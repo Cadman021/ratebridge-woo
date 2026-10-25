@@ -593,6 +593,9 @@ msgstr "تنظیمات ذخیره شد."
 msgid "Something went wrong. Please try again."
 msgstr "مشکلی پیش آمد. لطفاً دوباره تلاش کنید."
 
+msgid "Your session has expired. The page will reload so you can retry."
+msgstr "نشست شما منقضی شده است. صفحه دوباره بارگذاری می‌شود تا بتوانید دوباره تلاش کنید."
+
 msgid "The code must be 32 characters or fewer."
 msgstr "کد باید حداکثر ۳۲ نویسه باشد."
 

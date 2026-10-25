@@ -134,6 +134,7 @@ final class SettingsPage {
 					'saving'        => __( 'Saving…', 'ratebridge-woo' ),
 					'working'       => __( 'Working…', 'ratebridge-woo' ),
 					'genericError'  => __( 'Something went wrong. Please try again.', 'ratebridge-woo' ),
+					'sessionExpired' => __( 'Your session has expired. The page will reload so you can retry.', 'ratebridge-woo' ),
 					'editTitle'     => __( 'Edit currency', 'ratebridge-woo' ),
 					'addTitle'      => __( 'Add currency', 'ratebridge-woo' ),
 					'emptyRate'     => __( 'Keep current rate', 'ratebridge-woo' ),

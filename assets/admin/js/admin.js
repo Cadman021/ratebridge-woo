@@ -23,6 +23,25 @@
 	}
 
 	/**
+	 * Show a request error, and recover automatically when the session/nonce
+	 * has expired (WordPress answers with a bare "0" in that case).
+	 *
+	 * @param {Error} error Error thrown by request().
+	 */
+	function handleRequestError( error ) {
+		var message = ( error && error.message ) || strings.genericError;
+
+		notify( message, 'error' );
+
+		if ( message === strings.sessionExpired ) {
+			// A stale nonce cannot be repaired client-side: reload once.
+			window.setTimeout( function () {
+				window.location.reload();
+			}, 1500 );
+		}
+	}
+
+	/**
 	 * Show a notice above the tables.
 	 *
 	 * @param {string} message Message text.
@@ -116,6 +135,12 @@
 					try {
 						parsed = JSON.parse( text );
 					} catch ( parseError ) {
+						// WordPress replies with a bare "0" when the nonce check fails.
+						// Tell the user what to do instead of a generic error.
+						if ( '0' === String( text ).trim() ) {
+							throw new Error( strings.sessionExpired || strings.genericError );
+						}
+
 						var snippet = ( text || '' ).replace( /<[^>]*>/g, ' ' ).replace( /\s+/g, ' ' ).trim().slice( 0, 220 );
 
 						throw new Error(
@@ -141,8 +166,20 @@
 	/* Currency row actions                                                */
 	/* ------------------------------------------------------------------ */
 
-	function bindTable() {
-		qsa( '.rbw-toggle' ).forEach( function ( input ) {
+	/**
+	 * Bind row actions. Safe to call repeatedly: each element is bound once.
+	 *
+	 * @param {Element} [scope] Optional subtree to bind (defaults to document).
+	 */
+	function bindTable( scope ) {
+		var root = scope || document;
+
+		qsa( '.rbw-toggle', root ).forEach( function ( input ) {
+			if ( input.getAttribute( 'data-rbw-bound' ) ) {
+				return;
+			}
+			input.setAttribute( 'data-rbw-bound', '1' );
+
 			input.addEventListener( 'change', function () {
 				var id = input.getAttribute( 'data-id' );
 				var enabled = input.checked;
@@ -158,12 +195,17 @@
 					} )
 					.catch( function ( error ) {
 						input.checked = ! enabled;
-						notify( error.message, 'error' );
+						handleRequestError( error );
 					} );
 			} );
 		} );
 
-		qsa( '.rbw-delete' ).forEach( function ( button ) {
+		qsa( '.rbw-delete', root ).forEach( function ( button ) {
+			if ( button.getAttribute( 'data-rbw-bound' ) ) {
+				return;
+			}
+			button.setAttribute( 'data-rbw-bound', '1' );
+
 			button.addEventListener( 'click', function () {
 				if ( ! window.confirm( strings.confirmDelete ) ) {
 					return;
@@ -184,12 +226,17 @@
 						refreshLog();
 					} )
 					.catch( function ( error ) {
-						notify( error.message, 'error' );
+						handleRequestError( error );
 					} );
 			} );
 		} );
 
-		qsa( '.rbw-edit' ).forEach( function ( button ) {
+		qsa( '.rbw-edit', root ).forEach( function ( button ) {
+			if ( button.getAttribute( 'data-rbw-bound' ) ) {
+				return;
+			}
+			button.setAttribute( 'data-rbw-bound', '1' );
+
 			button.addEventListener( 'click', function () {
 				var id = button.getAttribute( 'data-id' );
 
@@ -202,12 +249,17 @@
 						openModal( response.data.currency );
 					} )
 					.catch( function ( error ) {
-						notify( error.message, 'error' );
+						handleRequestError( error );
 					} );
 			} );
 		} );
 
-		qsa( '.rbw-update-one' ).forEach( function ( button ) {
+		qsa( '.rbw-update-one', root ).forEach( function ( button ) {
+			if ( button.getAttribute( 'data-rbw-bound' ) ) {
+				return;
+			}
+			button.setAttribute( 'data-rbw-bound', '1' );
+
 			button.addEventListener( 'click', function () {
 				runUpdate( button, 'update_now', { id: button.getAttribute( 'data-id' ) } );
 			} );
@@ -226,7 +278,7 @@
 				refreshLog();
 			} )
 			.catch( function ( error ) {
-				notify( error.message, 'error' );
+				handleRequestError( error );
 			} )
 			.finally( function () {
 				button.disabled = false;
@@ -236,6 +288,10 @@
 
 	/**
 	 * Patch one or more rows with fresh data returned by the server.
+	 *
+	 * Updates existing rows in place and inserts new rows, so the page never
+	 * needs a full reload (which used to race with in-flight AJAX calls and
+	 * produce a stale-nonce "0" response).
 	 *
 	 * @param {Object} data Response payload.
 	 */
@@ -248,7 +304,9 @@
 
 		list.forEach( function ( currency ) {
 			var row = qs( 'tr[data-id="' + currency.id + '"]' );
+
 			if ( ! row ) {
+				appendCurrencyRow( currency );
 				return;
 			}
 
@@ -263,7 +321,31 @@
 				updatedCell.textContent = currency.last_updated;
 			}
 
+			// Provider label can change when the row is edited.
+			var providerCell = qs( 'td:nth-child(6)', row );
+			if ( providerCell && currency.provider ) {
+				providerCell.textContent = ( config.providerLabels && config.providerLabels[ currency.provider ] ) || currency.provider;
+			}
+
+			var intervalCell = qs( 'td:nth-child(7)', row );
+			if ( intervalCell && currency.update_interval_minutes ) {
+				intervalCell.textContent = currency.update_interval_minutes;
+			}
+
+			var codeCell = qs( 'td:nth-child(3) code', row );
+			if ( codeCell && currency.code ) {
+				codeCell.textContent = currency.code;
+			}
+
 			var nameCell = qs( 'td:nth-child(2)', row );
+
+			if ( nameCell && currency.name ) {
+				var strong = qs( 'strong', nameCell );
+				if ( strong ) {
+					strong.textContent = currency.name;
+				}
+			}
+
 			var oldError = qs( '.rbw-error-text', row );
 			if ( oldError ) {
 				oldError.parentNode.removeChild( oldError );
@@ -275,7 +357,66 @@
 				errorEl.textContent = currency.last_error;
 				nameCell.appendChild( errorEl );
 			}
+
+			var toggle = qs( '.rbw-toggle', row );
+			if ( toggle ) {
+				toggle.checked = !! currency.is_enabled;
+			}
 		} );
+	}
+
+	/**
+	 * Insert a freshly created currency as a new table row.
+	 *
+	 * @param {Object} currency Currency payload from the server.
+	 */
+	function appendCurrencyRow( currency ) {
+		var tbody = qs( '#rbw-currencies-table tbody' );
+		if ( ! tbody || ! currency || ! currency.id ) {
+			return;
+		}
+
+		// Drop the "no currencies yet" placeholder if present.
+		var empty = qs( '.rbw-empty-row', tbody );
+		if ( empty ) {
+			empty.parentNode.removeChild( empty );
+		}
+
+		var providerLabel = ( config.providerLabels && config.providerLabels[ currency.provider ] ) || currency.provider;
+		var tr = document.createElement( 'tr' );
+		tr.setAttribute( 'data-id', currency.id );
+
+		tr.innerHTML =
+			'<td><label class="rbw-switch"><input type="checkbox" class="rbw-toggle" data-id="' + currency.id + '"' + ( currency.is_enabled ? ' checked' : '' ) + ' /></label></td>' +
+			'<td><strong></strong> <span class="rbw-muted"></span></td>' +
+			'<td><code></code></td>' +
+			'<td class="rbw-rate"></td>' +
+			'<td class="rbw-last-updated"></td>' +
+			'<td class="rbw-provider"></td>' +
+			'<td class="rbw-col-interval"></td>' +
+			'<td class="rbw-actions">' +
+				'<button type="button" class="button button-small rbw-edit">Edit</button> ' +
+				'<button type="button" class="button button-small rbw-update-one">Update now</button> ' +
+				'<button type="button" class="button button-small button-link-delete rbw-delete">Delete</button>' +
+			'</td>';
+
+		// Fill text via textContent so provider data can never inject markup.
+		qs( 'strong', tr ).textContent = currency.name || '';
+		qs( '.rbw-muted', tr ).textContent = currency.symbol ? '(' + currency.symbol + ')' : '';
+		qs( 'code', tr ).textContent = currency.code || '';
+		qs( '.rbw-rate', tr ).textContent = currency.rate_formatted || '—';
+		qs( '.rbw-last-updated', tr ).textContent = currency.last_updated || '—';
+		qs( '.rbw-provider', tr ).textContent = providerLabel;
+		qs( '.rbw-col-interval', tr ).textContent = currency.update_interval_minutes || 60;
+
+		qsa( '[data-id]', tr ).forEach( function ( el ) {
+			el.setAttribute( 'data-id', currency.id );
+		} );
+
+		tbody.appendChild( tr );
+
+		// Bind only the new row's actions (existing rows are already bound).
+		bindTable( tr );
 	}
 
 	/* ------------------------------------------------------------------ */
@@ -375,10 +516,17 @@
 
 						notify( messageFrom( response ), 'success' );
 						closeModal();
-						window.location.reload();
+
+						// Patch the row in place. A full reload here raced with
+						// in-flight AJAX calls (stale nonce -> bare "0" response).
+						if ( response.data && response.data.currency ) {
+							updateRow( { currencies: [ response.data.currency ] } );
+						} else {
+							window.location.reload();
+						}
 					} )
 					.catch( function ( error ) {
-						notify( error.message, 'error' );
+						handleRequestError( error );
 					} )
 					.finally( function () {
 						if ( button ) {
@@ -511,7 +659,7 @@
 					notify( messageFrom( response ), response.success ? 'success' : 'error' );
 				} )
 				.catch( function ( error ) {
-					notify( error.message, 'error' );
+					handleRequestError( error );
 				} )
 				.finally( function () {
 					if ( button ) {
@@ -559,7 +707,7 @@
 						renderLog( [] );
 					} )
 					.catch( function ( error ) {
-						notify( error.message, 'error' );
+						handleRequestError( error );
 					} );
 			} );
 		}
@@ -910,10 +1058,17 @@
 
 						notify( messageFrom( response ), 'success' );
 						modal.hidden = true;
-						window.location.reload();
+
+						// Append the new row instead of reloading (a reload raced with
+						// in-flight AJAX and produced stale-nonce errors).
+						if ( response.data && response.data.currency ) {
+							appendCurrencyRow( response.data.currency );
+						} else {
+							window.location.reload();
+						}
 					} )
 					.catch( function ( error ) {
-						notify( error.message, 'error' );
+						handleRequestError( error );
 					} )
 					.finally( function () {
 						if ( button ) {
@@ -1005,7 +1160,7 @@
 						}
 					} )
 					.catch( function ( error ) {
-						notify( error.message, 'error' );
+						handleRequestError( error );
 					} )
 					.finally( function () {
 						if ( button ) {
@@ -1063,7 +1218,7 @@
 						}
 					} )
 					.catch( function ( error ) {
-						notify( error.message, 'error' );
+						handleRequestError( error );
 					} );
 			} );
 		} );
