@@ -91,7 +91,22 @@ final class SettingsPage {
 			RBW_VERSION
 		);
 
-		wp_style_add_data( 'rbw-admin', 'rtl', 'replace' );
+		/*
+		 * RTL: admin.css is direction-agnostic (logical properties), so it must
+		 * always load. admin-rtl.css only adds RTL-specific overrides.
+		 *
+		 * Do NOT use wp_style_add_data( ..., 'rtl', 'replace' ) here: "replace"
+		 * makes WordPress load admin-rtl.css INSTEAD of admin.css on RTL locales,
+		 * which dropped every base rule (modal positioning, grid, flex).
+		 */
+		if ( is_rtl() ) {
+			wp_enqueue_style(
+				'rbw-admin-rtl',
+				RBW_PLUGIN_URL . 'assets/admin/css/admin-rtl.css',
+				array( 'rbw-admin' ),
+				RBW_VERSION
+			);
+		}
 
 		wp_enqueue_script(
 			'rbw-admin',
