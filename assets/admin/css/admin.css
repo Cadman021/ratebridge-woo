@@ -362,3 +362,16 @@
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 }
+
+/* Inline error inside the add/edit dialogs (the page notice sits behind the overlay) */
+.rbw-modal-error {
+	margin-block: 0 12px;
+	padding: 8px 10px;
+	border-radius: 4px;
+	border-inline-start: 4px solid #d63638;
+	background: #fcf0f1;
+	color: #b32d2e;
+	font-size: 13px;
+	line-height: 1.6;
+	word-break: break-word;
+}

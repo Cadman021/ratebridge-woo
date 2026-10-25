@@ -65,4 +65,15 @@ interface ProviderInterface {
 	 * @return array<string, string>
 	 */
 	public function get_known_symbols(): array;
+
+	/**
+	 * Normalise a provider symbol before storing or looking it up.
+	 *
+	 * Default: trim + lowercase. Providers with a catalogue override this to
+	 * map aliases onto their canonical typed key.
+	 *
+	 * @param string $symbol Raw symbol.
+	 * @return string
+	 */
+	public function normalize_symbol( string $symbol ): string;
 }

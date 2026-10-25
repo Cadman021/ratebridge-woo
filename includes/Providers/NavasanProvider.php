@@ -34,9 +34,13 @@ final class NavasanProvider extends AbstractProvider {
 	private const DEFAULT_MONTHLY_LIMIT = 120;
 
 	/**
-	 * Cache lifetime for the full parsed catalogue (10 minutes).
+	 * Minimum cache lifetime for the full parsed catalogue (10 minutes).
+	 *
+	 * The real TTL is raised to the provider's effective minimum interval, so a
+	 * currency added between two real requests can still be served from the
+	 * cached catalogue instead of being blocked by the request budget.
 	 */
-	private const CATALOGUE_TTL = 600;
+	private const CATALOGUE_TTL_FLOOR = 600;
 
 	/**
 	 * {@inheritDoc}
@@ -186,7 +190,7 @@ final class NavasanProvider extends AbstractProvider {
 			array(
 				'query'       => array( 'api_key' => (string) $this->get_setting( 'api_key', '' ) ),
 				'cache_key'   => $cache_key,
-				'cache_ttl'   => self::CATALOGUE_TTL,
+				'cache_ttl'   => max( self::CATALOGUE_TTL_FLOOR, $this->get_effective_min_interval_minutes() * MINUTE_IN_SECONDS ),
 				'parse_args'  => array(
 					'variant' => $variant,
 				),
@@ -276,6 +280,16 @@ final class NavasanProvider extends AbstractProvider {
 			'usd_eth'   => __( 'Ethereum', 'ratebridge-woo' ),
 			'usd_usdt'  => __( 'Tether', 'ratebridge-woo' ),
 		);
+	}
+
+	/**
+	 * {@inheritDoc}
+	 *
+	 * Navasan keys are already lowercase; trim and lowercase so free-text input
+	 * lines up with the payload keys.
+	 */
+	public function normalize_symbol( string $symbol ): string {
+		return strtolower( trim( $symbol ) );
 	}
 
 	/**

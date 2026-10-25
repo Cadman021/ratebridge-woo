@@ -26,9 +26,9 @@ defined( 'ABSPATH' ) || exit;
 final class AlanChandProvider extends AbstractProvider {
 
 	/**
-	 * Default endpoint.
+	 * Default endpoint (no trailing slash; add_query_arg appends the query).
 	 */
-	private const DEFAULT_ENDPOINT = 'https://api.alanchand.com';
+	private const DEFAULT_ENDPOINT = 'https://api.alanchand.com/';
 
 	/**
 	 * Test-plan minimum minutes between requests.
@@ -36,9 +36,27 @@ final class AlanChandProvider extends AbstractProvider {
 	private const DEFAULT_MIN_INTERVAL = 60;
 
 	/**
-	 * Cache lifetime per type (30 minutes).
+	 * Absolute minimum cache lifetime per catalogue type (30 minutes).
 	 */
-	private const TYPE_TTL = 1800;
+	private const TYPE_TTL_FLOOR = 1800;
+
+	/**
+	 * Internal type => real API `type` query value (plural form).
+	 *
+	 * Verified against the URLs that actually returned JSON:
+	 *   https://api.alanchand.com/?type=currencies&token=TOKEN
+	 *   https://api.alanchand.com/?type=golds&token=TOKEN
+	 *   https://api.alanchand.com/?type=crypto&token=TOKEN
+	 *
+	 * @return array<string, string>
+	 */
+	public static function api_types(): array {
+		return array(
+			AlanChandParser::TYPE_CURRENCY => 'currencies',
+			AlanChandParser::TYPE_GOLD     => 'golds',
+			AlanChandParser::TYPE_CRYPTO   => 'crypto',
+		);
+	}
 
 	/**
 	 * Built-in slug => type map, taken only from the real samples.
@@ -102,7 +120,6 @@ final class AlanChandProvider extends AbstractProvider {
 		'bahar'           => AlanChandParser::TYPE_GOLD,
 		'nim'             => AlanChandParser::TYPE_GOLD,
 		'rob'             => AlanChandParser::TYPE_GOLD,
-		'sek'             => AlanChandParser::TYPE_GOLD,
 	);
 
 	/**
@@ -169,7 +186,7 @@ final class AlanChandProvider extends AbstractProvider {
 	 * @return array{0: string, 1: string}
 	 */
 	public function resolve_symbol( string $symbol ): array {
-		return AlanChandParser::split_symbol( $symbol, self::SYMBOL_TYPES, AlanChandParser::TYPE_CURRENCY );
+		return AlanChandParser::split_symbol( $this->normalize_symbol( $symbol ), self::SYMBOL_TYPES, AlanChandParser::TYPE_CURRENCY );
 	}
 
 	/**
@@ -244,7 +261,7 @@ final class AlanChandProvider extends AbstractProvider {
 	 * @param string[] $slugs Slugs requested from that catalogue.
 	 * @return array<string, float>|WP_Error
 	 */
-	private function get_type_payload( string $type, array $slugs ): array|WP_Error {
+	private function get_type_payload( string $type, array $slugs = array() ): array|WP_Error {
 		$settings_hash = md5( (string) wp_json_encode( $this->get_settings() ) );
 		$cache_key     = 'rbw_alanchand_' . $type . '_' . $settings_hash;
 
@@ -254,22 +271,37 @@ final class AlanChandProvider extends AbstractProvider {
 			return $cached;
 		}
 
+		$api_types = self::api_types();
+		$api_type  = $api_types[ $type ] ?? 'currencies';
+
+		$query = array(
+			'type'  => $api_type,
+			'token' => $this->get_token(),
+		);
+
+		/**
+		 * Filter the AlanChand query arguments.
+		 *
+		 * Lets you switch auth style (e.g. a header) later without code edits.
+		 *
+		 * @param array<string, string> $query    Query args sent to the API.
+		 * @param string                $type     Internal catalogue type.
+		 * @param string                $api_type Raw `type` value sent to the API.
+		 */
+		$query = (array) apply_filters( 'rbw_alanchand_request_args', $query, $type, $api_type );
+
+		// Keep the catalogue longer than the request interval so rows added
+		// between two real requests can still be served from the cache.
+		$ttl = max( self::TYPE_TTL_FLOOR, $this->get_effective_min_interval_minutes() * MINUTE_IN_SECONDS );
+
 		return $this->request(
 			$this->get_endpoint(),
 			array(
-				'query'     => array(
-					'type'    => $type,
-					'symbols' => implode( ',', $slugs ),
-				),
-				'headers'   => array(
-					'Authorization' => 'Bearer ' . $this->get_token(),
-				),
-				'cache_key' => $cache_key,
-				'cache_ttl' => self::TYPE_TTL,
-				// The payload keys are slugs; callers select what they need.
-				'parse_args' => array(
-					'type' => $type,
-				),
+				'query'      => $query,
+				'cache_key'  => $cache_key,
+				'cache_ttl'  => $ttl,
+				// The payload keys are slugs; callers pick what they need.
+				'parse_args' => array( 'type' => $type ),
 			)
 		);
 	}
@@ -321,45 +353,63 @@ final class AlanChandProvider extends AbstractProvider {
 	 * @return array<string, string>
 	 */
 	public function get_known_symbols(): array {
+		$c = AlanChandParser::TYPE_CURRENCY;
+		$g = AlanChandParser::TYPE_GOLD;
+
+		// ALWAYS typed keys (`type:slug`). `sek` exists in both catalogues
+		// (Swedish krona vs gram coin), so a bare slug would be ambiguous.
 		$labels = array(
-			'usd'    => __( 'US Dollar', 'ratebridge-woo' ),
-			'eur'    => __( 'Euro', 'ratebridge-woo' ),
-			'aed'    => __( 'UAE Dirham', 'ratebridge-woo' ),
-			'try'    => __( 'Turkish Lira', 'ratebridge-woo' ),
-			'gbp'    => __( 'British Pound', 'ratebridge-woo' ),
-			'cny'    => __( 'Chinese Yuan', 'ratebridge-woo' ),
-			'cad'    => __( 'Canadian Dollar', 'ratebridge-woo' ),
-			'aud'    => __( 'Australian Dollar', 'ratebridge-woo' ),
-			'jpy'    => __( 'Japanese Yen', 'ratebridge-woo' ),
-			'chf'    => __( 'Swiss Franc', 'ratebridge-woo' ),
-			'sar'    => __( 'Saudi Riyal', 'ratebridge-woo' ),
-			'iqd'    => __( 'Iraqi Dinar (100)', 'ratebridge-woo' ),
-			'kwd'    => __( 'Kuwaiti Dinar', 'ratebridge-woo' ),
-			'bhd'    => __( 'Bahraini Dinar', 'ratebridge-woo' ),
-			'omr'    => __( 'Omani Rial', 'ratebridge-woo' ),
-			'qar'    => __( 'Qatari Riyal', 'ratebridge-woo' ),
-			'usd-hav' => __( 'US Dollar (remittance)', 'ratebridge-woo' ),
-			'18ayar' => __( '18K Gold (gram)', 'ratebridge-woo' ),
-			'abshodeh' => __( 'Melted gold (mithqal)', 'ratebridge-woo' ),
-			'sekkeh' => __( 'Gold coin (full)', 'ratebridge-woo' ),
-			'bahar'  => __( 'Bahar Azadi coin', 'ratebridge-woo' ),
-			'nim'    => __( 'Half coin', 'ratebridge-woo' ),
-			'rob'    => __( 'Quarter coin', 'ratebridge-woo' ),
-			'sek'    => __( 'Gram coin', 'ratebridge-woo' ),
+			"$c:usd"     => __( 'US Dollar', 'ratebridge-woo' ),
+			"$c:eur"     => __( 'Euro', 'ratebridge-woo' ),
+			"$c:aed"     => __( 'UAE Dirham', 'ratebridge-woo' ),
+			"$c:try"     => __( 'Turkish Lira', 'ratebridge-woo' ),
+			"$c:gbp"     => __( 'British Pound', 'ratebridge-woo' ),
+			"$c:cny"     => __( 'Chinese Yuan', 'ratebridge-woo' ),
+			"$c:cad"     => __( 'Canadian Dollar', 'ratebridge-woo' ),
+			"$c:aud"     => __( 'Australian Dollar', 'ratebridge-woo' ),
+			"$c:jpy"     => __( 'Japanese Yen', 'ratebridge-woo' ),
+			"$c:chf"     => __( 'Swiss Franc', 'ratebridge-woo' ),
+			"$c:sek"     => __( 'Swedish Krona', 'ratebridge-woo' ),
+			"$c:sar"     => __( 'Saudi Riyal', 'ratebridge-woo' ),
+			"$c:iqd"     => __( 'Iraqi Dinar (100)', 'ratebridge-woo' ),
+			"$c:kwd"     => __( 'Kuwaiti Dinar', 'ratebridge-woo' ),
+			"$c:bhd"     => __( 'Bahraini Dinar', 'ratebridge-woo' ),
+			"$c:omr"     => __( 'Omani Rial', 'ratebridge-woo' ),
+			"$c:qar"     => __( 'Qatari Riyal', 'ratebridge-woo' ),
+			"$c:usd-hav" => __( 'US Dollar (remittance)', 'ratebridge-woo' ),
+			"$g:18ayar"  => __( '18K Gold (gram)', 'ratebridge-woo' ),
+			"$g:abshodeh" => __( 'Melted gold (mithqal)', 'ratebridge-woo' ),
+			"$g:sekkeh"  => __( 'Gold coin (full)', 'ratebridge-woo' ),
+			"$g:bahar"   => __( 'Bahar Azadi coin', 'ratebridge-woo' ),
+			"$g:nim"     => __( 'Half coin', 'ratebridge-woo' ),
+			"$g:rob"     => __( 'Quarter coin', 'ratebridge-woo' ),
+			"$g:sek"     => __( 'Gram coin', 'ratebridge-woo' ),
 		);
 
-		$known = array();
+		return $labels;
+	}
 
-		foreach ( $labels as $slug => $label ) {
-			$type = self::SYMBOL_TYPES[ $slug ] ?? AlanChandParser::TYPE_CURRENCY;
+	/**
+	 * {@inheritDoc}
+	 *
+	 * Canonical form is always `type:slug`. A bare slug is a legacy fallback:
+	 * it is resolved through the built-in map and then re-emitted typed, which
+	 * removes the `sek` ambiguity (currency krona vs gold gram coin).
+	 */
+	public function normalize_symbol( string $symbol ): string {
+		$symbol = strtolower( trim( $symbol ) );
 
-			// Currencies stay bare (the API default); gold is explicitly typed.
-			$key = AlanChandParser::TYPE_CURRENCY === $type ? $slug : $type . ':' . $slug;
-
-			$known[ $key ] = $label;
+		if ( '' === $symbol ) {
+			return '';
 		}
 
-		return $known;
+		if ( str_contains( $symbol, ':' ) ) {
+			return $symbol;
+		}
+
+		list( $type, $slug ) = AlanChandParser::split_symbol( $symbol, self::SYMBOL_TYPES, AlanChandParser::TYPE_CURRENCY );
+
+		return $type . ':' . $slug;
 	}
 
 	/**

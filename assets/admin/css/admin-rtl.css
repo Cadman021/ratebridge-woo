@@ -101,3 +101,9 @@
 	margin-right: 0;
 	margin-left: auto;
 }
+
+.rbw-modal-error {
+	border-right: 4px solid #d63638;
+	border-left: 0;
+	text-align: right;
+}

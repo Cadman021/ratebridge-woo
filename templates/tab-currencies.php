@@ -152,6 +152,8 @@ foreach ( $rbw_providers as $rbw_provider_key => $rbw_provider_label ) {
 		<form id="rbw-currency-form" onsubmit="return false;">
 			<input type="hidden" name="id" value="0" />
 
+			<div class="rbw-modal-error" id="rbw-currency-error" role="alert" hidden></div>
+
 			<p>
 				<label for="rbw-field-name"><?php esc_html_e( 'Name', 'ratebridge-woo' ); ?> <span class="rbw-required">*</span></label>
 				<input type="text" id="rbw-field-name" name="name" class="regular-text" required />
@@ -250,6 +252,7 @@ foreach ( $rbw_providers as $rbw_provider_key => $rbw_provider_label ) {
 		</p>
 
 		<form id="rbw-preset-form" onsubmit="return false;">
+			<div class="rbw-modal-error" id="rbw-preset-error" role="alert" hidden></div>
 			<p>
 				<label for="rbw-preset-provider"><?php esc_html_e( 'Price source', 'ratebridge-woo' ); ?></label>
 				<select id="rbw-preset-provider" name="provider">
@@ -267,6 +270,13 @@ foreach ( $rbw_providers as $rbw_provider_key => $rbw_provider_label ) {
 					placeholder="<?php esc_attr_e( 'Search symbol…', 'ratebridge-woo' ); ?>"
 				/>
 				<select id="rbw-preset-symbol" name="symbol" size="8" class="rbw-preset-list"></select>
+			</p>
+			<p>
+				<label for="rbw-preset-code"><?php esc_html_e( 'Code', 'ratebridge-woo' ); ?> <span class="rbw-required">*</span></label>
+				<input type="text" id="rbw-preset-code" name="code" class="regular-text" dir="ltr" maxlength="32" />
+				<span class="description" id="rbw-preset-code-hint">
+					<?php esc_html_e( 'Generated from the symbol. Change it if the code is already taken.', 'ratebridge-woo' ); ?>
+				</span>
 			</p>
 
 			<p class="rbw-modal-actions">

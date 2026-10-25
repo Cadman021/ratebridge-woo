@@ -23,6 +23,21 @@
 	}
 
 	/**
+	 * Escape text for safe interpolation into an HTML string.
+	 *
+	 * @param {string} value Raw text.
+	 * @return {string} Escaped text.
+	 */
+	function esc( value ) {
+		return String( value === null || typeof value === 'undefined' ? '' : value )
+			.replace( /&/g, '&amp;' )
+			.replace( /</g, '&lt;' )
+			.replace( />/g, '&gt;' )
+			.replace( /"/g, '&quot;' )
+			.replace( /'/g, '&#39;' );
+	}
+
+	/**
 	 * Show a request error, and recover automatically when the session/nonce
 	 * has expired (WordPress answers with a bare "0" in that case).
 	 *
@@ -33,12 +48,31 @@
 
 		notify( message, 'error' );
 
-		if ( message === strings.sessionExpired ) {
-			// A stale nonce cannot be repaired client-side: reload once.
-			window.setTimeout( function () {
-				window.location.reload();
-			}, 1500 );
+		// Never reload automatically: the user decides when to refresh.
+	}
+
+	/**
+	 * Show an error inside a dialog (the page-level notice is behind the overlay).
+	 *
+	 * @param {string} id      Element id of the error box.
+	 * @param {string} message Message text.
+	 */
+	function showModalError( id, message ) {
+		var box = qs( '#' + id );
+		if ( ! box ) {
+			return;
 		}
+		box.textContent = message || '';
+		box.hidden = ! message;
+	}
+
+	/**
+	 * Clear a dialog's inline error.
+	 *
+	 * @param {string} id Element id of the error box.
+	 */
+	function clearModalError( id ) {
+		showModalError( id, '' );
 	}
 
 	/**
@@ -135,10 +169,12 @@
 					try {
 						parsed = JSON.parse( text );
 					} catch ( parseError ) {
-						// WordPress replies with a bare "0" when the nonce check fails.
-						// Tell the user what to do instead of a generic error.
+						// WordPress answers a bare "0" when the request is not
+						// recognised (wrong action name or expired nonce).
 						if ( '0' === String( text ).trim() ) {
-							throw new Error( strings.sessionExpired || strings.genericError );
+							throw new Error(
+								( strings.requestNotRecognised || strings.genericError ).replace( '%d', response.status )
+							);
 						}
 
 						var snippet = ( text || '' ).replace( /<[^>]*>/g, ' ' ).replace( /\s+/g, ' ' ).trim().slice( 0, 220 );
@@ -395,9 +431,9 @@
 			'<td class="rbw-provider"></td>' +
 			'<td class="rbw-col-interval"></td>' +
 			'<td class="rbw-actions">' +
-				'<button type="button" class="button button-small rbw-edit">Edit</button> ' +
-				'<button type="button" class="button button-small rbw-update-one">Update now</button> ' +
-				'<button type="button" class="button button-small button-link-delete rbw-delete">Delete</button>' +
+				'<button type="button" class="button button-small rbw-edit">' + esc( strings.editLabel ) + '</button> ' +
+				'<button type="button" class="button button-small rbw-update-one">' + esc( strings.updateNowLabel ) + '</button> ' +
+				'<button type="button" class="button button-small button-link-delete rbw-delete">' + esc( strings.deleteLabel ) + '</button>' +
 			'</td>';
 
 		// Fill text via textContent so provider data can never inject markup.
@@ -448,6 +484,7 @@
 		modal.querySelector( '[name="sort_order"]' ).value = isEdit ? currency.sort_order : 0;
 		modal.querySelector( '[name="is_enabled"]' ).checked = isEdit ? !! currency.is_enabled : false;
 
+		clearModalError( 'rbw-currency-error' );
 		modal.hidden = false;
 
 		// Warn when the row interval is shorter than the source can serve.
@@ -495,7 +532,8 @@
 					code: form.querySelector( '[name="code"]' ).value,
 					symbol: form.querySelector( '[name="symbol"]' ).value,
 					provider: form.querySelector( '[name="provider"]' ).value,
-					provider_symbol: form.querySelector( '[name="provider_symbol"]' ).value,
+					// Select value when a preset is chosen, otherwise the free-text input.
+					provider_symbol: currentProviderSymbol(),
 					rate: form.querySelector( '[name="rate"]' ).value,
 					update_interval_minutes: form.querySelector( '[name="update_interval_minutes"]' ).value,
 					sort_order: form.querySelector( '[name="sort_order"]' ).value,
@@ -510,7 +548,8 @@
 				request( 'save', payload )
 					.then( function ( response ) {
 						if ( ! response.success ) {
-							notify( messageFrom( response ), 'error' );
+							// Show it inside the dialog; the page notice sits behind it.
+							showModalError( 'rbw-currency-error', messageFrom( response ) );
 							return;
 						}
 
@@ -526,12 +565,12 @@
 						}
 					} )
 					.catch( function ( error ) {
-						handleRequestError( error );
+						showModalError( 'rbw-currency-error', ( error && error.message ) || strings.genericError );
 					} )
 					.finally( function () {
 						if ( button ) {
 							button.disabled = false;
-							button.textContent = 'Save';
+							button.textContent = strings.saveButton;
 						}
 					} );
 			} );
@@ -563,13 +602,13 @@
 		entries.forEach( function ( entry ) {
 			var tr = document.createElement( 'tr' );
 
-			[ entry.time, null, entry.message, entry.trigger === 'manual' ? 'Manual' : 'Cron' ].forEach( function ( value, index ) {
+			[ entry.time, null, entry.message, entry.trigger === 'manual' ? strings.manualLabel : strings.cronLabel ].forEach( function ( value, index ) {
 				var td = document.createElement( 'td' );
 
 				if ( 1 === index ) {
 					var badge = document.createElement( 'span' );
 					badge.className = 'rbw-badge rbw-badge-' + ( entry.status === 'success' ? 'success' : 'error' );
-					badge.textContent = entry.status === 'success' ? 'OK' : '!';
+					badge.textContent = entry.status === 'success' ? strings.okLabel : strings.errorShort;
 					td.appendChild( badge );
 				} else {
 					td.textContent = value || '';
@@ -664,7 +703,7 @@
 				.finally( function () {
 					if ( button ) {
 						button.disabled = false;
-						button.textContent = 'Save settings';
+						button.textContent = strings.saveSettingsButton;
 					}
 				} );
 		} );
@@ -815,7 +854,7 @@
 			select.value = map[ current ] !== undefined ? current : '';
 			text.value = map[ current ] !== undefined ? '' : ( current || '' );
 			if ( hint ) {
-				hint.textContent = strings.searchSymbol;
+				hint.textContent = strings.symbolHint;
 			}
 		} else {
 			select.innerHTML = '';
@@ -984,6 +1023,34 @@
 		} );
 	}
 
+	/**
+	 * Derive a currency code from the selected preset symbol.
+	 *
+	 * `gold:sekkeh` -> `SEKKEH`, `currency:usd` -> `USD`.
+	 *
+	 * @param {string} symbol Typed provider symbol.
+	 * @return {string}
+	 */
+	function codeFromSymbol( symbol ) {
+		var bare = String( symbol || '' ).indexOf( ':' ) !== -1 ? String( symbol ).split( ':' )[ 1 ] : String( symbol || '' );
+
+		return bare.toUpperCase().replace( /[^A-Z0-9]/g, '' ).slice( 0, 32 );
+	}
+
+	/**
+	 * Fill the preset dialog's editable code field from the chosen symbol.
+	 */
+	function updatePresetCode() {
+		var list = qs( '#rbw-preset-symbol' );
+		var code = qs( '#rbw-preset-code' );
+
+		if ( ! list || ! code ) {
+			return;
+		}
+
+		code.value = codeFromSymbol( list.value );
+	}
+
 	function bindPresets() {
 		var openButton = qs( '#rbw-add-preset' );
 		var modal = qs( '#rbw-preset-modal' );
@@ -1001,6 +1068,8 @@
 				}
 			}
 			fillPresetList();
+			updatePresetCode();
+			clearModalError( 'rbw-preset-error' );
 			modal.hidden = false;
 		} );
 
@@ -1020,6 +1089,14 @@
 			search.addEventListener( 'input', fillPresetList );
 		}
 
+		var presetList = qs( '#rbw-preset-symbol' );
+		if ( presetList ) {
+			presetList.addEventListener( 'change', function () {
+				clearModalError( 'rbw-preset-error' );
+				updatePresetCode();
+			} );
+		}
+
 		var form = qs( '#rbw-preset-form' );
 		if ( form ) {
 			form.addEventListener( 'submit', function ( event ) {
@@ -1036,8 +1113,11 @@
 				var provider = providerSelect.value;
 				var map = ( config.symbols && config.symbols[ provider ] ) || {};
 				var label = map[ selected ] || selected;
-				var bare = selected.indexOf( ':' ) !== -1 ? selected.split( ':' )[ 1 ] : selected;
+				var codeField = qs( '#rbw-preset-code' );
 				var button = qs( '#rbw-preset-submit' );
+
+				// Use the editable field, falling back to the derived value.
+				var code = codeField && codeField.value ? codeField.value : codeFromSymbol( selected );
 
 				if ( button ) {
 					button.disabled = true;
@@ -1047,20 +1127,35 @@
 				request( 'add_preset', {
 					provider: provider,
 					symbol: selected,
-					code: bare.toUpperCase().replace( /[^A-Z0-9]/g, '' ).slice( 0, 32 ),
+					code: code,
 					name: label
 				} )
 					.then( function ( response ) {
 						if ( ! response.success ) {
-							notify( messageFrom( response ), 'error' );
+							var data = response.data || {};
+
+							// Code collision: suggest a free one inline and keep the dialog open.
+							if ( data.suggestion ) {
+								showModalError(
+									'rbw-preset-error',
+									( strings.codeTaken || messageFrom( response ) ).replace( '%s', data.suggestion )
+								);
+
+								if ( codeField ) {
+									codeField.value = data.suggestion;
+									codeField.focus();
+								}
+								return;
+							}
+
+							showModalError( 'rbw-preset-error', messageFrom( response ) );
 							return;
 						}
 
 						notify( messageFrom( response ), 'success' );
 						modal.hidden = true;
 
-						// Append the new row instead of reloading (a reload raced with
-						// in-flight AJAX and produced stale-nonce errors).
+						// Append the new row instead of reloading.
 						if ( response.data && response.data.currency ) {
 							appendCurrencyRow( response.data.currency );
 						} else {
@@ -1068,12 +1163,12 @@
 						}
 					} )
 					.catch( function ( error ) {
-						handleRequestError( error );
+						showModalError( 'rbw-preset-error', error.message );
 					} )
 					.finally( function () {
 						if ( button ) {
 							button.disabled = false;
-							button.textContent = 'Add';
+							button.textContent = strings.addButton;
 						}
 					} );
 			} );
@@ -1165,7 +1260,7 @@
 					.finally( function () {
 						if ( button ) {
 							button.disabled = false;
-							button.textContent = 'Save';
+							button.textContent = strings.saveButton;
 						}
 					} );
 			} );

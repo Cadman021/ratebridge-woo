@@ -1,4 +1,5 @@
 <?php
+
 /**
  * AJAX controller for the currency admin screen.
  *
@@ -17,12 +18,13 @@ use RateBridge\Providers\ProviderInterface;
 use RateBridge\Providers\ProviderRegistry;
 use RateBridge\Providers\RequestBudget;
 
-defined( 'ABSPATH' ) || exit;
+defined('ABSPATH') || exit;
 
 /**
  * Handles all admin-ajax actions (nonce + manage_woocommerce capability).
  */
-final class AjaxController {
+final class AjaxController
+{
 
 	/**
 	 * Nonce action shared by all endpoints.
@@ -35,30 +37,81 @@ final class AjaxController {
 	public const NONCE_NAME = 'nonce';
 
 	/**
+	 * The one and only list of dispatcher slugs.
+	 *
+	 * admin.js calls `request( 'save' )`, which posts `action=rbw_save`. Every
+	 * slug here is registered as `wp_ajax_rbw_{slug}`, so the two sides can
+	 * never drift apart again (see tests/ajax-actions.php).
+	 *
+	 * @return string[]
+	 */
+	public static function actions(): array
+	{
+		return array(
+			'toggle',
+			'save',
+			'delete',
+			'update_now',
+			'update_all',
+			'get_currency',
+			'save_settings',
+			'get_log',
+			'clear_log',
+			'save_provider_settings',
+			'test_provider',
+			'reset_budget',
+			'add_preset',
+			'get_symbols',
+		);
+	}
+
+	/**
+	 * Legacy alias suffix => dispatcher slug.
+	 *
+	 * Phase 1/2 registered `rbw_save_currency`, `rbw_delete_currency` and
+	 * friends. They never matched what the JS sends, but keeping them costs
+	 * nothing and avoids breaking any cached admin page.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function legacy_aliases(): array
+	{
+		return array(
+			'rbw_toggle_currency'            => 'toggle',
+			'rbw_save_currency'              => 'save',
+			'rbw_delete_currency'            => 'delete',
+			'rbw_update_now'                 => 'update_now',
+			'rbw_update_all'                 => 'update_all',
+			'rbw_save_settings'              => 'save_settings',
+			'rbw_clear_log'                  => 'clear_log',
+			'rbw_get_log'                    => 'get_log',
+			'rbw_get_currency'               => 'get_currency',
+			'rbw_save_provider_settings'     => 'save_provider_settings',
+			'rbw_test_provider'              => 'test_provider',
+			'rbw_reset_budget'               => 'reset_budget',
+			'rbw_add_preset'                 => 'add_preset',
+			'rbw_get_symbols'                => 'get_symbols',
+		);
+	}
+
+	/**
 	 * Register AJAX hooks.
 	 *
 	 * @return void
 	 */
-	public function register(): void {
-		$actions = array(
-			'rbw_toggle_currency',
-			'rbw_save_currency',
-			'rbw_delete_currency',
-			'rbw_update_now',
-			'rbw_update_all',
-			'rbw_save_settings',
-			'rbw_clear_log',
-			'rbw_get_log',
-			'rbw_get_currency',
-			'rbw_save_provider_settings',
-			'rbw_test_provider',
-			'rbw_reset_budget',
-			'rbw_add_preset',
-			'rbw_get_symbols',
-		);
+	public function register(): void
+	{
+		foreach (self::actions() as $slug) {
+			add_action('wp_ajax_rbw_' . $slug, array($this, 'handle'));
+		}
 
-		foreach ( $actions as $action ) {
-			add_action( 'wp_ajax_' . $action, array( $this, 'handle' ) );
+		// Harmless aliases for the old (never-matching) hook names.
+		foreach (array_keys(self::legacy_aliases()) as $alias) {
+			if (0 !== strpos($alias, 'rbw_')) {
+				continue;
+			}
+
+			add_action('wp_ajax_' . $alias, array($this, 'handle'));
 		}
 	}
 
@@ -67,18 +120,23 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	public function handle(): void {
-		if ( ! check_ajax_referer( self::NONCE_ACTION, self::NONCE_NAME, false ) ) {
-			wp_send_json_error( array( 'message' => __( 'Security check failed. Please reload the page.', 'ratebridge-woo' ) ), 403 );
+	public function handle(): void
+	{
+		if (! check_ajax_referer(self::NONCE_ACTION, self::NONCE_NAME, false)) {
+			wp_send_json_error(array('message' => __('Security check failed. Please reload the page.', 'ratebridge-woo')), 403);
 		}
 
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'You are not allowed to do this.', 'ratebridge-woo' ) ), 403 );
+		if (! current_user_can('manage_woocommerce')) {
+			wp_send_json_error(array('message' => __('You are not allowed to do this.', 'ratebridge-woo')), 403);
 		}
 
-		$action = isset( $_REQUEST['rbw_action'] ) ? sanitize_key( wp_unslash( (string) $_REQUEST['rbw_action'] ) ) : '';
+		$action = $this->resolve_action();
 
-		switch ( $action ) {
+		if ('' === $action || ! in_array($action, self::actions(), true)) {
+			wp_send_json_error(array('message' => __('Unknown action.', 'ratebridge-woo')), 400);
+		}
+
+		switch ($action) {
 			case 'toggle':
 				$this->toggle();
 				break;
@@ -121,9 +179,44 @@ final class AjaxController {
 			case 'get_symbols':
 				$this->get_symbols();
 				break;
-			default:
-				wp_send_json_error( array( 'message' => __( 'Unknown action.', 'ratebridge-woo' ) ), 400 );
 		}
+	}
+
+	/**
+	 * Work out which handler to run.
+	 *
+	 * Primary source is the `rbw_action` field sent by admin.js. If it is
+	 * missing (legacy alias or a hand-crafted request) we fall back to the
+	 * `action` field, stripping the leading `rbw_` and any legacy suffix.
+	 *
+	 * @return string Dispatcher slug, or '' when it cannot be determined.
+	 */
+	private function resolve_action(): string
+	{
+		$candidate = '';
+
+		if (isset($_REQUEST['rbw_action'])) {
+			$candidate = sanitize_key(wp_unslash((string) $_REQUEST['rbw_action']));
+		} elseif (isset($_REQUEST['action'])) {
+			$candidate = sanitize_key(wp_unslash((string) $_REQUEST['action']));
+		}
+
+		// Normalise `rbw_save` -> `save`.
+		if (str_starts_with($candidate, 'rbw_')) {
+			$candidate = substr($candidate, 4);
+		}
+
+		// Legacy names such as `save_currency` -> `save`, but only when the
+		// stripped form is a real action (`get_currency` must stay intact).
+		if (str_ends_with($candidate, '_currency')) {
+			$stripped = substr($candidate, 0, -9);
+
+			if (in_array($stripped, self::actions(), true)) {
+				$candidate = $stripped;
+			}
+		}
+
+		return $candidate;
 	}
 
 	/**
@@ -131,24 +224,25 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function toggle(): void {
-		$id      = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
-		$enabled = isset( $_POST['enabled'] ) && '1' === sanitize_text_field( wp_unslash( (string) $_POST['enabled'] ) );
+	private function toggle(): void
+	{
+		$id      = isset($_POST['id']) ? absint($_POST['id']) : 0;
+		$enabled = isset($_POST['enabled']) && '1' === sanitize_text_field(wp_unslash((string) $_POST['enabled']));
 
 		$repo     = new CurrencyRepository();
-		$currency = $repo->get( $id );
+		$currency = $repo->get($id);
 
-		if ( null === $currency ) {
-			wp_send_json_error( array( 'message' => __( 'Currency not found.', 'ratebridge-woo' ) ), 404 );
+		if (null === $currency) {
+			wp_send_json_error(array('message' => __('Currency not found.', 'ratebridge-woo')), 404);
 		}
 
-		if ( ! $repo->set_enabled( $id, $enabled ) ) {
-			wp_send_json_error( array( 'message' => __( 'Could not save the change.', 'ratebridge-woo' ) ), 500 );
+		if (! $repo->set_enabled($id, $enabled)) {
+			wp_send_json_error(array('message' => __('Could not save the change.', 'ratebridge-woo')), 500);
 		}
 
 		wp_send_json_success(
 			array(
-				'message'    => $enabled ? __( 'Currency enabled.', 'ratebridge-woo' ) : __( 'Currency disabled.', 'ratebridge-woo' ),
+				'message'    => $enabled ? __('Currency enabled.', 'ratebridge-woo') : __('Currency disabled.', 'ratebridge-woo'),
 				'id'         => $id,
 				'is_enabled' => $enabled,
 			)
@@ -160,82 +254,98 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function save(): void {
+	private function save(): void
+	{
 		$repo = new CurrencyRepository();
-		$id   = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
+		$id   = isset($_POST['id']) ? absint($_POST['id']) : 0;
 
-		$code = isset( $_POST['code'] ) ? strtoupper( sanitize_text_field( wp_unslash( (string) $_POST['code'] ) ) ) : '';
-		$name = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['name'] ) ) : '';
-		$code = preg_replace( '/[^A-Z0-9_\-]/', '', $code ) ?? '';
+		$code = isset($_POST['code']) ? strtoupper(sanitize_text_field(wp_unslash((string) $_POST['code']))) : '';
+		$name = isset($_POST['name']) ? sanitize_text_field(wp_unslash((string) $_POST['name'])) : '';
+		$code = preg_replace('/[^A-Z0-9_\-]/', '', $code) ?? '';
 
-		if ( '' === $code || '' === $name ) {
-			wp_send_json_error( array( 'message' => __( 'Code and name are required.', 'ratebridge-woo' ) ), 400 );
+		if ('' === $code || '' === $name) {
+			wp_send_json_error(array('message' => __('Code and name are required.', 'ratebridge-woo')), 400);
 		}
 
-		if ( strlen( $code ) > 32 ) {
-			wp_send_json_error( array( 'message' => __( 'The code must be 32 characters or fewer.', 'ratebridge-woo' ) ), 400 );
+		if (strlen($code) > 32) {
+			wp_send_json_error(array('message' => __('The code must be 32 characters or fewer.', 'ratebridge-woo')), 400);
 		}
 
-		if ( $repo->code_exists( $code, $id ) ) {
-			wp_send_json_error( array( 'message' => __( 'This code is already used by another currency.', 'ratebridge-woo' ) ), 400 );
+		if ($repo->code_exists($code, $id)) {
+			wp_send_json_error(array('message' => __('This code is already used by another currency.', 'ratebridge-woo')), 400);
 		}
 
-		$provider        = isset( $_POST['provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['provider'] ) ) : 'manual';
+		$provider        = isset($_POST['provider']) ? sanitize_key(wp_unslash((string) $_POST['provider'])) : 'manual';
 		$registry        = ProviderRegistry::instance();
-		$provider_object = $registry->get( $provider );
+		$provider_object = $registry->get($provider);
 
-		if ( null === $provider_object ) {
-			wp_send_json_error( array( 'message' => __( 'Unknown provider.', 'ratebridge-woo' ) ), 400 );
+		if (null === $provider_object) {
+			wp_send_json_error(array('message' => __('Unknown provider.', 'ratebridge-woo')), 400);
 		}
 
-		$rate_raw        = isset( $_POST['rate'] ) ? wp_unslash( (string) $_POST['rate'] ) : '';
-		$rate_raw        = str_replace( array( ',', ' ' ), '', $rate_raw );
+		$rate_raw        = isset($_POST['rate']) ? wp_unslash((string) $_POST['rate']) : '';
+		$rate_raw        = str_replace(array(',', ' '), '', $rate_raw);
 		$rate            = '' === $rate_raw ? 0.0 : (float) $rate_raw;
-		$provider_symbol = isset( $_POST['provider_symbol'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['provider_symbol'] ) ) : '';
+		$provider_symbol = isset($_POST['provider_symbol']) ? sanitize_text_field(wp_unslash((string) $_POST['provider_symbol'])) : '';
+
+		// Normalise through the provider so a free-text entry lines up with its
+		// catalogue keys (e.g. AlanChand `usd` -> `currency:usd`).
+		$provider_symbol = $provider_object->normalize_symbol($provider_symbol);
+
+		// Providers with a real catalogue must not silently fall back to the
+		// currency code: an empty symbol would never resolve to a rate.
+		$known_symbols = $provider_object->get_known_symbols();
+
+		if ('' === $provider_symbol && ! empty($known_symbols)) {
+			wp_send_json_error(
+				array('message' => __('Select or enter a provider symbol.', 'ratebridge-woo')),
+				400
+			);
+		}
 
 		$data = array(
 			'code'                    => $code,
 			'name'                    => $name,
-			'symbol'                  => isset( $_POST['symbol'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['symbol'] ) ) : '',
+			'symbol'                  => isset($_POST['symbol']) ? sanitize_text_field(wp_unslash((string) $_POST['symbol'])) : '',
 			'provider'                => $provider,
 			'provider_symbol'         => '' !== $provider_symbol ? $provider_symbol : $code,
 			'rate'                    => $rate,
-			'is_enabled'              => isset( $_POST['is_enabled'] ) && '1' === sanitize_text_field( wp_unslash( (string) $_POST['is_enabled'] ) ) ? 1 : 0,
-			'update_interval_minutes' => isset( $_POST['update_interval_minutes'] ) ? absint( $_POST['update_interval_minutes'] ) : Settings::get( 'default_update_interval', 60 ),
-			'sort_order'              => isset( $_POST['sort_order'] ) ? (int) $_POST['sort_order'] : 0,
+			'is_enabled'              => isset($_POST['is_enabled']) && '1' === sanitize_text_field(wp_unslash((string) $_POST['is_enabled'])) ? 1 : 0,
+			'update_interval_minutes' => isset($_POST['update_interval_minutes']) ? absint($_POST['update_interval_minutes']) : Settings::get('default_update_interval', 60),
+			'sort_order'              => isset($_POST['sort_order']) ? (int) $_POST['sort_order'] : 0,
 		);
 
-		if ( $id > 0 ) {
-			$existing = $repo->get( $id );
+		if ($id > 0) {
+			$existing = $repo->get($id);
 
-			if ( null === $existing ) {
-				wp_send_json_error( array( 'message' => __( 'Currency not found.', 'ratebridge-woo' ) ), 404 );
+			if (null === $existing) {
+				wp_send_json_error(array('message' => __('Currency not found.', 'ratebridge-woo')), 404);
 			}
 
 			// Keep the current rate if the field was left empty.
-			if ( 0.0 === $rate ) {
-				unset( $data['rate'] );
+			if (0.0 === $rate) {
+				unset($data['rate']);
 			}
 
-			$saved = $repo->update( $id, $data );
+			$saved = $repo->update($id, $data);
 		} else {
-			$now                = current_time( 'mysql', true );
+			$now                = current_time('mysql', true);
 			$data['created_at'] = $now;
 			$data['updated_at'] = $now;
-			$id                 = $repo->create( $data );
+			$id                 = $repo->create($data);
 			$saved              = $id > 0;
 		}
 
-		if ( ! $saved ) {
-			wp_send_json_error( array( 'message' => __( 'Could not save the currency.', 'ratebridge-woo' ) ), 500 );
+		if (! $saved) {
+			wp_send_json_error(array('message' => __('Could not save the currency.', 'ratebridge-woo')), 500);
 		}
 
-		$currency = $repo->get( $id );
+		$currency = $repo->get($id);
 
 		wp_send_json_success(
 			array(
-				'message'  => __( 'Currency saved.', 'ratebridge-woo' ),
-				'currency' => $currency instanceof Currency ? $this->currency_payload( $currency ) : array(),
+				'message'  => __('Currency saved.', 'ratebridge-woo'),
+				'currency' => $currency instanceof Currency ? $this->currency_payload($currency) : array(),
 			)
 		);
 	}
@@ -245,21 +355,22 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function delete(): void {
-		$id   = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
+	private function delete(): void
+	{
+		$id   = isset($_POST['id']) ? absint($_POST['id']) : 0;
 		$repo = new CurrencyRepository();
 
-		if ( null === $repo->get( $id ) ) {
-			wp_send_json_error( array( 'message' => __( 'Currency not found.', 'ratebridge-woo' ) ), 404 );
+		if (null === $repo->get($id)) {
+			wp_send_json_error(array('message' => __('Currency not found.', 'ratebridge-woo')), 404);
 		}
 
-		if ( ! $repo->delete( $id ) ) {
-			wp_send_json_error( array( 'message' => __( 'Could not delete the currency.', 'ratebridge-woo' ) ), 500 );
+		if (! $repo->delete($id)) {
+			wp_send_json_error(array('message' => __('Could not delete the currency.', 'ratebridge-woo')), 500);
 		}
 
 		wp_send_json_success(
 			array(
-				'message' => __( 'Currency deleted.', 'ratebridge-woo' ),
+				'message' => __('Currency deleted.', 'ratebridge-woo'),
 				'id'      => $id,
 			)
 		);
@@ -270,24 +381,25 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function update_now(): void {
-		$id      = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
-		$summary = ( new RateUpdater() )->update_one( $id, 'manual' );
+	private function update_now(): void
+	{
+		$id      = isset($_POST['id']) ? absint($_POST['id']) : 0;
+		$summary = (new RateUpdater())->update_one($id, 'manual');
 		$repo    = new CurrencyRepository();
-		$item    = $repo->get( $id );
+		$item    = $repo->get($id);
 
 		$payload = array(
-			'message'  => (string) ( $summary['message'] ?? '' ),
-			'updated'  => (int) ( $summary['updated'] ?? 0 ),
-			'failed'   => (int) ( $summary['failed'] ?? 0 ),
-			'currency' => $item instanceof Currency ? $this->currency_payload( $item ) : array(),
+			'message'  => (string) ($summary['message'] ?? ''),
+			'updated'  => (int) ($summary['updated'] ?? 0),
+			'failed'   => (int) ($summary['failed'] ?? 0),
+			'currency' => $item instanceof Currency ? $this->currency_payload($item) : array(),
 		);
 
-		if ( ! empty( $payload['failed'] ) ) {
-			wp_send_json_error( $payload, 200 );
+		if (! empty($payload['failed'])) {
+			wp_send_json_error($payload, 200);
 		}
 
-		wp_send_json_success( $payload );
+		wp_send_json_success($payload);
 	}
 
 	/**
@@ -295,26 +407,27 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function update_all(): void {
-		$summary = ( new RateUpdater() )->update_all_enabled( 'manual' );
+	private function update_all(): void
+	{
+		$summary = (new RateUpdater())->update_all_enabled('manual');
 		$repo    = new CurrencyRepository();
 		$list    = array_map(
-			fn ( Currency $currency ): array => $this->currency_payload( $currency ),
+			fn(Currency $currency): array => $this->currency_payload($currency),
 			$repo->get_all()
 		);
 
 		$payload = array(
-			'message'    => (string) ( $summary['message'] ?? '' ),
-			'updated'    => (int) ( $summary['updated'] ?? 0 ),
-			'failed'     => (int) ( $summary['failed'] ?? 0 ),
+			'message'    => (string) ($summary['message'] ?? ''),
+			'updated'    => (int) ($summary['updated'] ?? 0),
+			'failed'     => (int) ($summary['failed'] ?? 0),
 			'currencies' => $list,
 		);
 
-		if ( ! empty( $payload['failed'] ) ) {
-			wp_send_json_error( $payload, 200 );
+		if (! empty($payload['failed'])) {
+			wp_send_json_error($payload, 200);
 		}
 
-		wp_send_json_success( $payload );
+		wp_send_json_success($payload);
 	}
 
 	/**
@@ -322,17 +435,18 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function get_currency(): void {
-		$id       = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
-		$currency = ( new CurrencyRepository() )->get( $id );
+	private function get_currency(): void
+	{
+		$id       = isset($_POST['id']) ? absint($_POST['id']) : 0;
+		$currency = (new CurrencyRepository())->get($id);
 
-		if ( null === $currency ) {
-			wp_send_json_error( array( 'message' => __( 'Currency not found.', 'ratebridge-woo' ) ), 404 );
+		if (null === $currency) {
+			wp_send_json_error(array('message' => __('Currency not found.', 'ratebridge-woo')), 404);
 		}
 
 		wp_send_json_success(
 			array(
-				'currency' => $this->currency_payload( $currency ),
+				'currency' => $this->currency_payload($currency),
 			)
 		);
 	}
@@ -342,20 +456,21 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function save_settings(): void {
+	private function save_settings(): void
+	{
 		$values = array(
-			'store_currency_unit'      => isset( $_POST['store_currency_unit'] ) ? sanitize_key( wp_unslash( (string) $_POST['store_currency_unit'] ) ) : '',
-			'rounding_mode'            => isset( $_POST['rounding_mode'] ) ? sanitize_key( wp_unslash( (string) $_POST['rounding_mode'] ) ) : '',
-			'rounding_step'            => isset( $_POST['rounding_step'] ) ? absint( $_POST['rounding_step'] ) : 1,
-			'default_update_interval'  => isset( $_POST['default_update_interval'] ) ? absint( $_POST['default_update_interval'] ) : 60,
-			'delete_data_on_uninstall' => isset( $_POST['delete_data_on_uninstall'] ) && '1' === sanitize_text_field( wp_unslash( (string) $_POST['delete_data_on_uninstall'] ) ),
+			'store_currency_unit'      => isset($_POST['store_currency_unit']) ? sanitize_key(wp_unslash((string) $_POST['store_currency_unit'])) : '',
+			'rounding_mode'            => isset($_POST['rounding_mode']) ? sanitize_key(wp_unslash((string) $_POST['rounding_mode'])) : '',
+			'rounding_step'            => isset($_POST['rounding_step']) ? absint($_POST['rounding_step']) : 1,
+			'default_update_interval'  => isset($_POST['default_update_interval']) ? absint($_POST['default_update_interval']) : 60,
+			'delete_data_on_uninstall' => isset($_POST['delete_data_on_uninstall']) && '1' === sanitize_text_field(wp_unslash((string) $_POST['delete_data_on_uninstall'])),
 		);
 
-		$saved = Settings::update( $values );
+		$saved = Settings::update($values);
 
 		wp_send_json_success(
 			array(
-				'message'  => __( 'Settings saved.', 'ratebridge-woo' ),
+				'message'  => __('Settings saved.', 'ratebridge-woo'),
 				'settings' => $saved,
 			)
 		);
@@ -366,44 +481,45 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function save_provider_settings(): void {
-		$provider_key = isset( $_POST['provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['provider'] ) ) : '';
+	private function save_provider_settings(): void
+	{
+		$provider_key = isset($_POST['provider']) ? sanitize_key(wp_unslash((string) $_POST['provider'])) : '';
 
-		if ( '' === $provider_key ) {
-			wp_send_json_error( array( 'message' => __( 'Unknown provider.', 'ratebridge-woo' ) ), 400 );
+		if ('' === $provider_key) {
+			wp_send_json_error(array('message' => __('Unknown provider.', 'ratebridge-woo')), 400);
 		}
 
 		// Collect the raw field values for this provider only.
 		$raw = array();
 
-		if ( isset( $_POST['fields'] ) && is_array( $_POST['fields'] ) ) {
+		if (isset($_POST['fields']) && is_array($_POST['fields'])) {
 			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitised per field type below.
-			$submitted = wp_unslash( $_POST['fields'] );
+			$submitted = wp_unslash($_POST['fields']);
 
-			foreach ( (array) $submitted as $field_key => $field_value ) {
-				$raw[ sanitize_key( (string) $field_key ) ] = is_scalar( $field_value ) ? (string) $field_value : '';
+			foreach ((array) $submitted as $field_key => $field_value) {
+				$raw[sanitize_key((string) $field_key)] = is_scalar($field_value) ? (string) $field_value : '';
 			}
 		}
 
 		$service = new ProviderSettings();
-		$result  = $service->save( $provider_key, $raw );
+		$result  = $service->save($provider_key, $raw);
 
-		if ( is_wp_error( $result ) ) {
+		if (is_wp_error($result)) {
 			wp_send_json_error(
 				array(
 					'message' => $result->get_error_message(),
-					'errors'  => (array) ( $result->get_error_data()['errors'] ?? array() ),
+					'errors'  => (array) ($result->get_error_data()['errors'] ?? array()),
 				),
 				400
 			);
 		}
 
-		$provider = ProviderRegistry::instance()->get( $provider_key );
+		$provider = ProviderRegistry::instance()->get($provider_key);
 
 		wp_send_json_success(
 			array(
-				'message' => __( 'Provider settings saved.', 'ratebridge-woo' ),
-				'card'    => $provider instanceof ProviderInterface ? $service->card_model( $provider ) : array(),
+				'message' => __('Provider settings saved.', 'ratebridge-woo'),
+				'card'    => $provider instanceof ProviderInterface ? $service->card_model($provider) : array(),
 			)
 		);
 	}
@@ -413,12 +529,13 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function test_provider(): void {
-		$provider_key = isset( $_POST['provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['provider'] ) ) : '';
+	private function test_provider(): void
+	{
+		$provider_key = isset($_POST['provider']) ? sanitize_key(wp_unslash((string) $_POST['provider'])) : '';
 		$service      = new ProviderSettings();
-		$result       = $service->test_connection( $provider_key );
+		$result       = $service->test_connection($provider_key);
 
-		if ( is_wp_error( $result ) ) {
+		if (is_wp_error($result)) {
 			wp_send_json_error(
 				array(
 					'message' => $result->get_error_message(),
@@ -427,7 +544,7 @@ final class AjaxController {
 			);
 		}
 
-		wp_send_json_success( $result );
+		wp_send_json_success($result);
 	}
 
 	/**
@@ -435,25 +552,26 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function reset_budget(): void {
-		$provider_key = isset( $_POST['provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['provider'] ) ) : '';
-		$provider     = ProviderRegistry::instance()->get( $provider_key );
+	private function reset_budget(): void
+	{
+		$provider_key = isset($_POST['provider']) ? sanitize_key(wp_unslash((string) $_POST['provider'])) : '';
+		$provider     = ProviderRegistry::instance()->get($provider_key);
 
-		if ( null === $provider ) {
-			wp_send_json_error( array( 'message' => __( 'Unknown provider.', 'ratebridge-woo' ) ), 400 );
+		if (null === $provider) {
+			wp_send_json_error(array('message' => __('Unknown provider.', 'ratebridge-woo')), 400);
 		}
 
 		// Clear both the quota state and any cached payloads.
-		RequestBudget::reset( $provider_key );
+		RequestBudget::reset($provider_key);
 
-		if ( $provider instanceof AbstractProvider ) {
+		if ($provider instanceof AbstractProvider) {
 			$provider->flush_cache();
 		}
 
 		wp_send_json_success(
 			array(
-				'message' => __( 'Request counters reset.', 'ratebridge-woo' ),
-				'card'    => ( new ProviderSettings() )->card_model( $provider ),
+				'message' => __('Request counters reset.', 'ratebridge-woo'),
+				'card'    => (new ProviderSettings())->card_model($provider),
 			)
 		);
 	}
@@ -463,37 +581,48 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function add_preset(): void {
-		$provider_key = isset( $_POST['provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['provider'] ) ) : '';
-		$symbol       = isset( $_POST['symbol'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['symbol'] ) ) : '';
-		$code         = isset( $_POST['code'] ) ? strtoupper( sanitize_text_field( wp_unslash( (string) $_POST['code'] ) ) ) : '';
-		$name         = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['name'] ) ) : '';
+	private function add_preset(): void
+	{
+		$provider_key = isset($_POST['provider']) ? sanitize_key(wp_unslash((string) $_POST['provider'])) : '';
+		$symbol       = isset($_POST['symbol']) ? sanitize_text_field(wp_unslash((string) $_POST['symbol'])) : '';
+		$code         = isset($_POST['code']) ? strtoupper(sanitize_text_field(wp_unslash((string) $_POST['code']))) : '';
+		$name         = isset($_POST['name']) ? sanitize_text_field(wp_unslash((string) $_POST['name'])) : '';
 
 		$registry = ProviderRegistry::instance();
-		$provider = $registry->get( $provider_key );
+		$provider = $registry->get($provider_key);
 
-		if ( null === $provider || '' === $symbol ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid preset.', 'ratebridge-woo' ) ), 400 );
+		if (null === $provider || '' === $symbol) {
+			wp_send_json_error(array('message' => __('Invalid preset.', 'ratebridge-woo')), 400);
 		}
 
-		$known = $provider->get_known_symbols();
+		$symbol = $provider->normalize_symbol($symbol);
+		$known  = $provider->get_known_symbols();
 
-		if ( ! array_key_exists( $symbol, $known ) ) {
-			wp_send_json_error( array( 'message' => __( 'This symbol is not offered by the selected source.', 'ratebridge-woo' ) ), 400 );
+		if (! array_key_exists($symbol, $known)) {
+			wp_send_json_error(array('message' => __('This symbol is not offered by the selected source.', 'ratebridge-woo')), 400);
 		}
 
 		$repo = new CurrencyRepository();
-		$code = preg_replace( '/[^A-Z0-9_\-]/', '', $code ) ?? '';
+		$code = preg_replace('/[^A-Z0-9_\-]/', '', $code) ?? '';
 
-		if ( '' === $code || '' === $name ) {
-			wp_send_json_error( array( 'message' => __( 'Code and name are required.', 'ratebridge-woo' ) ), 400 );
+		if ('' === $code || '' === $name) {
+			wp_send_json_error(array('message' => __('Code and name are required.', 'ratebridge-woo')), 400);
 		}
 
-		if ( $repo->code_exists( $code ) ) {
-			wp_send_json_error( array( 'message' => __( 'This code is already used by another currency.', 'ratebridge-woo' ) ), 400 );
+		if ($repo->code_exists($code)) {
+			// Tell the UI which free code to suggest instead of a bare error.
+			$suggestion = self::unique_code($repo, $code, $provider_key);
+
+			wp_send_json_error(
+				array(
+					'message'    => __('This code is already used by another currency.', 'ratebridge-woo'),
+					'suggestion' => $suggestion,
+				),
+				400
+			);
 		}
 
-		$now = current_time( 'mysql', true );
+		$now = current_time('mysql', true);
 
 		$id = $repo->create(
 			array(
@@ -504,25 +633,57 @@ final class AjaxController {
 				'provider_symbol'         => $symbol,
 				'rate'                    => 0,
 				'is_enabled'              => 0,
-				'update_interval_minutes' => (int) Settings::get( 'default_update_interval', 60 ),
+				'update_interval_minutes' => (int) Settings::get('default_update_interval', 60),
 				'sort_order'              => 0,
 				'created_at'              => $now,
 				'updated_at'              => $now,
 			)
 		);
 
-		if ( $id <= 0 ) {
-			wp_send_json_error( array( 'message' => __( 'Could not save the currency.', 'ratebridge-woo' ) ), 500 );
+		if ($id <= 0) {
+			wp_send_json_error(array('message' => __('Could not save the currency.', 'ratebridge-woo')), 500);
 		}
 
-		$currency = $repo->get( $id );
+		$currency = $repo->get($id);
 
 		wp_send_json_success(
 			array(
-				'message'  => __( 'Currency added from presets. Enable it to start updating.', 'ratebridge-woo' ),
-				'currency' => $currency instanceof Currency ? $this->currency_payload( $currency ) : array(),
+				'message'  => __('Currency added from presets. Enable it to start updating.', 'ratebridge-woo'),
+				'currency' => $currency instanceof Currency ? $this->currency_payload($currency) : array(),
 			)
 		);
+	}
+
+	/**
+	 * Suggest a free currency code derived from a taken one.
+	 *
+	 * `USD` + provider `navasan` -> `USD_NAVASAN`, then `USD_NAVASAN2`, ...
+	 * Always <= 32 chars, always [A-Z0-9_-].
+	 *
+	 * @param CurrencyRepository $repo         Repository.
+	 * @param string             $taken        Existing code.
+	 * @param string             $provider_key Provider key used as a suffix.
+	 * @return string
+	 */
+	public static function unique_code(CurrencyRepository $repo, string $taken, string $provider_key): string
+	{
+		$suffix = strtoupper(preg_replace('/[^A-Za-z0-9_]/', '', $provider_key) ?? '');
+		$base   = substr($taken, 0, max(1, 32 - (strlen($suffix) + 2)));
+
+		$candidate = '' !== $suffix ? $base . '_' . $suffix : $base;
+		$attempt   = 1;
+
+		while ($repo->code_exists($candidate)) {
+			++$attempt;
+			$tail      = (string) $attempt;
+			$candidate = substr($base, 0, 32 - (strlen($suffix) + strlen($tail) + 2)) . '_' . $suffix . $tail;
+
+			if ($attempt > 50) {
+				break;
+			}
+		}
+
+		return $candidate;
 	}
 
 	/**
@@ -530,13 +691,14 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function get_symbols(): void {
-		$provider_key = isset( $_POST['provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['provider'] ) ) : '';
+	private function get_symbols(): void
+	{
+		$provider_key = isset($_POST['provider']) ? sanitize_key(wp_unslash((string) $_POST['provider'])) : '';
 		$registry     = ProviderRegistry::instance();
 
 		wp_send_json_success(
 			array(
-				'symbols' => $registry->known_symbols( $provider_key ),
+				'symbols' => $registry->known_symbols($provider_key),
 			)
 		);
 	}
@@ -546,20 +708,21 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function get_log(): void {
+	private function get_log(): void
+	{
 		$entries = array();
 
-		foreach ( Logger::all() as $entry ) {
+		foreach (Logger::all() as $entry) {
 			$entries[] = array(
-				'time'       => isset( $entry['time'] ) ? wp_date( 'Y-m-d H:i:s', (int) $entry['time'] ) : '',
-				'status'     => isset( $entry['status'] ) ? (string) $entry['status'] : 'error',
-				'message'    => isset( $entry['message'] ) ? (string) $entry['message'] : '',
-				'trigger'    => isset( $entry['trigger'] ) ? (string) $entry['trigger'] : 'cron',
-				'currencies' => isset( $entry['currencies'] ) && is_array( $entry['currencies'] ) ? implode( ', ', $entry['currencies'] ) : '',
+				'time'       => isset($entry['time']) ? wp_date('Y-m-d H:i:s', (int) $entry['time']) : '',
+				'status'     => isset($entry['status']) ? (string) $entry['status'] : 'error',
+				'message'    => isset($entry['message']) ? (string) $entry['message'] : '',
+				'trigger'    => isset($entry['trigger']) ? (string) $entry['trigger'] : 'cron',
+				'currencies' => isset($entry['currencies']) && is_array($entry['currencies']) ? implode(', ', $entry['currencies']) : '',
 			);
 		}
 
-		wp_send_json_success( array( 'entries' => $entries ) );
+		wp_send_json_success(array('entries' => $entries));
 	}
 
 	/**
@@ -567,10 +730,11 @@ final class AjaxController {
 	 *
 	 * @return void
 	 */
-	private function clear_log(): void {
+	private function clear_log(): void
+	{
 		Logger::clear();
 
-		wp_send_json_success( array( 'message' => __( 'Log cleared.', 'ratebridge-woo' ) ) );
+		wp_send_json_success(array('message' => __('Log cleared.', 'ratebridge-woo')));
 	}
 
 	/**
@@ -579,7 +743,8 @@ final class AjaxController {
 	 * @param Currency $currency Currency.
 	 * @return array<string, mixed>
 	 */
-	private function currency_payload( Currency $currency ): array {
+	private function currency_payload(Currency $currency): array
+	{
 		return array(
 			'id'                      => $currency->id,
 			'code'                    => $currency->code,
@@ -588,10 +753,10 @@ final class AjaxController {
 			'provider'                => $currency->provider,
 			'provider_symbol'         => $currency->provider_symbol,
 			'rate'                    => $currency->rate,
-			'rate_formatted'          => SettingsPage::format_rate( $currency ),
+			'rate_formatted'          => SettingsPage::format_rate($currency),
 			'is_enabled'              => $currency->is_enabled,
 			'update_interval_minutes' => $currency->update_interval_minutes,
-			'last_updated'            => SettingsPage::format_datetime( $currency->last_updated ),
+			'last_updated'            => SettingsPage::format_datetime($currency->last_updated),
 			'last_error'              => (string) $currency->last_error,
 			'sort_order'              => $currency->sort_order,
 		);

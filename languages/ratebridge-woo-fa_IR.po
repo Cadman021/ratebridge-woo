@@ -709,3 +709,27 @@ msgstr "تازه‌سازی گزارش"
 
 msgid "Volatility"
 msgstr "نوسان"
+
+msgid "Add"
+msgstr "افزودن"
+
+msgid "Auto schedule"
+msgstr "زمان‌بندی خودکار"
+
+msgid "Generated from the symbol. Change it if the code is already taken."
+msgstr "از روی نماد ساخته می‌شود. اگر این کد قبلاً استفاده شده، آن را تغییر دهید."
+
+msgid "OK"
+msgstr "موفق"
+
+msgid "Select or enter a provider symbol."
+msgstr "نماد منبع قیمت را انتخاب یا وارد کنید."
+
+msgid "Swedish Krona"
+msgstr "کرون سوئد"
+
+msgid "That code is already used. Suggested: %s"
+msgstr "این کد قبلاً استفاده شده است. پیشنهاد: %s"
+
+msgid "The server did not recognise this request (HTTP %d). Please refresh the page."
+msgstr "درخواست توسط سرور شناسایی نشد (HTTP %d). صفحه را رفرش کنید."

@@ -171,12 +171,20 @@ if ( '' !== $navasan_body ) {
 	Assert::rate( 'eur', $map['eur'] ?? null, 302460.0 );
 	Assert::rate( 'aed', $map['aed'] ?? null, 74220.0 );
 	Assert::rate( '18ayar', $map['18ayar'] ?? null, 26051530.0 );
-	Assert::rate( 'sekkeh', $map['sekkeh'] ?? null, 267000.0 );
-	Assert::rate( 'bahar', $map['bahar'] ?? null, 255000.0 );
-	Assert::rate( 'nim', $map['nim'] ?? null, 141000.0 );
-	Assert::rate( 'rob', $map['rob'] ?? null, 76000.0 );
-	Assert::rate( 'gerami', $map['gerami'] ?? null, 38000.0 );
-	Assert::rate( 'abshodeh', $map['abshodeh'] ?? null, 112850.0 );
+	// Coins and melted gold are quoted in THOUSAND Toman and must be x1000.
+	Assert::rate( 'sekkeh (x1000)', $map['sekkeh'] ?? null, 267000000.0 );
+	Assert::rate( 'bahar (x1000)', $map['bahar'] ?? null, 255000000.0 );
+	Assert::rate( 'nim (x1000)', $map['nim'] ?? null, 141000000.0 );
+	Assert::rate( 'rob (x1000)', $map['rob'] ?? null, 76000000.0 );
+	Assert::rate( 'gerami (x1000)', $map['gerami'] ?? null, 38000000.0 );
+	Assert::rate( 'abshodeh (x1000)', $map['abshodeh'] ?? null, 112850000.0 );
+
+	// Unit multipliers must also apply to buy/sell variants.
+	Assert::check( 'unit_multiplier(sekkeh)=1000', 1000.0 === NavasanParser::unit_multiplier( 'sekkeh' ) );
+	Assert::check( 'unit_multiplier(sekkeh_sell)=1000', 1000.0 === NavasanParser::unit_multiplier( 'sekkeh_sell' ) );
+	Assert::check( 'unit_multiplier(sekkeh_buy)=1000', 1000.0 === NavasanParser::unit_multiplier( 'sekkeh_buy' ) );
+	Assert::check( 'unit_multiplier(usd)=1', 1.0 === NavasanParser::unit_multiplier( 'usd' ) );
+	Assert::check( 'unit_multiplier(18ayar)=1', 1.0 === NavasanParser::unit_multiplier( '18ayar' ) );
 	Assert::rate( 'xau (Toman, not USD)', $map['xau'] ?? null, 1078851150.0 );
 	Assert::rate( 'xag (Toman)', $map['xag'] ?? null, 14554470.0 );
 
@@ -300,6 +308,49 @@ Assert::rate( 'envelope {data:{...}} unwrapped', AlanChandParser::parse_to_toman
 
 // Error payload parses to nothing.
 Assert::check( 'error payload yields no rates', array() === AlanChandParser::parse_to_toman( '{"error":"توکن یافت نشد."}' ) );
+
+/* ------------------------------------------------------------------------- */
+echo "\n[6] Cross-source consistency (Navasan vs AlanChand, within 3%)\n";
+/* ------------------------------------------------------------------------- */
+if ( '' !== $navasan_body && '' !== $alan_currency && '' !== $alan_gold ) {
+	$nav = NavasanParser::parse_to_toman( $navasan_body );
+	$cur = AlanChandParser::parse_to_toman( $alan_currency, AlanChandParser::TYPE_CURRENCY );
+	$gld = AlanChandParser::parse_to_toman( $alan_gold, AlanChandParser::TYPE_GOLD );
+
+	// array( navasan key, alanchand payload, alanchand slug, label )
+	$cross = array(
+		array( 'usd', $cur, 'usd', 'USD' ),
+		array( 'eur', $cur, 'eur', 'EUR' ),
+		array( 'aed', $cur, 'aed', 'AED' ),
+		array( '18ayar', $gld, '18ayar', '18K gold' ),
+		array( 'sekkeh', $gld, 'sekkeh', 'Full coin' ),
+		array( 'bahar', $gld, 'bahar', 'Bahar coin' ),
+		array( 'nim', $gld, 'nim', 'Half coin' ),
+		array( 'rob', $gld, 'rob', 'Quarter coin' ),
+		array( 'gerami', $gld, 'sek', 'Gram coin' ),
+		array( 'abshodeh', $gld, 'abshodeh', 'Melted gold' ),
+	);
+
+	foreach ( $cross as $pair ) {
+		list( $nav_key, $source, $ac_slug, $label ) = $pair;
+
+		$nav_value = $nav[ $nav_key ] ?? null;
+		$ac_value  = $source[ $ac_slug ] ?? null;
+
+		if ( null === $nav_value || null === $ac_value ) {
+			Assert::check( $label . ' present in both sources', false, 'navasan=' . var_export( $nav_value, true ) . ' alanchand=' . var_export( $ac_value, true ) );
+			continue;
+		}
+
+		$diff_pct = abs( $nav_value - $ac_value ) / max( $nav_value, 0.0001 ) * 100;
+
+		Assert::check(
+			sprintf( '%s within 3%% (%s vs %s, %.2f%%)', $label, number_format( $nav_value ), number_format( $ac_value ), $diff_pct ),
+			$diff_pct <= 3.0
+		);
+	}
+}
+
 
 /* ------------------------------------------------------------------------- */
 echo "\n", str_repeat( '=', 60 ), "\n";

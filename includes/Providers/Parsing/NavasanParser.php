@@ -58,6 +58,52 @@ final class NavasanParser {
 	private const IGNORED_PREFIXES = array( 'bub_', 'mob_', 'mex_', 'hav_' );
 
 	/**
+	 * Items whose Navasan `value` is expressed in THOUSAND Toman, not Toman.
+	 *
+	 * Evidence (docs/api-samples, same moment in time):
+	 *
+	 *   item        Navasan        AlanChand        ratio
+	 *   sekkeh       267,000       267,000,000      x1000
+	 *   bahar        255,000       255,000,000      x1000
+	 *   nim          141,000       141,000,000      x1000
+	 *   rob           76,000        76,000,000      x1000
+	 *   gerami        38,000        38,000,000      x1000  (AlanChand slug: sek)
+	 *   abshodeh     112,850       112,850,000      x1000
+	 *   --- unchanged, genuinely Toman ---
+	 *   usd          270,000       270,900         x1
+	 *   eur          302,460       303,500         x1
+	 *   aed           74,220        73,760         x1
+	 *   18ayar    26,051,530    26,051,530        x1
+	 *
+	 * xau / xag and the crypto pairs are real Toman and stay x1.
+	 *
+	 * @var array<string, float>
+	 */
+	private const UNIT_MULTIPLIERS = array(
+		'sekkeh'   => 1000.0,
+		'bahar'    => 1000.0,
+		'nim'      => 1000.0,
+		'rob'      => 1000.0,
+		'gerami'   => 1000.0,
+		'abshodeh' => 1000.0,
+	);
+
+	/**
+	 * Conversion factor applied to a Navasan item to reach real Toman.
+	 *
+	 * Collapses an optional buy/sell suffix first, so `sekkeh_buy` also gets
+	 * the x1000 treatment.
+	 *
+	 * @param string $key Payload key, e.g. `sekkeh` or `sekkeh_sell`.
+	 * @return float 1.0 or 1000.0.
+	 */
+	public static function unit_multiplier( string $key ): float {
+		$base = preg_replace( '/_(buy|sell)$/', '', strtolower( trim( $key ) ) ) ?? '';
+
+		return self::UNIT_MULTIPLIERS[ $base ] ?? 1.0;
+	}
+
+	/**
 	 * Parse the whole payload into a base-key => Toman rate map.
 	 *
 	 * Keys keep their Navasan base form (`usd`, `18ayar`, `sekkeh`, …) so any
@@ -93,7 +139,8 @@ final class NavasanParser {
 				continue;
 			}
 
-			$rates[ $key ] = $value;
+			// Coins and melted gold are quoted in thousand Toman by Navasan.
+			$rates[ $key ] = $value * self::unit_multiplier( $key );
 		}
 
 		return $rates;

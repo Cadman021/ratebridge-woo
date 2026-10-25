@@ -86,6 +86,19 @@ abstract class AbstractProvider implements ProviderInterface {
 	}
 
 	/**
+	 * Normalise a provider symbol before storing or looking it up.
+	 *
+	 * Default: trim + lowercase. Providers with a catalogue override this so
+	 * free-text input lines up with their canonical keys.
+	 *
+	 * @param string $symbol Raw symbol.
+	 * @return string
+	 */
+	public function normalize_symbol( string $symbol ): string {
+		return strtolower( trim( $symbol ) );
+	}
+
+	/**
 	 * The budget period the provider is effectively limited to, in minutes.
 	 *
 	 * The larger of the explicit interval and the interval implied by the

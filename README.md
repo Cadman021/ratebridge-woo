@@ -294,16 +294,49 @@ An AlanChand currency row's `provider_symbol` may be written as:
 
 Unknown bare slugs fall back to `currency`.
 
-### Parser tests
+AlanChand symbols are stored **typed** (`currency:usd`, `gold:sekkeh`, `gold:sek`) because `sek`
+exists in both catalogues (Swedish krona vs gram coin).
+
+### Unit multipliers (Navasan)
+
+Navasan quotes **coins and melted gold in thousand Toman**, everything else in real Toman.
+`NavasanParser::UNIT_MULTIPLIERS` applies `x1000` to `sekkeh`, `bahar`, `nim`, `rob`, `gerami`
+and `abshodeh` (including their `_buy` / `_sell` variants). Evidence from the fixtures:
+`sekkeh` is `267000` on Navasan vs `267,000,000` on AlanChand, and the same x1000 holds for the
+other five. Currencies, `18ayar`, `xau`/`xag` and crypto pairs are unchanged.
+
+### Request format (AlanChand)
+
+The real, verified endpoints are:
+
+```
+https://api.alanchand.com/?type=currencies&token=TOKEN
+https://api.alanchand.com/?type=golds&token=TOKEN
+https://api.alanchand.com/?type=crypto&token=TOKEN
+```
+
+The token travels in the **query string**, `type` is **plural**, and there is **no `symbols`
+parameter** — the whole catalogue is fetched once per type and cached. Because the token is in
+the URL, `scrub_secrets()` must strip it from every message (covered by
+`tests/scrub-secrets.php`). The query args can be replaced with the
+`rbw_alanchand_request_args` filter.
+
+### Tests
 
 Pure parsers live in `includes/Providers/Parsing/` with **no WordPress dependency**, so they can
 be tested from the CLI against the real fixtures:
 
 ```bash
-php tests/parse-fixtures.php
+php tests/parse-fixtures.php    # parsing + cross-source consistency (79 assertions)
+php tests/ajax-actions.php      # JS request() slugs vs registered wp_ajax hooks (67)
+php tests/scrub-secrets.php     # credentials never leak into messages (11)
 ```
 
-It prints `PASS`/`FAIL` per assertion and exits non-zero on failure (64 assertions currently).
+Each prints `PASS`/`FAIL` per assertion and exits non-zero on failure.
+
+`tests/ajax-actions.php` guards the Phase-2 regression where `admin.js` sent `action=rbw_save`
+while the server only hooked `wp_ajax_rbw_save_currency`, so admin-ajax.php answered a bare `0`.
+`AjaxController::actions()` is now the single source of truth for the dispatcher slugs.
 
 ---
 
