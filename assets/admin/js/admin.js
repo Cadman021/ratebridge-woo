@@ -51,6 +51,10 @@
 	/**
 	 * Perform an AJAX request.
 	 *
+	 * Nested objects are flattened into `key[subkey]=value` pairs, which is how
+	 * PHP expects them (`$_POST['key']['subkey']`). A plain String() cast would
+	 * send "[object Object]" and the server would see nothing.
+	 *
 	 * @param {string} action  rbw_action value.
 	 * @param {Object} payload Extra parameters.
 	 * @return {Promise<Object>} Parsed JSON response.
@@ -61,8 +65,40 @@
 		body.append( 'rbw_action', action );
 		body.append( 'nonce', config.nonce );
 
+		/**
+		 * Append a value, recursing into plain objects and arrays.
+		 *
+		 * @param {string} key   Field name (already bracketed for nesting).
+		 * @param {*}      value Value to append.
+		 */
+		function append( key, value ) {
+			if ( value === true ) {
+				body.append( key, '1' );
+				return;
+			}
+
+			if ( value === false ) {
+				body.append( key, '0' );
+				return;
+			}
+
+			if ( value === null || typeof value === 'undefined' ) {
+				body.append( key, '' );
+				return;
+			}
+
+			if ( typeof value === 'object' ) {
+				Object.keys( value ).forEach( function ( subkey ) {
+					append( key + '[' + subkey + ']', value[ subkey ] );
+				} );
+				return;
+			}
+
+			body.append( key, String( value ) );
+		}
+
 		Object.keys( payload || {} ).forEach( function ( key ) {
-			body.append( key, payload[ key ] === true ? '1' : payload[ key ] === false ? '0' : String( payload[ key ] ) );
+			append( key, payload[ key ] );
 		} );
 
 		return window.fetch( config.ajaxUrl, {
