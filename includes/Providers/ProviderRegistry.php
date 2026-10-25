@@ -61,6 +61,8 @@ final class ProviderRegistry {
 		$built_in = array(
 			new ManualProvider(),
 			new MockProvider(),
+			new NavasanProvider(),
+			new AlanChandProvider(),
 		);
 
 		/**
@@ -133,6 +135,52 @@ final class ProviderRegistry {
 		}
 
 		return $choices;
+	}
+
+	/**
+	 * Providers that declare at least one settings field.
+	 *
+	 * @return array<string, ProviderInterface>
+	 */
+	public function with_settings(): array {
+		$with = array();
+
+		foreach ( $this->all() as $key => $provider ) {
+			if ( ! empty( $provider->get_settings_fields() ) ) {
+				$with[ $key ] = $provider;
+			}
+		}
+
+		return $with;
+	}
+
+	/**
+	 * Known symbols for a provider, or an empty array.
+	 *
+	 * @param string $key Provider key.
+	 * @return array<string, string>
+	 */
+	public function known_symbols( string $key ): array {
+		return $this->get( $key )?->get_known_symbols() ?? array();
+	}
+
+	/**
+	 * Known symbols for every provider, shaped for the admin dialog.
+	 *
+	 * @return array<string, array<string, string>>
+	 */
+	public function all_known_symbols(): array {
+		$map = array();
+
+		foreach ( $this->all() as $key => $provider ) {
+			$symbols = $provider->get_known_symbols();
+
+			if ( ! empty( $symbols ) ) {
+				$map[ $key ] = $symbols;
+			}
+		}
+
+		return $map;
 	}
 
 	/**

@@ -1,0 +1,708 @@
+# Persian (fa_IR) translation for RateBridge Woo / نرخ ساز
+# This file is distributed under the same license as the plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: RateBridge Woo 0.2.0\n"
+"Report-Msgid-Bugs-To: https://example.com/ratebridge-woo\n"
+"POT-Creation-Date: 2026-10-25T00:00:00+00:00\n"
+"PO-Revision-Date: 2026-10-25T00:00:00+00:00\n"
+"Last-Translator: RateBridge\n"
+"Language-Team: Persian\n"
+"Language: fa_IR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Domain: ratebridge-woo\n"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Placeholders and counters
+# ─────────────────────────────────────────────────────────────────────────────
+msgid "%1$d minutes configured, %2$d minutes effective"
+msgstr "%1$d دقیقه تنظیم شده، %2$d دقیقه مؤثر"
+
+msgid "%1$d of %2$d"
+msgstr "%1$d از %2$d"
+
+msgid "%1$s failed recently. To protect the quota, the next request is allowed in %2$d minutes."
+msgstr "%1$s به‌تازگی خطا داد. برای حفظ سهمیه، درخواست بعدی %2$d دقیقه دیگر مجاز است."
+
+msgid "%1$s may only be queried every so often. The next request is allowed in %2$d minutes."
+msgstr "از %1$s فقط هر چند وقت یک‌بار می‌توان پرس‌وجو کرد. درخواست بعدی %2$d دقیقه دیگر مجاز است."
+
+msgid "%d (no limit set)"
+msgstr "%d (بدون محدودیت)"
+
+msgid "%d currency updated."
+msgid_plural "%d currencies updated."
+msgstr[0] "%d ارز به‌روزرسانی شد."
+msgstr[1] "%d ارز به‌روزرسانی شد."
+
+msgid "%d preset symbols available."
+msgstr "%d نماد آماده در دسترس است."
+
+msgid "%s is required."
+msgstr "%s الزامی است."
+
+msgid "%s: could not persist the new rate."
+msgstr "%s: ذخیره نرخ جدید ممکن نشد."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Currencies and commodities
+# ─────────────────────────────────────────────────────────────────────────────
+msgid "18K Gold (gram)"
+msgstr "طلای ۱۸ عیار (گرم)"
+
+msgid "24K Gold (gram)"
+msgstr "طلای ۲۴ عیار (گرم)"
+
+msgid "Australian Dollar"
+msgstr "دلار استرالیا"
+
+msgid "Bahraini Dinar"
+msgstr "دینار بحرین"
+
+msgid "Bahar Azadi coin"
+msgstr "سکه بهار آزادی"
+
+msgid "Bitcoin"
+msgstr "بیت‌کوین"
+
+msgid "British Pound"
+msgstr "پوند انگلیس"
+
+msgid "Canadian Dollar"
+msgstr "دلار کانادا"
+
+msgid "Chinese Yuan"
+msgstr "یوان چین"
+
+msgid "Ethereum"
+msgstr "اتریوم"
+
+msgid "Euro"
+msgstr "یورو"
+
+msgid "Gold coin (full)"
+msgstr "سکه تمام"
+
+msgid "Gold ounce (Toman)"
+msgstr "انس طلا (تومان)"
+
+msgid "Gram coin"
+msgstr "سکه گرمی"
+
+msgid "Half coin"
+msgstr "نیم سکه"
+
+msgid "Iraqi Dinar (100)"
+msgstr "صد دینار عراق"
+
+msgid "Japanese Yen"
+msgstr "صد ین ژاپن"
+
+msgid "Kuwaiti Dinar"
+msgstr "دینار کویت"
+
+msgid "Melted gold (mithqal)"
+msgstr "آبشده (مثقال طلا)"
+
+msgid "Omani Rial"
+msgstr "ریال عمان"
+
+msgid "Qatari Riyal"
+msgstr "ریال قطر"
+
+msgid "Quarter coin"
+msgstr "ربع سکه"
+
+msgid "Russian Ruble"
+msgstr "روبل روسیه"
+
+msgid "Saudi Riyal"
+msgstr "ریال عربستان"
+
+msgid "Silver (gram)"
+msgstr "نقره (گرم)"
+
+msgid "Silver ounce (Toman)"
+msgstr "انس نقره (تومان)"
+
+msgid "Swiss Franc"
+msgstr "فرانک سوئیس"
+
+msgid "Tether"
+msgstr "تتر"
+
+msgid "Turkish Lira"
+msgstr "لیر ترکیه"
+
+msgid "UAE Dirham"
+msgstr "درهم امارات"
+
+msgid "US Dollar"
+msgstr "دلار آمریکا"
+
+msgid "US Dollar (remittance)"
+msgstr "حواله دلار آمریکا"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Page chrome, tabs and tables
+# ─────────────────────────────────────────────────────────────────────────────
+msgid "Actions"
+msgstr "عملیات"
+
+msgid "Add currency"
+msgstr "افزودن ارز"
+
+msgid "Add from presets"
+msgstr "افزودن از لیست آماده"
+
+msgid "Code"
+msgstr "کد"
+
+msgid "Cron"
+msgstr "زمان‌بندی خودکار"
+
+msgid "Currencies"
+msgstr "ارزها"
+
+msgid "Currency"
+msgstr "ارز"
+
+msgid "Currency Prices"
+msgstr "نرخ ساز"
+
+msgid "Default rounding mode"
+msgstr "حالت گرد کردن پیش‌فرض"
+
+msgid "Default update interval (minutes)"
+msgstr "بازه به‌روزرسانی پیش‌فرض (دقیقه)"
+
+msgid "Delete"
+msgstr "حذف"
+
+msgid "Edit"
+msgstr "ویرایش"
+
+msgid "Edit currency"
+msgstr "ویرایش ارز"
+
+msgid "Enabled"
+msgstr "فعال"
+
+msgid "Error"
+msgstr "خطا"
+
+msgid "General settings"
+msgstr "تنظیمات عمومی"
+
+msgid "Interval (min)"
+msgstr "بازه به‌روزرسانی (دقیقه)"
+
+msgid "Last 20 update attempts"
+msgstr "۲۰ تلاش آخر برای به‌روزرسانی"
+
+msgid "Last update"
+msgstr "آخرین به‌روزرسانی"
+
+msgid "Manual"
+msgstr "دستی"
+
+msgid "Message"
+msgstr "پیام"
+
+msgid "Name"
+msgstr "نام"
+
+msgid "Provider"
+msgstr "منبع قیمت"
+
+msgid "Provider symbol"
+msgstr "نماد در منبع قیمت"
+
+msgid "Rate (%s)"
+msgstr "نرخ (%s)"
+
+msgid "Rial"
+msgstr "ریال"
+
+msgid "Rounding step (N)"
+msgstr "گام گرد کردن (N)"
+
+msgid "Save"
+msgstr "ذخیره"
+
+msgid "Save settings"
+msgstr "ذخیره تنظیمات"
+
+msgid "Saving…"
+msgstr "در حال ذخیره…"
+
+msgid "Settings"
+msgstr "تنظیمات"
+
+msgid "Sort order"
+msgstr "ترتیب نمایش"
+
+msgid "Status"
+msgstr "وضعیت"
+
+msgid "Success"
+msgstr "موفق"
+
+msgid "Symbol"
+msgstr "نماد"
+
+msgid "Time"
+msgstr "زمان"
+
+msgid "Toman"
+msgstr "تومان"
+
+msgid "Trigger"
+msgstr "عامل اجرا"
+
+msgid "Uninstall"
+msgstr "حذف افزونه"
+
+msgid "Update all now"
+msgstr "به‌روزرسانی همه"
+
+msgid "Update interval (minutes)"
+msgstr "بازه به‌روزرسانی (دقیقه)"
+
+msgid "Update now"
+msgstr "به‌روزرسانی همین حالا"
+
+msgid "Working…"
+msgstr "در حال انجام…"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Rounding and units
+# ─────────────────────────────────────────────────────────────────────────────
+msgid "Examples: 1000, 10000, 100000. Ignored when the mode is \"None\"."
+msgstr "مثال: ۱۰۰۰، ۱۰۰۰۰، ۱۰۰۰۰۰. در حالت «بدون گرد کردن» نادیده گرفته می‌شود."
+
+msgid "None"
+msgstr "بدون گرد کردن"
+
+msgid "Preview (1,234,567): %s"
+msgstr "پیش‌نمایش (۱٬۲۳۴٬۵۶۷): %s"
+
+msgid "Round down (floor)"
+msgstr "گرد کردن به پایین"
+
+msgid "Round to nearest N"
+msgstr "گرد کردن به نزدیک‌ترین مضرب N"
+
+msgid "Round up (ceil)"
+msgstr "گرد کردن به بالا"
+
+msgid "Store currency unit"
+msgstr "واحد پول فروشگاه"
+
+msgid "Used when displaying calculated prices (product pricing arrives in a later version). Stored rates follow this unit."
+msgstr "برای نمایش قیمت‌های محاسبه‌شده استفاده می‌شود (قیمت‌گذاری محصول در نسخه بعدی اضافه می‌شود). نرخ‌های ذخیره‌شده نیز بر همین واحد استوارند."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Price sources tab
+# ─────────────────────────────────────────────────────────────────────────────
+msgid "API key"
+msgstr "کلید API"
+
+msgid "API token"
+msgstr "توکن API"
+
+msgid "A value is stored. Leave empty to keep it."
+msgstr "مقداری ذخیره شده است. برای حفظ آن، خالی بگذارید."
+
+msgid "AlanChand"
+msgstr "آلان‌چند"
+
+msgid "Average of buy and sell"
+msgstr "میانگین خرید و فروش"
+
+msgid "Buy price"
+msgstr "قیمت خرید"
+
+msgid "Configured"
+msgstr "تنظیم شده"
+
+msgid "Connection failed"
+msgstr "اتصال ناموفق"
+
+msgid "Connection successful"
+msgstr "اتصال موفق"
+
+msgid "Copy the token from your AlanChand account panel. It is sent only in the Authorization header."
+msgstr "توکن را از پنل کاربری آلان‌چند خود بردارید. این مقدار فقط در سرآیند Authorization ارسال می‌شود."
+
+msgid "Copy the value shown in your Navasan user panel under the API section."
+msgstr "مقدار نمایش‌داده‌شده در پنل کاربری نواسان، بخش API، را کپی کنید."
+
+msgid "Default item price"
+msgstr "قیمت پیش‌فرض آیتم"
+
+msgid "Each source has its own request quota. The plugin never sends more requests than the limits you configure here; when a limit is reached the previous rate is kept."
+msgstr "هر منبع قیمت سهمیه درخواست خودش را دارد. افزونه هرگز بیش از محدودیت‌های تعیین‌شده در اینجا درخواست نمی‌فرستد؛ وقتی سهمیه تمام شود، نرخ قبلی حفظ می‌شود."
+
+msgid "Every 5 minutes (RateBridge)"
+msgstr "هر ۵ دقیقه (نرخ ساز)"
+
+msgid "Fill in the required settings and save before testing the connection."
+msgstr "پیش از تست اتصال، تنظیمات الزامی را تکمیل و ذخیره کنید."
+
+msgid "Last error: %s"
+msgstr "آخرین خطا: %s"
+
+msgid "Last request"
+msgstr "آخرین درخواست"
+
+msgid "Maximum hourly variation (0 to 0.5). Default 0.02 = ±2%."
+msgstr "بیشترین نوسان ساعتی (۰ تا ۰٫۵). پیش‌فرض ۰٫۰۲ یعنی ±۲٪."
+
+msgid "Minimum interval"
+msgstr "کمترین فاصله بین درخواست‌ها"
+
+msgid "Minimum minutes between requests"
+msgstr "کمترین فاصله بین درخواست‌ها (دقیقه)"
+
+msgid "Mock / test data (development only)"
+msgstr "داده آزمایشی (فقط برای توسعه)"
+
+msgid "Monthly request limit"
+msgstr "محدودیت درخواست ماهانه"
+
+msgid "Monthly request usage"
+msgstr "میزان مصرف درخواست ماهانه"
+
+msgid "Navasan"
+msgstr "نواسان"
+
+msgid "Next allowed request"
+msgstr "درخواست مجاز بعدی"
+
+msgid "No source with settings is registered."
+msgstr "هیچ منبع قیمتی با تنظیمات ثبت نشده است."
+
+msgid "No value stored yet."
+msgstr "هنوز مقداری ذخیره نشده است."
+
+msgid "Not configured"
+msgstr "تنظیم نشده"
+
+msgid "Parsed: %d"
+msgstr "تعداد نمادهای خوانده‌شده: %d"
+
+msgid "Price source"
+msgstr "منبع قیمت"
+
+msgid "Price sources"
+msgstr "منابع قیمت"
+
+msgid "Price type"
+msgstr "نوع قیمت"
+
+msgid "Request counters reset."
+msgstr "شمارنده‌های درخواست بازنشانی شد."
+
+msgid "Request quota"
+msgstr "سهمیه درخواست"
+
+msgid "Requests this month"
+msgstr "درخواست‌های این ماه"
+
+msgid "Reset counters"
+msgstr "بازنشانی شمارنده‌ها"
+
+msgid "Reset this source’s request counters? This does not refund real requests already sent."
+msgstr "شمارنده‌های درخواست این منبع بازنشانی شود؟ این کار درخواست‌های واقعی ارسال‌شده را جبران نمی‌کند."
+
+msgid "Sample:"
+msgstr "نمونه:"
+
+msgid "Search symbol…"
+msgstr "جستجوی نماد…"
+
+msgid "Sell price"
+msgstr "قیمت فروش"
+
+msgid "Test connection"
+msgstr "تست اتصال"
+
+msgid "The AlanChand API token is not configured. Add it in “Price sources”."
+msgstr "توکن API آلان‌چند تنظیم نشده است. آن را در «منابع قیمت» وارد کنید."
+
+msgid "The Navasan API key is not configured. Add it in “Price sources”."
+msgstr "کلید API نواسان تنظیم نشده است. آن را در «منابع قیمت» وارد کنید."
+
+msgid "The bearer token issued by AlanChand."
+msgstr "توکن Bearer که آلان‌چند صادر کرده است."
+
+msgid "The free plan allows about 120 requests per month. The plugin never exceeds this number."
+msgstr "طرح رایگان حدود ۱۲۰ درخواست در ماه اجازه می‌دهد. افزونه هرگز از این عدد فراتر نمی‌رود."
+
+msgid "The key issued by your Navasan account panel."
+msgstr "کلیدی که پنل کاربری نواسان برای شما صادر کرده است."
+
+msgid "The monthly request limit for %1$s has been reached (%2$d of %3$d). No request was sent to the provider."
+msgstr "محدودیت درخواست ماهانه %1$s به پایان رسیده است (%2$d از %3$d). هیچ درخواستی به منبع ارسال نشد."
+
+msgid "The test plan allows one request per hour. The plugin will never send requests faster than this."
+msgstr "طرح آزمایشی اجازه یک درخواست در ساعت می‌دهد. افزونه هرگز سریع‌تر از این درخواست نمی‌فرستد."
+
+msgid "This source does not use a network connection, so there is nothing to test."
+msgstr "این منبع از اتصال شبکه استفاده نمی‌کند، بنابراین چیزی برای تست وجود ندارد."
+
+msgid "This source has no preset symbol list. Enter the symbol manually."
+msgstr "این منبع فهرست نماد آماده ندارد. نماد را دستی وارد کنید."
+
+msgid "Which value to read when the API offers both a buy and a sell price."
+msgstr "در صورتی که API هم قیمت خرید و هم قیمت فروش بدهد، کدام مقدار خوانده شود."
+
+msgid "never"
+msgstr "هرگز"
+
+msgid "now"
+msgstr "اکنون"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Add / edit currency dialog
+# ─────────────────────────────────────────────────────────────────────────────
+msgid "Add this currency from the source preset?"
+msgstr "این ارز از فهرست آماده منبع اضافه شود؟"
+
+msgid "Cancel"
+msgstr "انصراف"
+
+msgid "Code and name are required."
+msgstr "کد و نام الزامی است."
+
+msgid "Custom symbol (free text)"
+msgstr "نماد دلخواه (متن آزاد)"
+
+msgid "Enable %s"
+msgstr "فعال‌سازی %s"
+
+msgid "Invalid preset."
+msgstr "پیش‌تنظیم نامعتبر است."
+
+msgid "Keep current rate"
+msgstr "نرخ فعلی حفظ شود"
+
+msgid "Manual rate (%s per 1 unit)"
+msgstr "نرخ دستی (%s برای هر واحد)"
+
+msgid "Pick a preset symbol or type a custom one. Leave empty to reuse the code."
+msgstr "یک نماد آماده انتخاب کنید یا نماد دلخواه بنویسید. برای استفاده از کد، خالی بگذارید."
+
+msgid "Pick a price source, then add one of its preset currencies. New rows start disabled so you can review them first."
+msgstr "یک منبع قیمت انتخاب کنید و سپس یکی از ارزهای آماده آن را اضافه کنید. ردیف‌های جدید غیرفعال ساخته می‌شوند تا ابتدا آن‌ها را بررسی کنید."
+
+msgid "This code is already used by another currency."
+msgstr "این کد قبلاً برای ارز دیگری استفاده شده است."
+
+msgid "This interval (%1$d minutes) is shorter than the source allows (%2$d minutes). The row will only refresh when the source permits it."
+msgstr "این بازه (%1$d دقیقه) کوتاه‌تر از حد مجاز منبع (%2$d دقیقه) است. این ردیف تنها زمانی به‌روزرسانی می‌شود که منبع اجازه دهد."
+
+msgid "This symbol is not offered by the selected source."
+msgstr "این نماد توسط منبع انتخاب‌شده ارائه نمی‌شود."
+
+msgid "Unique identifier, letters/numbers only (e.g. USD, GOLD18)."
+msgstr "شناسه یکتا، فقط حروف و اعداد (مثلاً USD یا GOLD18)."
+
+msgid "Used for the manual provider. Leave empty when editing to keep the current rate."
+msgstr "برای منبع دستی استفاده می‌شود. در حالت ویرایش برای حفظ نرخ فعلی، خالی بگذارید."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Notices, confirmations and log
+# ─────────────────────────────────────────────────────────────────────────────
+msgid "Clear log"
+msgstr "پاک کردن گزارش"
+
+msgid "Clear the update log?"
+msgstr "گزارش به‌روزرسانی پاک شود؟"
+
+msgid "Could not delete the currency."
+msgstr "حذف ارز ممکن نشد."
+
+msgid "Could not save the change."
+msgstr "ذخیره تغییر ممکن نشد."
+
+msgid "Could not save the currency."
+msgstr "ذخیره ارز ممکن نشد."
+
+msgid "Currency added from presets. Enable it to start updating."
+msgstr "ارز از فهرست آماده اضافه شد. برای شروع به‌روزرسانی آن را فعال کنید."
+
+msgid "Currency deleted."
+msgstr "ارز حذف شد."
+
+msgid "Currency disabled."
+msgstr "ارز غیرفعال شد."
+
+msgid "Currency enabled."
+msgstr "ارز فعال شد."
+
+msgid "Currency not found."
+msgstr "ارز یافت نشد."
+
+msgid "Currency saved."
+msgstr "ارز ذخیره شد."
+
+msgid "Delete all plugin data (currencies, settings, log) when the plugin is uninstalled"
+msgstr "با حذف افزونه، تمام داده‌ها (ارزها، تنظیمات و گزارش) پاک شود"
+
+msgid "Delete this currency? This cannot be undone."
+msgstr "این ارز حذف شود؟ این کار قابل بازگشت نیست."
+
+msgid "Keep this off unless you are sure. Deactivating the plugin never deletes data."
+msgstr "تا زمانی که مطمئن نیستید این گزینه را خاموش بگذارید. غیرفعال کردن افزونه هرگز داده‌ها را پاک نمی‌کند."
+
+msgid "Log cleared."
+msgstr "گزارش پاک شد."
+
+msgid "No currencies were due for an update."
+msgstr "هیچ ارزی برای به‌روزرسانی زمان‌بندی‌نشده بود."
+
+msgid "No currencies yet. Use “Add currency” to create one."
+msgstr "هنوز ارزی وجود ندارد. با «افزودن ارز» یکی بسازید."
+
+msgid "No update attempts recorded yet."
+msgstr "هنوز تلاشی برای به‌روزرسانی ثبت نشده است."
+
+msgid "Nothing to update."
+msgstr "چیزی برای به‌روزرسانی نیست."
+
+msgid "Provider settings saved."
+msgstr "تنظیمات منبع قیمت ذخیره شد."
+
+msgid "Rates are currently stored in %1$s. The cron hook is %2$s."
+msgstr "نرخ‌ها در حال حاضر بر پایه %1$s ذخیره می‌شوند. قلاب زمان‌بندی: %2$s"
+
+msgid "Rates are stored in %1$s per 1 unit. Next automatic run: %2$s"
+msgstr "نرخ‌ها بر پایه %1$s برای هر واحد ذخیره می‌شوند. اجرای خودکار بعدی: %2$s"
+
+msgid "Security check failed. Please reload the page."
+msgstr "بررسی امنیتی ناموفق بود. لطفاً صفحه را دوباره بارگذاری کنید."
+
+msgid "Settings saved."
+msgstr "تنظیمات ذخیره شد."
+
+msgid "Something went wrong. Please try again."
+msgstr "مشکلی پیش آمد. لطفاً دوباره تلاش کنید."
+
+msgid "The code must be 32 characters or fewer."
+msgstr "کد باید حداکثر ۳۲ نویسه باشد."
+
+msgid "The minimum refresh interval is %d minutes (WordPress cron limit). Manual currencies are never updated automatically."
+msgstr "کمترین بازه به‌روزرسانی %d دقیقه است (محدودیت زمان‌بندی وردپرس). ارزهای دستی هرگز به‌صورت خودکار به‌روزرسانی نمی‌شوند."
+
+msgid "Unknown action."
+msgstr "عملیات ناشناخته."
+
+msgid "Unknown provider."
+msgstr "منبع قیمت ناشناخته."
+
+msgid "Unknown provider: %s"
+msgstr "منبع قیمت ناشناخته: %s"
+
+msgid "Unknown rate provider: %s"
+msgstr "منبع نرخ ناشناخته: %s"
+
+msgid "Updated %1$d, failed %2$d. %3$s"
+msgstr "%1$d به‌روزرسانی شد، %2$d ناموفق. %3$s"
+
+msgid "You are not allowed to do this."
+msgstr "شما اجازه انجام این کار را ندارید."
+
+msgid "You do not have permission to access this page."
+msgstr "شما اجازه دسترسی به این صفحه را ندارید."
+
+msgid "not scheduled"
+msgstr "زمان‌بندی نشده"
+
+msgid "Applied to newly added currencies. Minimum %d minutes because WordPress cron cannot run more often."
+msgstr "برای ارزهای تازه‌افزوده اعمال می‌شود. حداقل %d دقیقه، زیرا زمان‌بندی وردپرس سریع‌تر اجرا نمی‌شود."
+
+msgid "After a failed request the plugin waits at least %d minutes before trying that source again, so a broken key never burns the quota."
+msgstr "پس از یک درخواست ناموفق، افزونه حداقل %d دقیقه صبر می‌کند تا دوباره آن منبع را امتحان کند؛ بنابراین یک کلید خراب هرگز سهمیه را نمی‌سوزاند."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Provider and HTTP errors (must never contain secrets)
+# ─────────────────────────────────────────────────────────────────────────────
+msgid "AlanChand reported an error: %s"
+msgstr "آلان‌چند خطا گزارش کرد: %s"
+
+msgid "AlanChand returned a response that is not valid JSON."
+msgstr "پاسخ آلان‌چند JSON معتبر نبود."
+
+msgid "AlanChand returned no usable prices."
+msgstr "آلان‌چند هیچ قیمت قابل‌استفاده‌ای برنگرداند."
+
+msgid "AlanChand returned none of the requested symbols (%s)."
+msgstr "آلان‌چند هیچ‌یک از نمادهای درخواستی (%s) را برنگرداند."
+
+msgid "HTTP request failed: %s"
+msgstr "درخواست HTTP ناموفق بود: %s"
+
+msgid "Manual (typed by admin)"
+msgstr "دستی (ورود توسط مدیر)"
+
+msgid "Manual currencies are not updated automatically. Edit the currency to change its rate."
+msgstr "ارزهای دستی به‌صورت خودکار به‌روزرسانی نمی‌شوند. برای تغییر نرخ، ارز را ویرایش کنید."
+
+msgid "Navasan reported an error: %s"
+msgstr "نواسان خطا گزارش کرد: %s"
+
+msgid "Navasan returned a response that is not valid JSON."
+msgstr "پاسخ نواسان JSON معتبر نبود."
+
+msgid "Navasan returned no usable prices."
+msgstr "نواسان هیچ قیمت قابل‌استفاده‌ای برنگرداند."
+
+msgid "Navasan returned none of the requested symbols (%s)."
+msgstr "نواسان هیچ‌یک از نمادهای درخواستی (%s) را برنگرداند."
+
+msgid "No symbols requested."
+msgstr "هیچ نمادی درخواست نشد."
+
+msgid "No symbols were requested."
+msgstr "هیچ نمادی درخواست نشد."
+
+msgid "No test symbol is available for this source."
+msgstr "هیچ نماد آزمایشی برای این منبع موجود نیست."
+
+msgid "Provider \"%s\" cannot fetch rates automatically."
+msgstr "منبع «%s» نمی‌تواند نرخ‌ها را به‌صورت خودکار دریافت کند."
+
+msgid "Provider returned no valid rate for \"%s\"."
+msgstr "منبع هیچ نرخ معتبری برای «%s» برنگرداند."
+
+msgid "The manual provider does not parse remote responses."
+msgstr "منبع دستی پاسخ‌های راه دور را پردازش نمی‌کند."
+
+msgid "The mock provider does not use HTTP."
+msgstr "منبع آزمایشی از HTTP استفاده نمی‌کند."
+
+msgid "The provider returned no usable rates."
+msgstr "منبع هیچ نرخ قابل‌استفاده‌ای برنگرداند."
+
+msgid "This provider does not define an endpoint."
+msgstr "این منبع هیچ نشانی پایانه‌ای تعریف نکرده است."
+
+msgid "Unexpected HTTP status: %d"
+msgstr "وضعیت HTTP پیش‌بینی‌نشده: %d"
+
+msgid "This plugin requires WooCommerce to be installed and active. Its features are disabled until WooCommerce is activated."
+msgstr "این افزونه به نصب و فعال بودن ووکامرس نیاز دارد. تا زمان فعال شدن ووکامرس، امکانات آن غیرفعال است."
+
+msgid "RateBridge Woo"
+msgstr "نرخ ساز"
+
+msgid "Refresh log"
+msgstr "تازه‌سازی گزارش"
+
+msgid "Volatility"
+msgstr "نوسان"

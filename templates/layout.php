@@ -12,6 +12,7 @@ defined( 'ABSPATH' ) || exit;
 $rbw_active_tab = isset( $rbw_view['active_tab'] ) ? (string) $rbw_view['active_tab'] : 'currencies';
 $rbw_tabs       = array(
 	'currencies' => __( 'Currencies', 'ratebridge-woo' ),
+	'sources'    => __( 'Price sources', 'ratebridge-woo' ),
 	'general'    => __( 'General settings', 'ratebridge-woo' ),
 );
 ?>
@@ -36,6 +37,12 @@ $rbw_tabs       = array(
 	<div class="rbw-tab-panel" id="rbw-panel-currencies">
 		<?php if ( 'currencies' === $rbw_active_tab ) : ?>
 			<?php require RBW_PLUGIN_DIR . 'templates/tab-currencies.php'; ?>
+		<?php endif; ?>
+	</div>
+
+	<div class="rbw-tab-panel" id="rbw-panel-sources">
+		<?php if ( 'sources' === $rbw_active_tab ) : ?>
+			<?php require RBW_PLUGIN_DIR . 'templates/tab-sources.php'; ?>
 		<?php endif; ?>
 	</div>
 

@@ -25,6 +25,8 @@ $wpdb->query( "DROP TABLE IF EXISTS `{$rbw_table}`" ); // phpcs:ignore WordPress
 delete_option( 'rbw_settings' );
 delete_option( 'rbw_db_version' );
 delete_option( 'rbw_update_log' );
+delete_option( 'rbw_provider_settings' );
+delete_option( 'rbw_request_budget' );
 
 // Remove transients created by providers (rate cache).
 $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching

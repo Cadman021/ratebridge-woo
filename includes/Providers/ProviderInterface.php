@@ -54,4 +54,15 @@ interface ProviderInterface {
 	 * @return array<int, array<string, mixed>>
 	 */
 	public function get_settings_fields(): array;
+
+	/**
+	 * Symbols this provider can serve, as provider-symbol => Persian label.
+	 *
+	 * Used by the admin currency dialog to offer a searchable list and by the
+	 * "add from presets" workflow. Providers without a fixed catalogue return
+	 * an empty array, which keeps the free-text symbol field.
+	 *
+	 * @return array<string, string>
+	 */
+	public function get_known_symbols(): array;
 }

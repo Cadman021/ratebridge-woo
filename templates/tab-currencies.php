@@ -19,12 +19,23 @@ $rbw_log        = isset( $rbw_view['log'] ) && is_array( $rbw_view['log'] ) ? $r
 $rbw_unit       = SettingsPage::unit_label();
 $rbw_next_run   = isset( $rbw_view['next_run'] ) ? (int) $rbw_view['next_run'] : 0;
 $rbw_min        = isset( $rbw_view['min_interval'] ) ? (int) $rbw_view['min_interval'] : 5;
+$rbw_symbols    = isset( $rbw_view['symbols'] ) && is_array( $rbw_view['symbols'] ) ? $rbw_view['symbols'] : array();
+
+// Only providers with a preset catalogue can power the "add from presets" list.
+$rbw_preset_providers = array();
+
+foreach ( $rbw_providers as $rbw_provider_key => $rbw_provider_label ) {
+	if ( ! empty( $rbw_symbols[ $rbw_provider_key ] ) ) {
+		$rbw_preset_providers[ $rbw_provider_key ] = $rbw_provider_label;
+	}
+}
 ?>
 <div class="rbw-toolbar">
 	<button type="button" class="button button-primary" id="rbw-add-currency"><?php esc_html_e( 'Add currency', 'ratebridge-woo' ); ?></button>
+	<button type="button" class="button" id="rbw-add-preset"><?php esc_html_e( 'Add from presets', 'ratebridge-woo' ); ?></button>
 	<button type="button" class="button" id="rbw-update-all"><?php esc_html_e( 'Update all now', 'ratebridge-woo' ); ?></button>
 	<button type="button" class="button" id="rbw-refresh-log"><?php esc_html_e( 'Refresh log', 'ratebridge-woo' ); ?></button>
-	<span class="rbw-muted">
+	<span class="rbw-muted rbw-info-line">
 		<?php
 		printf(
 			/* translators: 1: unit label (Rial/Toman), 2: next cron run time */
@@ -35,6 +46,8 @@ $rbw_min        = isset( $rbw_view['min_interval'] ) ? (int) $rbw_view['min_inte
 		?>
 	</span>
 </div>
+
+<p class="rbw-warning" id="rbw-interval-warning" hidden></p>
 
 <table class="widefat striped rbw-table" id="rbw-currencies-table">
 	<thead>
@@ -160,10 +173,28 @@ $rbw_min        = isset( $rbw_view['min_interval'] ) ? (int) $rbw_view['min_inte
 					<?php endforeach; ?>
 				</select>
 			</p>
-			<p>
-				<label for="rbw-field-provider-symbol"><?php esc_html_e( 'Provider symbol', 'ratebridge-woo' ); ?></label>
-				<input type="text" id="rbw-field-provider-symbol" name="provider_symbol" class="regular-text" dir="ltr" />
-				<span class="description"><?php esc_html_e( 'Symbol used by the provider. Leave empty to reuse the code.', 'ratebridge-woo' ); ?></span>
+			<p class="rbw-symbol-picker">
+				<label for="rbw-symbol-search"><?php esc_html_e( 'Provider symbol', 'ratebridge-woo' ); ?></label>
+				<input
+					type="search"
+					id="rbw-symbol-search"
+					class="regular-text rbw-symbol-search"
+					placeholder="<?php esc_attr_e( 'Search symbol…', 'ratebridge-woo' ); ?>"
+					hidden
+				/>
+				<select id="rbw-field-provider-symbol" name="provider_symbol" class="rbw-symbol-select">
+					<option value=""><?php esc_html_e( 'Custom symbol (free text)', 'ratebridge-woo' ); ?></option>
+				</select>
+				<input
+					type="text"
+					id="rbw-field-provider-symbol-text"
+					class="regular-text"
+					dir="ltr"
+					placeholder="usd"
+				/>
+				<span class="description" id="rbw-symbol-hint">
+					<?php esc_html_e( 'Pick a preset symbol or type a custom one. Leave empty to reuse the code.', 'ratebridge-woo' ); ?>
+				</span>
 			</p>
 			<p>
 				<label for="rbw-field-rate">
@@ -203,6 +234,43 @@ $rbw_min        = isset( $rbw_view['min_interval'] ) ? (int) $rbw_view['min_inte
 
 			<p class="rbw-modal-actions">
 				<button type="submit" class="button button-primary" id="rbw-save-currency"><?php esc_html_e( 'Save', 'ratebridge-woo' ); ?></button>
+				<button type="button" class="button" data-rbw-close="1"><?php esc_html_e( 'Cancel', 'ratebridge-woo' ); ?></button>
+			</p>
+		</form>
+	</div>
+</div>
+
+<!-- Add from presets dialog -->
+<div class="rbw-modal" id="rbw-preset-modal" hidden>
+	<div class="rbw-modal-backdrop" data-rbw-close="1"></div>
+	<div class="rbw-modal-content" role="dialog" aria-modal="true" aria-labelledby="rbw-preset-title">
+		<h2 id="rbw-preset-title"><?php esc_html_e( 'Add from presets', 'ratebridge-woo' ); ?></h2>
+		<p class="rbw-muted">
+			<?php esc_html_e( 'Pick a price source, then add one of its preset currencies. New rows start disabled so you can review them first.', 'ratebridge-woo' ); ?>
+		</p>
+
+		<form id="rbw-preset-form" onsubmit="return false;">
+			<p>
+				<label for="rbw-preset-provider"><?php esc_html_e( 'Price source', 'ratebridge-woo' ); ?></label>
+				<select id="rbw-preset-provider" name="provider">
+					<?php foreach ( $rbw_preset_providers as $rbw_preset_key => $rbw_preset_label ) : ?>
+						<option value="<?php echo esc_attr( (string) $rbw_preset_key ); ?>"><?php echo esc_html( (string) $rbw_preset_label ); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</p>
+			<p>
+				<label for="rbw-preset-symbol-search"><?php esc_html_e( 'Currency', 'ratebridge-woo' ); ?></label>
+				<input
+					type="search"
+					id="rbw-preset-symbol-search"
+					class="regular-text"
+					placeholder="<?php esc_attr_e( 'Search symbol…', 'ratebridge-woo' ); ?>"
+				/>
+				<select id="rbw-preset-symbol" name="symbol" size="8" class="rbw-preset-list"></select>
+			</p>
+
+			<p class="rbw-modal-actions">
+				<button type="submit" class="button button-primary" id="rbw-preset-submit"><?php esc_html_e( 'Add currency', 'ratebridge-woo' ); ?></button>
 				<button type="button" class="button" data-rbw-close="1"><?php esc_html_e( 'Cancel', 'ratebridge-woo' ); ?></button>
 			</p>
 		</form>

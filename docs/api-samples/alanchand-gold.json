@@ -1,0 +1,143 @@
+{
+  "abshodeh": {
+    "slug": "abshodeh",
+    "name": "آبشده(مثقال طلا)",
+    "price": 112850000,
+    "open": 112000000,
+    "high": 113970000,
+    "low": 110900000,
+    "dayChange": 0.76,
+    "updated_at": "2026-10-25 20:20:07",
+    "real_price": 112776000,
+    "bubble": 74000,
+    "bubble_per": 0.07
+  },
+  "18ayar": {
+    "slug": "18ayar",
+    "name": "گرم طلای 18 عیار",
+    "price": 26051530,
+    "open": 25855300,
+    "high": 26310080,
+    "low": 25601370,
+    "dayChange": 0.76,
+    "updated_at": "2026-10-25 20:20:07",
+    "real_price": 26034000,
+    "bubble": 17530,
+    "bubble_per": 0.07
+  },
+  "sekkeh": {
+    "slug": "sekkeh",
+    "name": "سکه امامی (طرح جدید)",
+    "price": 267000000,
+    "open": 267000000,
+    "high": 269000000,
+    "low": 264000000,
+    "dayChange": 0,
+    "updated_at": "2026-10-25 20:20:07",
+    "real_price": 254394000,
+    "bubble": 12606000,
+    "bubble_per": 4.96
+  },
+  "bahar": {
+    "slug": "bahar",
+    "name": "سکه بهار آزادی",
+    "price": 255000000,
+    "open": 256000000,
+    "high": 256000000,
+    "low": 253000000,
+    "dayChange": -0.39,
+    "updated_at": "2026-10-25 20:20:07",
+    "real_price": 254394000,
+    "bubble": 606000,
+    "bubble_per": 0.24
+  },
+  "nim": {
+    "slug": "nim",
+    "name": "نیم سکه",
+    "price": 141000000,
+    "open": 139000000,
+    "high": 141000000,
+    "low": 139000000,
+    "dayChange": 1.44,
+    "updated_at": "2026-10-25 20:20:07",
+    "real_price": 127327000,
+    "bubble": 13673000,
+    "bubble_per": 10.74
+  },
+  "rob": {
+    "slug": "rob",
+    "name": "ربع سکه",
+    "price": 76000000,
+    "open": 74500000,
+    "high": 76000000,
+    "low": 74000000,
+    "dayChange": 2.01,
+    "updated_at": "2026-10-25 20:20:07",
+    "real_price": 63782000,
+    "bubble": 12218000,
+    "bubble_per": 19.16
+  },
+  "sek": {
+    "slug": "sek",
+    "name": "سکه گرمی",
+    "price": 38000000,
+    "open": 38000000,
+    "high": 38000000,
+    "low": 38000000,
+    "dayChange": 0,
+    "updated_at": "2026-10-25 20:20:07",
+    "real_price": 31544000,
+    "bubble": 6456000,
+    "bubble_per": 20.47
+  },
+  "usd_xau": {
+    "slug": "usd_xau",
+    "name": "انس طلا",
+    "price": 3995.85,
+    "open": 3995.96,
+    "high": 3996.14,
+    "low": 3995.5,
+    "dayChange": -0,
+    "updated_at": "2026-10-25 20:20:07"
+  },
+  "xag": {
+    "slug": "xag",
+    "name": "انس نقره",
+    "price": 53.92,
+    "open": 53.92,
+    "high": 53.92,
+    "low": 53.84,
+    "dayChange": -0,
+    "updated_at": "2026-10-25 20:20:07"
+  },
+  "xpt": {
+    "slug": "xpt",
+    "name": "انس پلاتین",
+    "price": 1552.45,
+    "open": 1552.45,
+    "high": 1553.39,
+    "low": 1552.45,
+    "dayChange": -0,
+    "updated_at": "2026-10-25 20:20:07"
+  },
+  "xpd": {
+    "slug": "xpd",
+    "name": "انس پالادیوم",
+    "price": 1044.17,
+    "open": 1044.17,
+    "high": 1044.17,
+    "low": 1044.17,
+    "dayChange": 0,
+    "updated_at": "2026-10-25 20:20:07"
+  },
+  "xrh": {
+    "slug": "xrh",
+    "name": "انس رودیوم",
+    "price": 8339.87,
+    "open": 8339.87,
+    "high": 8339.87,
+    "low": 8339.87,
+    "dayChange": -0,
+    "updated_at": "2026-10-25 20:20:07"
+  }
+}

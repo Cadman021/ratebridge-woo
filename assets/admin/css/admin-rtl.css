@@ -1,44 +1,103 @@
 /**
  * RateBridge Woo - admin styles (RTL overrides).
- * Loaded automatically when the admin locale is RTL.
+ *
+ * admin.css already uses logical properties, so most of the layout is
+ * direction-agnostic. This file handles direction, tab order and the
+ * numeric/latin fragments that must stay left-to-right.
  */
 
 .rbw-wrap {
 	direction: rtl;
+	text-align: right;
+}
+
+/* Tab row reads right-to-left; no floats so nothing escapes the row. */
+.rbw-tabs {
+	direction: rtl;
+	justify-content: flex-start;
+}
+
+.rbw-tabs .nav-tab {
+	float: none;
 }
 
 .rbw-toolbar,
-.rbw-actions,
+.rbw-card-actions,
 .rbw-modal-actions,
-.rbw-inline {
+.rbw-actions,
+.rbw-inline,
+.rbw-budget-list li {
 	direction: rtl;
 }
 
+/* Fallbacks for browsers without logical property support. */
 .rbw-notice {
-	border-inline-start: 4px solid #2271b1;
-	border-inline-end: 0;
+	border-right: 4px solid #2271b1;
+	border-left: 0;
 }
 
 .rbw-notice.is-success {
-	border-inline-start-color: #00a32a;
+	border-right-color: #00a32a;
 }
 
 .rbw-notice.is-error {
-	border-inline-start-color: #d63638;
+	border-right-color: #d63638;
+}
+
+.rbw-warning {
+	border-right: 4px solid #dba617;
+	border-left: 0;
+}
+
+.rbw-test-result.is-success {
+	border-right: 4px solid #00a32a;
+	border-left: 0;
+}
+
+.rbw-test-result.is-error {
+	border-right: 4px solid #d63638;
+	border-left: 0;
 }
 
 .rbw-modal-content {
 	text-align: right;
 }
 
+/*
+ * Latin/numeric fragments: force LTR and isolate them so a trailing period
+ * from an English sentence cannot jump to the wrong side.
+ */
 .rbw-rate,
 .rbw-last-updated,
-.rbw-table code {
+.rbw-table code,
+.rbw-card input[dir="ltr"],
+.rbw-modal-content input[dir="ltr"],
+.rbw-preset-list,
+.rbw-test-result .rbw-ltr {
 	direction: ltr;
-	unicode-bidi: embed;
+	unicode-bidi: isolate;
+	text-align: left;
 }
 
-.rbw-table td.rbw-rate,
-.rbw-table td.rbw-last-updated {
+/* Keep the table header alignment natural for RTL reading order. */
+.rbw-table th,
+.rbw-table td {
 	text-align: right;
+}
+
+.rbw-table th.rbw-col-rate,
+.rbw-table td.rbw-rate,
+.rbw-table th.rbw-col-interval,
+.rbw-table td.rbw-col-interval {
+	text-align: right;
+}
+
+.rbw-budget-list li span {
+	text-align: right;
+}
+
+.rbw-meter-fill {
+	/* Grows from the right edge in RTL. */
+	margin-right: 0;
+	margin-left: auto;
 }

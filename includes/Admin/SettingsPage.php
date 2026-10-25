@@ -13,7 +13,6 @@ use RateBridge\Cron\Scheduler;
 use RateBridge\Currency\Currency;
 use RateBridge\Currency\CurrencyRepository;
 use RateBridge\Providers\ProviderRegistry;
-
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -57,7 +56,6 @@ final class SettingsPage {
 			array( $this, 'render_page' )
 		);
 	}
-
 	/**
 	 * Add a settings link on the plugins screen.
 	 *
@@ -111,6 +109,10 @@ final class SettingsPage {
 				'nonce'    => wp_create_nonce( AjaxController::NONCE_ACTION ),
 				'minInterval' => Scheduler::min_interval(),
 				'storeUnit'   => Settings::store_unit(),
+				'storeUnitLabel' => self::unit_label(),
+				'symbols'     => ProviderRegistry::instance()->all_known_symbols(),
+				'providerLabels' => ProviderRegistry::instance()->choices(),
+				'providerEffMin' => $this->effective_minimums(),
 				'strings'  => array(
 					'confirmDelete' => __( 'Delete this currency? This cannot be undone.', 'ratebridge-woo' ),
 					'confirmClear'  => __( 'Clear the update log?', 'ratebridge-woo' ),
@@ -120,9 +122,36 @@ final class SettingsPage {
 					'editTitle'     => __( 'Edit currency', 'ratebridge-woo' ),
 					'addTitle'      => __( 'Add currency', 'ratebridge-woo' ),
 					'emptyRate'     => __( 'Keep current rate', 'ratebridge-woo' ),
+					'confirmBudgetReset' => __( 'Reset this source’s request counters? This does not refund real requests already sent.', 'ratebridge-woo' ),
+					'confirmPresetAdd'   => __( 'Add this currency from the source preset?', 'ratebridge-woo' ),
+					'testSuccess'   => __( 'Connection successful', 'ratebridge-woo' ),
+					'testFailed'    => __( 'Connection failed', 'ratebridge-woo' ),
+					'searchSymbol'  => __( 'Search symbol…', 'ratebridge-woo' ),
+					'customSymbol'  => __( 'Custom symbol (free text)', 'ratebridge-woo' ),
+					'noSymbols'     => __( 'This source has no preset symbol list. Enter the symbol manually.', 'ratebridge-woo' ),
+					'parsedCount'   => __( 'Parsed: %d', 'ratebridge-woo' ),
+					'samplePrefix'  => __( 'Sample:', 'ratebridge-woo' ),
+					'intervalTooShort' => __( 'This interval (%1$d minutes) is shorter than the source allows (%2$d minutes). The row will only refresh when the source permits it.', 'ratebridge-woo' ),
 				),
 			)
 		);
+	}
+
+	/**
+	 * Effective minimum interval (minutes) per provider, for the JS warning.
+	 *
+	 * @return array<string, int>
+	 */
+	private function effective_minimums(): array {
+		$map = array();
+
+		foreach ( ProviderRegistry::instance()->all() as $key => $provider ) {
+			$map[ $key ] = $provider instanceof \RateBridge\Providers\AbstractProvider
+				? $provider->get_effective_min_interval_minutes()
+				: 0;
+		}
+
+		return $map;
 	}
 
 	/**
@@ -136,15 +165,24 @@ final class SettingsPage {
 		}
 
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( (string) $_GET['tab'] ) ) : 'currencies'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$tab = in_array( $tab, array( 'currencies', 'general' ), true ) ? $tab : 'currencies';
+		$tab = in_array( $tab, array( 'currencies', 'sources', 'general' ), true ) ? $tab : 'currencies';
 
-		$repo = new CurrencyRepository();
+		$repo      = new CurrencyRepository();
+		$registry  = ProviderRegistry::instance();
+		$service   = new ProviderSettings( $registry );
+		$cards     = array();
+
+		foreach ( $registry->with_settings() as $provider ) {
+			$cards[ $provider->get_key() ] = $service->card_model( $provider );
+		}
 
 		// Templates receive $rbw_view in scope.
 		$rbw_view = array(
 			'currencies'   => $repo->get_all(),
 			'settings'     => Settings::all(),
-			'providers'    => ProviderRegistry::instance()->choices(),
+			'providers'    => $registry->choices(),
+			'symbols'      => $registry->all_known_symbols(),
+			'cards'        => $cards,
 			'log'          => Logger::all(),
 			'next_run'     => Scheduler::next_run(),
 			'min_interval' => Scheduler::min_interval(),

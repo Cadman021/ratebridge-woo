@@ -57,4 +57,13 @@ final class ManualProvider extends AbstractProvider {
 	public function get_settings_fields(): array {
 		return array();
 	}
+
+	/**
+	 * Manual currencies have no provider catalogue.
+	 *
+	 * @return array<string, string>
+	 */
+	public function get_known_symbols(): array {
+		return array();
+	}
 }

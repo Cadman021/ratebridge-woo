@@ -1,10 +1,26 @@
 /**
  * RateBridge Woo - admin styles (LTR).
  * The RTL counterpart is admin-rtl.css (loaded automatically by WP via wp_style_add_data).
+ * Layout uses logical properties (inline-start/end, block-start/end) so both directions behave.
  */
 
 .rbw-wrap {
 	max-width: 1200px;
+}
+
+/* Tab row: keep tabs on their own line and never let content overlap them. */
+.rbw-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-block: 16px 0;
+	padding-block: 0;
+	border-block-end: 1px solid #c3c4c7;
+}
+
+.rbw-tabs .nav-tab {
+	margin: 0;
+	float: none;
 }
 
 .rbw-toolbar {
@@ -12,12 +28,25 @@
 	flex-wrap: wrap;
 	gap: 8px;
 	align-items: center;
-	margin: 16px 0;
+	margin-block: 16px;
+}
+
+/* Info line drops onto its own row instead of crowding the action buttons. */
+.rbw-toolbar .rbw-info-line {
+	flex-basis: 100%;
+	margin-block-start: 4px;
 }
 
 .rbw-muted {
 	color: #646970;
 	font-size: 12px;
+}
+
+.rbw-warning {
+	border-inline-start: 4px solid #dba617;
+	background: #fcf9e8;
+	padding: 8px 12px;
+	margin: 0 0 12px;
 }
 
 .rbw-required {
@@ -193,4 +222,143 @@
 .rbw-is-busy {
 	opacity: 0.6;
 	pointer-events: none;
+}
+
+/* Provider cards (Price sources tab) */
+.rbw-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+	gap: 16px;
+	margin-block: 16px;
+}
+
+.rbw-card {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	padding: 16px 18px;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.rbw-card-header h3 {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin: 0 0 4px;
+}
+
+.rbw-card .rbw-field > label {
+	display: block;
+	font-weight: 600;
+	margin-block-end: 4px;
+}
+
+.rbw-card input[type="text"],
+.rbw-card input[type="password"],
+.rbw-card input[type="search"],
+.rbw-card select {
+	min-width: 60%;
+}
+
+.rbw-card .description {
+	display: block;
+	margin-block-start: 4px;
+}
+
+.rbw-hint {
+	font-style: italic;
+}
+
+.rbw-card-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-block: 16px 8px;
+}
+
+.rbw-budget {
+	border-block-start: 1px solid #e0e0e0;
+	padding-block-start: 12px;
+	margin-block-start: 8px;
+}
+
+.rbw-budget h4 {
+	margin: 0 0 8px;
+}
+
+.rbw-budget-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: 12px;
+}
+
+.rbw-budget-list li {
+	display: flex;
+	gap: 6px;
+	justify-content: space-between;
+	padding-block: 2px;
+}
+
+.rbw-meter {
+	height: 8px;
+	background: #f0f0f1;
+	border-radius: 4px;
+	overflow: hidden;
+	margin-block-start: 8px;
+}
+
+.rbw-meter-fill {
+	display: block;
+	height: 100%;
+	background: #2271b1;
+}
+
+.rbw-meter-fill.is-warn {
+	background: #d63638;
+}
+
+.rbw-test-result {
+	margin-block: 8px;
+	padding: 8px 10px;
+	border-radius: 4px;
+	font-size: 12px;
+	line-height: 1.6;
+	word-break: break-word;
+}
+
+.rbw-test-result.is-success {
+	background: #edfaef;
+	border-inline-start: 4px solid #00a32a;
+}
+
+.rbw-test-result.is-error {
+	background: #fcf0f1;
+	border-inline-start: 4px solid #d63638;
+}
+
+/* Symbol picker + preset list */
+.rbw-symbol-picker select,
+.rbw-symbol-picker input {
+	margin-block-end: 4px;
+}
+
+.rbw-preset-list {
+	width: 100%;
+	max-width: 100%;
+	min-height: 180px;
+	margin-block-start: 8px;
+}
+
+.rbw-preset-list option {
+	padding: 4px 6px;
+}
+
+/* Tables: keep numeric columns aligned and readable in both directions */
+.rbw-table td.rbw-rate,
+.rbw-table td.rbw-last-updated,
+.rbw-table td.rbw-col-interval {
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
 }

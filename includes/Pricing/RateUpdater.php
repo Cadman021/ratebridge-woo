@@ -10,6 +10,7 @@ namespace RateBridge\Pricing;
 use RateBridge\Core\Logger;
 use RateBridge\Currency\Currency;
 use RateBridge\Currency\CurrencyRepository;
+use RateBridge\Providers\AbstractProvider;
 use RateBridge\Providers\ProviderInterface;
 use RateBridge\Providers\ProviderRegistry;
 use WP_Error;
@@ -38,16 +39,60 @@ final class RateUpdater {
 	/**
 	 * Update every enabled currency whose interval has elapsed.
 	 *
+	 * Currencies whose configured interval is shorter than the provider's
+	 * effective minimum are skipped (rather than fetched every 5 minutes).
+	 *
 	 * @param string $trigger 'cron' or 'manual'.
 	 * @return array<string, mixed> Summary: array( 'updated' => int, 'failed' => int, 'skipped' => int ).
 	 */
 	public function update_due( string $trigger = 'cron' ): array {
 		$due = array_filter(
 			$this->repository->get_enabled(),
-			static fn ( Currency $currency ): bool => $currency->is_due()
+			fn ( Currency $currency ): bool => $this->is_due_for_provider( $currency )
 		);
 
 		return $this->update_currencies( array_values( $due ), $trigger, false );
+	}
+
+	/**
+	 * Whether a currency should be refreshed now, accounting for the provider's
+	 * effective minimum interval.
+	 *
+	 * @param Currency $currency Currency row.
+	 * @return bool
+	 */
+	private function is_due_for_provider( Currency $currency ): bool {
+		if ( ! $currency->is_due() ) {
+			return false;
+		}
+
+		$provider = $this->registry->get( $currency->provider );
+
+		if ( ! $provider instanceof AbstractProvider ) {
+			return true;
+		}
+
+		$effective = $provider->get_effective_min_interval_minutes();
+
+		if ( $effective <= 0 || $currency->update_interval_minutes >= $effective ) {
+			return true;
+		}
+
+		// The row asks for more frequent updates than the provider allows: only
+		// fetch once the provider's own minimum has actually elapsed.
+		$last = $currency->last_updated;
+
+		if ( null === $last ) {
+			return true;
+		}
+
+		$timestamp = strtotime( $last . ' UTC' );
+
+		if ( false === $timestamp ) {
+			return true;
+		}
+
+		return ( time() - $timestamp ) >= $effective * MINUTE_IN_SECONDS;
 	}
 
 	/**

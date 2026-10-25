@@ -246,7 +246,9 @@
 		modal.querySelector( '[name="code"]' ).disabled = !! isEdit;
 		modal.querySelector( '[name="symbol"]' ).value = isEdit ? currency.symbol : '';
 		modal.querySelector( '[name="provider"]' ).value = isEdit ? currency.provider : 'manual';
-		modal.querySelector( '[name="provider_symbol"]' ).value = isEdit ? currency.provider_symbol : '';
+
+		// Reset the symbol picker, then let it restore the stored value.
+		refreshSymbolPicker( isEdit ? currency.provider : 'manual', isEdit ? currency.provider_symbol : '' );
 		modal.querySelector( '[name="rate"]' ).value = isEdit && currency.rate > 0 ? String( currency.rate ) : '';
 		modal.querySelector( '[name="rate"]' ).placeholder = isEdit ? strings.emptyRate : '';
 		modal.querySelector( '[name="update_interval_minutes"]' ).value = isEdit ? currency.update_interval_minutes : ( config.minInterval || 60 );
@@ -254,6 +256,9 @@
 		modal.querySelector( '[name="is_enabled"]' ).checked = isEdit ? !! currency.is_enabled : false;
 
 		modal.hidden = false;
+
+		// Warn when the row interval is shorter than the source can serve.
+		checkIntervalWarning( isEdit ? currency.provider : 'manual', Number( modal.querySelector( '[name="update_interval_minutes"]' ).value ) || 0 );
 
 		var firstField = modal.querySelector( '[name="name"]' );
 		if ( firstField ) {
@@ -508,10 +513,560 @@
 		}
 	}
 
+	/* ------------------------------------------------------------------ */
+	/* Symbol picker (searchable preset list + free text)                  */
+	/* ------------------------------------------------------------------ */
+
+	var providerEffMin = config.providerEffMin || {};
+
+	/**
+	 * Build the option list for a provider, honouring the search filter.
+	 *
+	 * @param {string} provider Provider key.
+	 * @param {string} search   Search text.
+	 * @return {Array} List of {value,label}.
+	 */
+	function symbolOptions( provider, search ) {
+		var map = ( config.symbols && config.symbols[ provider ] ) || {};
+		var term = ( search || '' ).toLowerCase().trim();
+		var out = [];
+
+		Object.keys( map ).forEach( function ( key ) {
+			var label = String( map[ key ] || '' );
+
+			if ( term && key.toLowerCase().indexOf( term ) === -1 && label.toLowerCase().indexOf( term ) === -1 ) {
+				return;
+			}
+
+			out.push( { value: key, label: label + ' — ' + key } );
+		} );
+
+		return out;
+	}
+
+	/**
+	 * Fill a <select> from a provider's known symbols.
+	 *
+	 * @param {HTMLElement} select   Target select.
+	 * @param {string}      provider Provider key.
+	 * @param {string}      current  Currently selected value.
+	 * @param {string}      search   Search filter.
+	 */
+	function fillSymbolSelect( select, provider, current, search ) {
+		if ( ! select ) {
+			return;
+		}
+
+		var options = symbolOptions( provider, search );
+		select.innerHTML = '';
+
+		var custom = document.createElement( 'option' );
+		custom.value = '';
+		custom.textContent = strings.customSymbol;
+		select.appendChild( custom );
+
+		options.forEach( function ( item ) {
+			var opt = document.createElement( 'option' );
+			opt.value = item.value;
+			opt.textContent = item.label;
+			if ( item.value === current ) {
+				opt.selected = true;
+			}
+			select.appendChild( opt );
+		} );
+
+		// Keep a stored symbol visible even when it is not in the preset list.
+		if ( current && ! options.some( function ( o ) { return o.value === current; } ) ) {
+			var extra = document.createElement( 'option' );
+			extra.value = current;
+			extra.textContent = current;
+			extra.selected = true;
+			select.appendChild( extra );
+		}
+	}
+
+	/**
+	 * Rebuild the provider-symbol controls for the current provider.
+	 *
+	 * @param {string} provider Provider key.
+	 * @param {string} current  Current symbol.
+	 */
+	function refreshSymbolPicker( provider, current ) {
+		var select = qs( '#rbw-field-provider-symbol' );
+		var text = qs( '#rbw-field-provider-symbol-text' );
+		var search = qs( '#rbw-symbol-search' );
+		var hint = qs( '#rbw-symbol-hint' );
+
+		if ( ! select || ! text ) {
+			return;
+		}
+
+		var map = ( config.symbols && config.symbols[ provider ] ) || {};
+		var hasSymbols = Object.keys( map ).length > 0;
+
+		select.hidden = ! hasSymbols;
+		if ( search ) {
+			search.hidden = ! hasSymbols;
+			search.value = '';
+		}
+
+		if ( hasSymbols ) {
+			fillSymbolSelect( select, provider, current, '' );
+			select.value = map[ current ] !== undefined ? current : '';
+			text.value = map[ current ] !== undefined ? '' : ( current || '' );
+			if ( hint ) {
+				hint.textContent = strings.searchSymbol;
+			}
+		} else {
+			select.innerHTML = '';
+			text.value = current || '';
+			if ( hint ) {
+				hint.textContent = strings.noSymbols;
+			}
+		}
+	}
+
+	/**
+	 * Current provider symbol from whichever control is active.
+	 *
+	 * @return {string}
+	 */
+	function currentProviderSymbol() {
+		var select = qs( '#rbw-field-provider-symbol' );
+		var text = qs( '#rbw-field-provider-symbol-text' );
+
+		if ( select && ! select.hidden && select.value ) {
+			return select.value;
+		}
+
+		return text ? text.value.trim() : '';
+	}
+
+	function bindSymbolPicker() {
+		var providerSelect = qs( '#rbw-field-provider' );
+		var select = qs( '#rbw-field-provider-symbol' );
+		var search = qs( '#rbw-symbol-search' );
+
+		if ( providerSelect ) {
+			providerSelect.addEventListener( 'change', function () {
+				refreshSymbolPicker( providerSelect.value, '' );
+				var intervalField = qs( '#rbw-field-interval' );
+				checkIntervalWarning( providerSelect.value, intervalField ? Number( intervalField.value ) : 0 );
+			} );
+		}
+
+		var intervalField = qs( '#rbw-field-interval' );
+		if ( intervalField ) {
+			intervalField.addEventListener( 'input', function () {
+				checkIntervalWarning( providerSelect ? providerSelect.value : '', Number( intervalField.value ) || 0 );
+			} );
+		}
+
+		if ( search && select ) {
+			search.addEventListener( 'input', function () {
+				fillSymbolSelect( select, providerSelect ? providerSelect.value : '', select.value, search.value );
+			} );
+		}
+
+		if ( select ) {
+			select.addEventListener( 'change', function () {
+				autofillFromSymbol( providerSelect ? providerSelect.value : '', select.value );
+			} );
+		}
+	}
+
+	/**
+	 * Fill code/name/symbol when the chosen preset leaves them empty.
+	 *
+	 * @param {string} provider Provider key.
+	 * @param {string} symbol   Chosen symbol.
+	 */
+	function autofillFromSymbol( provider, symbol ) {
+		if ( ! symbol ) {
+			return;
+		}
+
+		var modal = qs( '#rbw-currency-modal' );
+		if ( ! modal ) {
+			return;
+		}
+
+		var map = ( config.symbols && config.symbols[ provider ] ) || {};
+		var label = map[ symbol ];
+		var codeField = modal.querySelector( '[name="code"]' );
+		var nameField = modal.querySelector( '[name="name"]' );
+		var symbolField = modal.querySelector( '[name="symbol"]' );
+
+		// Derive an ASCII-ish code from the symbol: `gold:sekkeh` -> SEKKEH.
+		var bare = symbol.indexOf( ':' ) !== -1 ? symbol.split( ':' )[ 1 ] : symbol;
+		var code = bare.toUpperCase().replace( /[^A-Z0-9]/g, '' ).slice( 0, 32 );
+
+		if ( codeField && ! codeField.value ) {
+			codeField.value = code;
+		}
+
+		if ( nameField && ! nameField.value && label ) {
+			nameField.value = label;
+		}
+
+		if ( symbolField && ! symbolField.value && label ) {
+			symbolField.value = bare.toLowerCase();
+		}
+	}
+
+	/**
+	 * Warn when the chosen interval is shorter than the source's effective minimum.
+	 *
+	 * @param {string} provider Provider key.
+	 * @param {number} interval Chosen interval.
+	 */
+	function checkIntervalWarning( provider, interval ) {
+		var box = qs( '#rbw-interval-warning' );
+		var effective = providerEffMin[ provider ] || 0;
+
+		if ( ! box ) {
+			return;
+		}
+
+		if ( effective > 0 && interval > 0 && interval < effective ) {
+			box.hidden = false;
+			box.textContent = ( strings.intervalTooShort || '' )
+				.replace( '%1$d', interval )
+				.replace( '%2$d', effective );
+		} else {
+			box.hidden = true;
+			box.textContent = '';
+		}
+	}
+
+	/* ------------------------------------------------------------------ */
+	/* Add from presets                                                    */
+	/* ------------------------------------------------------------------ */
+
+	function presetProviders() {
+		var out = [];
+		var map = config.symbols || {};
+
+		Object.keys( map ).forEach( function ( key ) {
+			if ( Object.keys( map[ key ] ).length ) {
+				out.push( key );
+			}
+		} );
+
+		return out;
+	}
+
+	function fillPresetList() {
+		var providerSelect = qs( '#rbw-preset-provider' );
+		var list = qs( '#rbw-preset-symbol' );
+		var search = qs( '#rbw-preset-symbol-search' );
+
+		if ( ! providerSelect || ! list ) {
+			return;
+		}
+
+		var map = ( config.symbols && config.symbols[ providerSelect.value ] ) || {};
+		var term = ( search ? search.value : '' ).toLowerCase().trim();
+
+		list.innerHTML = '';
+
+		Object.keys( map ).forEach( function ( key ) {
+			var label = String( map[ key ] || '' );
+
+			if ( term && key.toLowerCase().indexOf( term ) === -1 && label.toLowerCase().indexOf( term ) === -1 ) {
+				return;
+			}
+
+			var opt = document.createElement( 'option' );
+			opt.value = key;
+			opt.textContent = label + ' — ' + key;
+			list.appendChild( opt );
+		} );
+	}
+
+	function bindPresets() {
+		var openButton = qs( '#rbw-add-preset' );
+		var modal = qs( '#rbw-preset-modal' );
+
+		if ( ! openButton || ! modal ) {
+			return;
+		}
+
+		openButton.addEventListener( 'click', function () {
+			var providerSelect = qs( '#rbw-preset-provider' );
+			if ( providerSelect && ! providerSelect.value ) {
+				var available = presetProviders();
+				if ( available.length ) {
+					providerSelect.value = available[ 0 ];
+				}
+			}
+			fillPresetList();
+			modal.hidden = false;
+		} );
+
+		qsa( '[data-rbw-close]', modal ).forEach( function ( el ) {
+			el.addEventListener( 'click', function () {
+				modal.hidden = true;
+			} );
+		} );
+
+		var providerSelect = qs( '#rbw-preset-provider' );
+		if ( providerSelect ) {
+			providerSelect.addEventListener( 'change', fillPresetList );
+		}
+
+		var search = qs( '#rbw-preset-symbol-search' );
+		if ( search ) {
+			search.addEventListener( 'input', fillPresetList );
+		}
+
+		var form = qs( '#rbw-preset-form' );
+		if ( form ) {
+			form.addEventListener( 'submit', function ( event ) {
+				event.preventDefault();
+
+				var list = qs( '#rbw-preset-symbol' );
+				var selected = list ? list.value : '';
+
+				if ( ! selected ) {
+					notify( strings.noSymbols, 'error' );
+					return;
+				}
+
+				var provider = providerSelect.value;
+				var map = ( config.symbols && config.symbols[ provider ] ) || {};
+				var label = map[ selected ] || selected;
+				var bare = selected.indexOf( ':' ) !== -1 ? selected.split( ':' )[ 1 ] : selected;
+				var button = qs( '#rbw-preset-submit' );
+
+				if ( button ) {
+					button.disabled = true;
+					button.textContent = strings.saving;
+				}
+
+				request( 'add_preset', {
+					provider: provider,
+					symbol: selected,
+					code: bare.toUpperCase().replace( /[^A-Z0-9]/g, '' ).slice( 0, 32 ),
+					name: label
+				} )
+					.then( function ( response ) {
+						if ( ! response.success ) {
+							notify( messageFrom( response ), 'error' );
+							return;
+						}
+
+						notify( messageFrom( response ), 'success' );
+						modal.hidden = true;
+						window.location.reload();
+					} )
+					.catch( function ( error ) {
+						notify( error.message, 'error' );
+					} )
+					.finally( function () {
+						if ( button ) {
+							button.disabled = false;
+							button.textContent = 'Add';
+						}
+					} );
+			} );
+		}
+	}
+
+	/* ------------------------------------------------------------------ */
+	/* Price sources tab                                                   */
+	/* ------------------------------------------------------------------ */
+
+	function renderTestResult( provider, ok, data ) {
+		var box = qs( '.rbw-test-result[data-provider="' + provider + '"]' );
+		if ( ! box ) {
+			return;
+		}
+
+		var details = ( data && data.details ) || {};
+		var lines = [];
+
+		lines.push( ( ok ? strings.testSuccess : strings.testFailed ) );
+
+		if ( undefined !== data.http_status && 0 !== Number( data.http_status ) ) {
+			lines.push( 'HTTP: ' + data.http_status );
+		}
+
+		if ( undefined !== data.parsed ) {
+			lines.push( ( strings.parsedCount || 'Parsed: %d' ).replace( '%d', data.parsed ) );
+		}
+
+		if ( data.sample && Object.keys( data.sample ).length ) {
+			var pairs = Object.keys( data.sample ).map( function ( key ) {
+				return key + ' = ' + data.sample[ key ];
+			} );
+			lines.push( strings.samplePrefix + ' ' + pairs.join( ', ' ) );
+		}
+
+		if ( ! ok ) {
+			lines.push( messageFrom( data ) );
+		}
+
+		box.hidden = false;
+		box.className = 'rbw-test-result ' + ( ok ? 'is-success' : 'is-error' );
+		box.textContent = lines.join( ' · ' );
+	}
+
+	function bindSources() {
+		qsa( '.rbw-provider-form' ).forEach( function ( form ) {
+			var provider = form.getAttribute( 'data-provider' );
+
+			form.addEventListener( 'submit', function ( event ) {
+				event.preventDefault();
+
+				var button = form.querySelector( '.rbw-save-provider' );
+				var body = {};
+
+				qsa( '[name]', form ).forEach( function ( input ) {
+					if ( 'checkbox' === input.type ) {
+						body[ input.name ] = input.checked ? '1' : '0';
+					} else if ( 'password' === input.type ) {
+						// Only send when the admin typed something (empty keeps the old secret).
+						if ( input.value ) {
+							body[ input.name ] = input.value;
+						}
+					} else {
+						body[ input.name ] = input.value;
+					}
+				} );
+
+				if ( button ) {
+					button.disabled = true;
+					button.textContent = strings.saving;
+				}
+
+				request( 'save_provider_settings', { provider: provider, fields: body } )
+					.then( function ( response ) {
+						notify( messageFrom( response ), response.success ? 'success' : 'error' );
+
+						qsa( '[type="password"]', form ).forEach( function ( input ) {
+							input.value = '';
+						} );
+
+						if ( response.success && response.data.card ) {
+							applyBudget( provider, response.data.card );
+						}
+					} )
+					.catch( function ( error ) {
+						notify( error.message, 'error' );
+					} )
+					.finally( function () {
+						if ( button ) {
+							button.disabled = false;
+							button.textContent = 'Save';
+						}
+					} );
+			} );
+		} );
+
+		qsa( '.rbw-test-provider' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				var provider = button.getAttribute( 'data-provider' );
+				var previous = button.textContent;
+
+				button.disabled = true;
+				button.textContent = strings.working;
+
+				request( 'test_provider', { provider: provider } )
+					.then( function ( response ) {
+						var data = response.data || {};
+						if ( response.success ) {
+							renderTestResult( provider, true, data );
+							if ( data.budget ) {
+								applyBudget( provider, { budget: data.budget } );
+							}
+						} else {
+							data.message = messageFrom( response );
+							renderTestResult( provider, false, data );
+						}
+					} )
+					.catch( function ( error ) {
+						renderTestResult( provider, false, { message: error.message } );
+					} )
+					.finally( function () {
+						button.disabled = false;
+						button.textContent = previous;
+					} );
+			} );
+		} );
+
+		qsa( '.rbw-reset-budget' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				if ( ! window.confirm( strings.confirmBudgetReset ) ) {
+					return;
+				}
+
+				var provider = button.getAttribute( 'data-provider' );
+
+				request( 'reset_budget', { provider: provider } )
+					.then( function ( response ) {
+						notify( messageFrom( response ), response.success ? 'success' : 'error' );
+						if ( response.success && response.data.card ) {
+							applyBudget( provider, response.data.card );
+						}
+					} )
+					.catch( function ( error ) {
+						notify( error.message, 'error' );
+					} );
+			} );
+		} );
+
+		// Remember effective minimums so the currency dialog can warn.
+		qsa( '.rbw-card' ).forEach( function ( card ) {
+			var provider = card.getAttribute( 'data-provider' );
+			var meter = card.querySelector( '.rbw-budget-list' );
+			if ( meter && ! providerEffMin[ provider ] ) {
+				providerEffMin[ provider ] = 0;
+			}
+		} );
+	}
+
+	/**
+	 * Update the quota block in a provider card after an AJAX call.
+	 *
+	 * @param {string} provider Provider key.
+	 * @param {Object} card     Card model from the server.
+	 */
+	function applyBudget( provider, card ) {
+		var budget = card && card.budget;
+		var cardEl = qs( '.rbw-card[data-provider="' + provider + '"]' );
+
+		if ( ! budget || ! cardEl ) {
+			return;
+		}
+
+		providerEffMin[ provider ] = Number( budget.effective ) || 0;
+
+		var list = cardEl.querySelector( '.rbw-budget-list' );
+		if ( ! list ) {
+			return;
+		}
+
+		var items = list.querySelectorAll( 'li strong' );
+		var texts = [
+			budget.limit > 0 ? budget.used + ' / ' + budget.limit : String( budget.used ),
+			budget.last_request_fmt || '—',
+			budget.next_allowed_fmt || '—',
+			( budget.min_interval || 0 ) + ' / ' + ( budget.effective || 0 )
+		];
+
+		for ( var i = 0; i < items.length && i < texts.length; i++ ) {
+			items[ i ].textContent = texts[ i ];
+		}
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		bindToolbar();
 		bindTable();
 		bindModal();
 		bindGeneral();
+		bindSymbolPicker();
+		bindPresets();
+		bindSources();
 	} );
 }() );

@@ -112,4 +112,24 @@ final class MockProvider extends AbstractProvider {
 			),
 		);
 	}
+
+	/**
+	 * The built-in mock catalogue, so the admin can pick symbols from a list.
+	 *
+	 * @return array<string, string>
+	 */
+	public function get_known_symbols(): array {
+		return array(
+			'USD'    => __( 'US Dollar', 'ratebridge-woo' ),
+			'EUR'    => __( 'Euro', 'ratebridge-woo' ),
+			'AED'    => __( 'UAE Dirham', 'ratebridge-woo' ),
+			'GBP'    => __( 'British Pound', 'ratebridge-woo' ),
+			'TRY'    => __( 'Turkish Lira', 'ratebridge-woo' ),
+			'GOLD18' => __( '18K Gold (gram)', 'ratebridge-woo' ),
+			'GOLD24' => __( '24K Gold (gram)', 'ratebridge-woo' ),
+			'SILVER' => __( 'Silver (gram)', 'ratebridge-woo' ),
+			'COIN'   => __( 'Gold coin (full)', 'ratebridge-woo' ),
+			'BTC'    => __( 'Bitcoin', 'ratebridge-woo' ),
+		);
+	}
 }

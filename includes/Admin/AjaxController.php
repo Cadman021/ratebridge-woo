@@ -12,7 +12,10 @@ use RateBridge\Core\Settings;
 use RateBridge\Currency\Currency;
 use RateBridge\Currency\CurrencyRepository;
 use RateBridge\Pricing\RateUpdater;
+use RateBridge\Providers\AbstractProvider;
+use RateBridge\Providers\ProviderInterface;
 use RateBridge\Providers\ProviderRegistry;
+use RateBridge\Providers\RequestBudget;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -47,6 +50,11 @@ final class AjaxController {
 			'rbw_clear_log',
 			'rbw_get_log',
 			'rbw_get_currency',
+			'rbw_save_provider_settings',
+			'rbw_test_provider',
+			'rbw_reset_budget',
+			'rbw_add_preset',
+			'rbw_get_symbols',
 		);
 
 		foreach ( $actions as $action ) {
@@ -97,6 +105,21 @@ final class AjaxController {
 				break;
 			case 'clear_log':
 				$this->clear_log();
+				break;
+			case 'save_provider_settings':
+				$this->save_provider_settings();
+				break;
+			case 'test_provider':
+				$this->test_provider();
+				break;
+			case 'reset_budget':
+				$this->reset_budget();
+				break;
+			case 'add_preset':
+				$this->add_preset();
+				break;
+			case 'get_symbols':
+				$this->get_symbols();
 				break;
 			default:
 				wp_send_json_error( array( 'message' => __( 'Unknown action.', 'ratebridge-woo' ) ), 400 );
@@ -334,6 +357,186 @@ final class AjaxController {
 			array(
 				'message'  => __( 'Settings saved.', 'ratebridge-woo' ),
 				'settings' => $saved,
+			)
+		);
+	}
+
+	/**
+	 * Save a provider's settings (Price sources tab).
+	 *
+	 * @return void
+	 */
+	private function save_provider_settings(): void {
+		$provider_key = isset( $_POST['provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['provider'] ) ) : '';
+
+		if ( '' === $provider_key ) {
+			wp_send_json_error( array( 'message' => __( 'Unknown provider.', 'ratebridge-woo' ) ), 400 );
+		}
+
+		// Collect the raw field values for this provider only.
+		$raw = array();
+
+		if ( isset( $_POST['fields'] ) && is_array( $_POST['fields'] ) ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitised per field type below.
+			$submitted = wp_unslash( $_POST['fields'] );
+
+			foreach ( (array) $submitted as $field_key => $field_value ) {
+				$raw[ sanitize_key( (string) $field_key ) ] = is_scalar( $field_value ) ? (string) $field_value : '';
+			}
+		}
+
+		$service = new ProviderSettings();
+		$result  = $service->save( $provider_key, $raw );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error(
+				array(
+					'message' => $result->get_error_message(),
+					'errors'  => (array) ( $result->get_error_data()['errors'] ?? array() ),
+				),
+				400
+			);
+		}
+
+		$provider = ProviderRegistry::instance()->get( $provider_key );
+
+		wp_send_json_success(
+			array(
+				'message' => __( 'Provider settings saved.', 'ratebridge-woo' ),
+				'card'    => $provider instanceof ProviderInterface ? $service->card_model( $provider ) : array(),
+			)
+		);
+	}
+
+	/**
+	 * Perform one test fetch against a provider.
+	 *
+	 * @return void
+	 */
+	private function test_provider(): void {
+		$provider_key = isset( $_POST['provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['provider'] ) ) : '';
+		$service      = new ProviderSettings();
+		$result       = $service->test_connection( $provider_key );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error(
+				array(
+					'message' => $result->get_error_message(),
+					'details' => (array) $result->get_error_data(),
+				)
+			);
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Reset a provider's request budget counters.
+	 *
+	 * @return void
+	 */
+	private function reset_budget(): void {
+		$provider_key = isset( $_POST['provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['provider'] ) ) : '';
+		$provider     = ProviderRegistry::instance()->get( $provider_key );
+
+		if ( null === $provider ) {
+			wp_send_json_error( array( 'message' => __( 'Unknown provider.', 'ratebridge-woo' ) ), 400 );
+		}
+
+		// Clear both the quota state and any cached payloads.
+		RequestBudget::reset( $provider_key );
+
+		if ( $provider instanceof AbstractProvider ) {
+			$provider->flush_cache();
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => __( 'Request counters reset.', 'ratebridge-woo' ),
+				'card'    => ( new ProviderSettings() )->card_model( $provider ),
+			)
+		);
+	}
+
+	/**
+	 * Add a currency from a provider preset in one click.
+	 *
+	 * @return void
+	 */
+	private function add_preset(): void {
+		$provider_key = isset( $_POST['provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['provider'] ) ) : '';
+		$symbol       = isset( $_POST['symbol'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['symbol'] ) ) : '';
+		$code         = isset( $_POST['code'] ) ? strtoupper( sanitize_text_field( wp_unslash( (string) $_POST['code'] ) ) ) : '';
+		$name         = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['name'] ) ) : '';
+
+		$registry = ProviderRegistry::instance();
+		$provider = $registry->get( $provider_key );
+
+		if ( null === $provider || '' === $symbol ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid preset.', 'ratebridge-woo' ) ), 400 );
+		}
+
+		$known = $provider->get_known_symbols();
+
+		if ( ! array_key_exists( $symbol, $known ) ) {
+			wp_send_json_error( array( 'message' => __( 'This symbol is not offered by the selected source.', 'ratebridge-woo' ) ), 400 );
+		}
+
+		$repo = new CurrencyRepository();
+		$code = preg_replace( '/[^A-Z0-9_\-]/', '', $code ) ?? '';
+
+		if ( '' === $code || '' === $name ) {
+			wp_send_json_error( array( 'message' => __( 'Code and name are required.', 'ratebridge-woo' ) ), 400 );
+		}
+
+		if ( $repo->code_exists( $code ) ) {
+			wp_send_json_error( array( 'message' => __( 'This code is already used by another currency.', 'ratebridge-woo' ) ), 400 );
+		}
+
+		$now = current_time( 'mysql', true );
+
+		$id = $repo->create(
+			array(
+				'code'                    => $code,
+				'name'                    => $name,
+				'symbol'                  => '',
+				'provider'                => $provider_key,
+				'provider_symbol'         => $symbol,
+				'rate'                    => 0,
+				'is_enabled'              => 0,
+				'update_interval_minutes' => (int) Settings::get( 'default_update_interval', 60 ),
+				'sort_order'              => 0,
+				'created_at'              => $now,
+				'updated_at'              => $now,
+			)
+		);
+
+		if ( $id <= 0 ) {
+			wp_send_json_error( array( 'message' => __( 'Could not save the currency.', 'ratebridge-woo' ) ), 500 );
+		}
+
+		$currency = $repo->get( $id );
+
+		wp_send_json_success(
+			array(
+				'message'  => __( 'Currency added from presets. Enable it to start updating.', 'ratebridge-woo' ),
+				'currency' => $currency instanceof Currency ? $this->currency_payload( $currency ) : array(),
+			)
+		);
+	}
+
+	/**
+	 * Return the known symbols of one provider (for the dialog).
+	 *
+	 * @return void
+	 */
+	private function get_symbols(): void {
+		$provider_key = isset( $_POST['provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['provider'] ) ) : '';
+		$registry     = ProviderRegistry::instance();
+
+		wp_send_json_success(
+			array(
+				'symbols' => $registry->known_symbols( $provider_key ),
 			)
 		);
 	}

@@ -1,0 +1,26 @@
+# Dependencies / tooling
+/vendor/
+/node_modules/
+composer.lock
+package-lock.json
+
+# Secrets — never commit these
+.env
+.env.*
+*.key
+*.pem
+*secret*
+*credentials*
+/keys/
+
+# Build artefacts / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+*.zip
+/build/
+
+# NOTE: docs/api-samples/*.json ARE intentionally committed as parser fixtures.
+# They must never contain real API keys or tokens; scrub them before committing.
