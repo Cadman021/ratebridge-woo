@@ -1,0 +1,196 @@
+/**
+ * RateBridge Woo - admin styles (LTR).
+ * The RTL counterpart is admin-rtl.css (loaded automatically by WP via wp_style_add_data).
+ */
+
+.rbw-wrap {
+	max-width: 1200px;
+}
+
+.rbw-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin: 16px 0;
+}
+
+.rbw-muted {
+	color: #646970;
+	font-size: 12px;
+}
+
+.rbw-required {
+	color: #d63638;
+}
+
+.rbw-table {
+	margin-top: 8px;
+}
+
+.rbw-table th.rbw-col-enabled,
+.rbw-table td:first-child {
+	width: 70px;
+	text-align: center;
+}
+
+.rbw-col-code {
+	width: 110px;
+}
+
+.rbw-col-rate {
+	width: 150px;
+}
+
+.rbw-col-interval {
+	width: 110px;
+}
+
+.rbw-col-actions {
+	width: 240px;
+}
+
+.rbw-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.rbw-rate {
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+}
+
+.rbw-error-text {
+	color: #d63638;
+	font-size: 12px;
+	margin-top: 4px;
+	line-height: 1.4;
+}
+
+.rbw-notices {
+	margin: 12px 0;
+}
+
+.rbw-notice {
+	border-inline-start: 4px solid #2271b1;
+	background: #fff;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+	padding: 8px 12px;
+	margin: 0 0 8px;
+}
+
+.rbw-notice.is-success {
+	border-inline-start-color: #00a32a;
+}
+
+.rbw-notice.is-error {
+	border-inline-start-color: #d63638;
+}
+
+.rbw-section-title {
+	margin-top: 32px;
+}
+
+.rbw-log-table .rbw-col-time {
+	width: 170px;
+}
+
+.rbw-log-table .rbw-col-status,
+.rbw-log-table .rbw-col-trigger {
+	width: 100px;
+}
+
+.rbw-badge {
+	display: inline-block;
+	padding: 1px 8px;
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.8;
+}
+
+.rbw-badge-success {
+	background: #edfaef;
+	color: #007017;
+}
+
+.rbw-badge-error {
+	background: #fcf0f1;
+	color: #b32d2e;
+}
+
+/* Modal */
+.rbw-modal[hidden] {
+	display: none;
+}
+
+.rbw-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 100100;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.rbw-modal-backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.5);
+}
+
+.rbw-modal-content {
+	position: relative;
+	background: #fff;
+	border-radius: 4px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+	width: min(560px, 92vw);
+	max-height: 90vh;
+	overflow-y: auto;
+	padding: 20px 24px;
+	text-align: start;
+}
+
+.rbw-modal-content h2 {
+	margin-top: 0;
+}
+
+.rbw-modal-content p > label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.rbw-modal-content input[type="text"],
+.rbw-modal-content input[type="number"],
+.rbw-modal-content select {
+	width: 100%;
+	max-width: 100%;
+}
+
+.rbw-modal-actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 20px;
+}
+
+.rbw-inline {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-weight: 400;
+}
+
+.rbw-form-table input[type="number"].small-text {
+	width: 110px;
+}
+
+.rbw-rounding-preview code {
+	font-size: 12px;
+}
+
+.rbw-is-busy {
+	opacity: 0.6;
+	pointer-events: none;
+}

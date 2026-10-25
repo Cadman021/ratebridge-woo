@@ -1,0 +1,44 @@
+/**
+ * RateBridge Woo - admin styles (RTL overrides).
+ * Loaded automatically when the admin locale is RTL.
+ */
+
+.rbw-wrap {
+	direction: rtl;
+}
+
+.rbw-toolbar,
+.rbw-actions,
+.rbw-modal-actions,
+.rbw-inline {
+	direction: rtl;
+}
+
+.rbw-notice {
+	border-inline-start: 4px solid #2271b1;
+	border-inline-end: 0;
+}
+
+.rbw-notice.is-success {
+	border-inline-start-color: #00a32a;
+}
+
+.rbw-notice.is-error {
+	border-inline-start-color: #d63638;
+}
+
+.rbw-modal-content {
+	text-align: right;
+}
+
+.rbw-rate,
+.rbw-last-updated,
+.rbw-table code {
+	direction: ltr;
+	unicode-bidi: embed;
+}
+
+.rbw-table td.rbw-rate,
+.rbw-table td.rbw-last-updated {
+	text-align: right;
+}
