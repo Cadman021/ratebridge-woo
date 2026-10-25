@@ -108,8 +108,24 @@
 			body: body.toString()
 		} )
 			.then( function ( response ) {
-				return response.json().catch( function () {
-					throw new Error( strings.genericError );
+				// Read the body once as text so we can show what the server really
+				// said when it is not JSON (e.g. a PHP fatal or a wp_die page).
+				return response.text().then( function ( text ) {
+					var parsed = null;
+
+					try {
+						parsed = JSON.parse( text );
+					} catch ( parseError ) {
+						var snippet = ( text || '' ).replace( /<[^>]*>/g, ' ' ).replace( /\s+/g, ' ' ).trim().slice( 0, 220 );
+
+						throw new Error(
+							( strings.genericError || 'Error' ) +
+							' [HTTP ' + response.status + ']' +
+							( snippet ? ' ' + snippet : '' )
+						);
+					}
+
+					return parsed;
 				} );
 			} );
 	}
