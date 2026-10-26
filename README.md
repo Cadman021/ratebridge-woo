@@ -536,9 +536,10 @@ Nothing happens when the unit did not really change.
 ### Product editor behaviour
 
 - **Simple product** – General tab, section «قیمت‌گذاری با نرخ ارز»: checkbox, currency select
-  (enabled currencies with code, name and current rate), base price, sale base price, minimum
-  price, fluctuation margin, profit/commission/extra with the mode select, and the
-  «پیش‌نمایش قیمت» button.
+  (**all** currencies with code, name and current rate; disabled ones are appended with
+  «غیرفعال» / «بدون نرخ» so an existing product never loses its selection), base price, sale
+  base price, minimum price, fluctuation margin, profit/commission/extra with the mode select,
+  and the «پیش‌نمایش قیمت» button.
 - **Variable product** – the parent holds the currency, mode, overrides, minimum and
   fluctuation; each variation has a base price, an optional sale base price and an optional
   currency override («ارز والد»).
@@ -550,7 +551,30 @@ Nothing happens when the unit did not really change.
   through the same `PriceCalculator` and returns the final price plus a Persian breakdown
   (base value, profit, commission, extra, before/after minimum, rounded, final) and the flags
   that fired (minimum applied, rounded, fluctuation kept, percentage converted).
-- The products list gets an «ارز» column (currency code + «آخرین محاسبه» timestamp).
+- The products list gets an «ارز» column: currency code, «آخرین محاسبه» timestamp, and a red
+  reason when the product still has no calculated price («ارز غیرفعال است»، «ارز نرخ ندارد»،
+  «قیمت پایه ندارد»، «ارزی انتخاب نشده است»).
+- A **bulk action «محاسبه دوباره قیمت‌های ارزی»** recalculates the selected products immediately
+  and reports repriced / skipped / failed counts.
+
+#### Why a product can show as «ناموجود»
+
+WooCommerce prints *"این محصول در انبار موجود نیست"* whenever `WC_Product::is_purchasable()` is
+false — and that happens when the price is **empty**, regardless of stock status. A managed
+variation gets its price only when the currency is usable, so a **disabled currency (or one
+without a rate)** leaves a newly created variation priceless and WooCommerce renders it as out of
+stock. This is now surfaced in three places: the panel note under the currency select, the
+products-list column, and an admin notice queued after saving a product whose price could not be
+calculated. Fix = enable the currency (and give it a rate), then run the bulk recalculation.
+
+Related invariants the repricer enforces on variable products:
+
+- the **parent keeps no price of its own** (a leftover `_regular_price`/`_sale_price` from when
+  the product was simple is cleared), so the range and the "from" label come from the variations;
+- a variation's **sale base price is never inherited from the parent** (only its own value
+  counts), which previously wrote a sale price orders of magnitude below the regular price;
+- the parent base price *is* inherited by a variation that has none, because a variable product
+  stores its template base price on the parent.
 
 ---
 

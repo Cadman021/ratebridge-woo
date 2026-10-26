@@ -335,7 +335,12 @@ final class Repricer {
 			$base_price = ProductData::base_price( $variation_id );
 
 			if ( $base_price <= 0 ) {
-				// Fall back to the parent base price when the variation has none.
+				/*
+				 * Inherit the parent's base price only when the parent really
+				 * acts as a template: a variable product keeps its base price on
+				 * the parent, so every variation without its own value is meant
+				 * to share it.
+				 */
 				$base_price = ProductData::base_price( $parent_id );
 			}
 
@@ -387,11 +392,14 @@ final class Repricer {
 			$result['breakdown']['final'] = $regular;
 
 			$sale    = null;
-			$sale_base_price = ProductData::sale_base_price( $variation_id );
 
-			if ( $sale_base_price <= 0 ) {
-				$sale_base_price = ProductData::sale_base_price( $parent_id );
-			}
+			/*
+			 * Only the variation's own sale base price counts. Falling back to
+			 * the parent's value is wrong (the parent's base price is not the
+			 * variation's) and used to write a sale price orders of magnitude
+			 * below the regular one.
+			 */
+			$sale_base_price = ProductData::sale_base_price( $variation_id );
 
 			if ( $sale_base_price > 0 ) {
 				$sale_base     = $sale_base_price * $var_currency->rate;
@@ -401,7 +409,7 @@ final class Repricer {
 				$sale_settings['fluctuation'] = 0.0;
 				$sale_result   = PriceCalculator::calculate( $sale_base_price, $var_currency->rate, $sale_settings );
 
-				if ( $sale_result['ok'] && $sale_result['price'] > 0 && $sale_result['price'] < $regular ) {
+				if ( $sale_result['ok'] ? ( $sale_result['price'] > 0 && $sale_result['price'] < $regular ) : false ) {
 					$sale = (float) $sale_result['price'];
 				}
 			}
@@ -424,6 +432,21 @@ final class Repricer {
 			} else {
 				++$summary['repriced'];
 			}
+		}
+
+		/*
+		 * A variable product has no price of its own: its range comes from the
+		 * variations. A leftover regular/sale price on the parent (e.g. from
+		 * when the product was still simple) pollutes the range and the
+		 * "starting from" label, so it is cleared here.
+		 */
+		$parent_regular = (string) $product->get_regular_price( 'edit' );
+		$parent_sale    = (string) $product->get_sale_price( 'edit' );
+
+		if ( '' !== $parent_regular || '' !== $parent_sale ) {
+			$product->set_regular_price( '' );
+			$product->set_sale_price( '' );
+			$product->save();
 		}
 
 		/*

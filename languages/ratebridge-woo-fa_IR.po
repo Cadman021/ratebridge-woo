@@ -1030,3 +1030,70 @@ msgstr "بدون نرخ"
 
 msgid "rate: %1$s %2$s"
 msgstr "نرخ: %1$s %2$s"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 3.1 — currency selection clarity + variation pricing fixes
+# ─────────────────────────────────────────────────────────────────────────────
+
+msgid " and "
+msgstr " و "
+
+msgid "%s is missing"
+msgstr "%s وجود ندارد"
+
+msgid "Currency disabled"
+msgstr "ارز غیرفعال است"
+
+msgid "Currency has no rate"
+msgstr "ارز نرخ ندارد"
+
+msgid "Fix it in the currency settings"
+msgstr "آن را در تنظیمات ارز اصلاح کنید"
+
+msgid "No base price"
+msgstr "قیمت پایه ندارد"
+
+msgid "No currency is ready: every currency is disabled or has no rate yet, so product prices cannot be calculated."
+msgstr "هیچ ارزی آماده نیست: همه ارزها غیرفعال‌اند یا هنوز نرخ ندارند، بنابراین قیمت محصولات محاسبه نمی‌شود."
+
+msgid "No currency selected"
+msgstr "ارزی انتخاب نشده است"
+
+msgid "Open the currency settings"
+msgstr "باز کردن تنظیمات ارز"
+
+msgid "Prices are not being calculated because the currency %1$s cannot be used: %2$s."
+msgstr "قیمت‌ها محاسبه نمی‌شوند چون ارز %1$s قابل استفاده نیست: %2$s."
+
+msgid "Recalculate currency prices"
+msgstr "محاسبه دوباره قیمت‌های ارزی"
+
+msgid "Recalculation finished: %1$d repriced, %2$d skipped (no usable currency or no base price), %3$d failed."
+msgstr "محاسبه دوباره تمام شد: %1$d قیمت‌گذاری شد، %2$d رد شد (ارز قابل استفاده یا قیمت پایه نداشت)، %3$d ناموفق."
+
+msgid "The currency \"%s\" no longer exists. Prices cannot be calculated."
+msgstr "ارز «%s» دیگر وجود ندارد. قیمت‌ها محاسبه نمی‌شوند."
+
+msgid "The parent currency is disabled or has no rate, so this variation keeps its current price (or shows as unavailable when it has none)."
+msgstr "ارز والد غیرفعال است یا نرخ ندارد، بنابراین این تنوع قیمت فعلی خود را حفظ می‌کند (و اگر قیمتی نداشته باشد ناموجود نمایش داده می‌شود)."
+
+msgid "The price of “%1$s” was not calculated: %2$s"
+msgstr "قیمت «%1$s» محاسبه نشد: %2$s"
+
+msgid "There is no currency yet. Create one in WooCommerce → نرخ ساز → Currencies first."
+msgstr "هنوز ارزی وجود ندارد. ابتدا یکی را در ووکامرس ← نرخ ساز ← ارزها بسازید."
+
+msgid "disabled"
+msgstr "غیرفعال"
+
+msgid "it has no rate yet"
+msgstr "نرخ ندارد"
+
+msgid "it is disabled"
+msgstr "غیرفعال است"
+
+msgid "no rate"
+msgstr "بدون نرخ"
+
+msgid "not set"
+msgstr "تعیین نشده"

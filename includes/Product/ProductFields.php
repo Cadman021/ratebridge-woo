@@ -63,6 +63,12 @@ final class ProductFields {
 		add_action( 'manage_product_posts_custom_column', array( $this, 'render_column' ), 10, 2 );
 		add_action( 'manage_posts_custom_column', array( $this, 'render_column' ), 10, 2 );
 
+		// Bulk action: recalculate the selected products right now.
+		add_filter( 'bulk_actions-edit-product', array( $this, 'add_bulk_action' ) );
+		add_filter( 'handle_bulk_actions-edit-product', array( $this, 'handle_bulk_action' ), 10, 3 );
+		add_action( 'admin_notices', array( $this, 'render_bulk_result_notice' ) );
+		add_action( 'admin_notices', array( $this, 'render_queued_notices' ) );
+
 		// Assets on the product edit screen.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 	}
@@ -95,7 +101,21 @@ final class ProductFields {
 	 * @return Currency[]
 	 */
 	private function currencies(): array {
-		return ( new CurrencyRepository() )->get_enabled();
+		return ( new CurrencyRepository() )->get_all();
+	}
+
+	/**
+	 * Currencies that can actually price a product right now.
+	 *
+	 * @return Currency[]
+	 */
+	private function usable_currencies(): array {
+		return array_values(
+			array_filter(
+				$this->currencies(),
+				static fn ( Currency $currency ): bool => $currency->is_enabled && $currency->has_rate()
+			)
+		);
 	}
 
 	/**
@@ -114,7 +134,19 @@ final class ProductFields {
 			)
 			: __( 'no rate yet', 'ratebridge-woo' );
 
-		return sprintf( '%s — %s (%s)', $currency->code, $currency->name, $rate );
+		$label = sprintf( '%s — %s (%s)', $currency->code, $currency->name, $rate );
+
+		// Disabled rows stay selectable so an existing product keeps its currency
+		// and the admin can see *why* prices are not updating.
+		if ( ! $currency->is_enabled ) {
+			$label .= ' — ' . __( 'disabled', 'ratebridge-woo' );
+		}
+
+		if ( ! $currency->has_rate() ) {
+			$label .= ' — ' . __( 'no rate', 'ratebridge-woo' );
+		}
+
+		return $label;
 	}
 
 	/**
@@ -150,7 +182,14 @@ final class ProductFields {
 		if ( empty( $currencies ) ) {
 			printf(
 				'<p class="rbw-product-note rbw-product-note-warning">%s</p>',
-				esc_html__( 'There is no enabled currency yet. Enable one in WooCommerce → نرخ ساز → Currencies first.', 'ratebridge-woo' )
+				esc_html__( 'There is no currency yet. Create one in WooCommerce → نرخ ساز → Currencies first.', 'ratebridge-woo' )
+			);
+		} elseif ( empty( $this->usable_currencies() ) ) {
+			printf(
+				'<p class="rbw-product-note rbw-product-note-warning">%s <a href="%s">%s</a></p>',
+				esc_html__( 'No currency is ready: every currency is disabled or has no rate yet, so product prices cannot be calculated.', 'ratebridge-woo' ),
+				esc_url( admin_url( 'admin.php?page=ratebridge-woo' ) ),
+				esc_html__( 'Open the currency settings', 'ratebridge-woo' )
 			);
 		}
 
@@ -171,6 +210,8 @@ final class ProductFields {
 
 		echo '</select>';
 		echo '</p>';
+
+		$this->render_currency_state( $data['currency'] );
 
 		$this->render_numeric_field(
 			'base_price',
@@ -224,6 +265,67 @@ final class ProductFields {
 		echo '</p>';
 
 		echo '</div><!-- .rbw-product-panel -->';
+	}
+
+	/**
+	 * Explain why the selected currency cannot produce a price right now.
+	 *
+	 * A disabled currency (or one without a rate) means the product keeps its
+	 * last price and, when it never had one, WooCommerce shows it as
+	 * unavailable. Saying so here beats a silent "out of stock" on the front end.
+	 *
+	 * @param string $code Currently selected currency code.
+	 * @return void
+	 */
+	private function render_currency_state( string $code ): void {
+		if ( '' === $code ) {
+			return;
+		}
+
+		$currency = ( new CurrencyRepository() )->get_by_code( $code );
+
+		if ( ! $currency instanceof Currency ) {
+			printf(
+				'<p class="rbw-product-note rbw-product-note-warning">%s</p>',
+				esc_html(
+					sprintf(
+						/* translators: %s: currency code */
+						__( 'The currency "%s" no longer exists. Prices cannot be calculated.', 'ratebridge-woo' ),
+						$code
+					)
+				)
+			);
+
+			return;
+		}
+
+		$problems = array();
+
+		if ( ! $currency->is_enabled ) {
+			$problems[] = __( 'it is disabled', 'ratebridge-woo' );
+		}
+
+		if ( ! $currency->has_rate() ) {
+			$problems[] = __( 'it has no rate yet', 'ratebridge-woo' );
+		}
+
+		if ( empty( $problems ) ) {
+			return;
+		}
+
+		printf(
+			'<p class="rbw-product-note rbw-product-note-warning">%s <a href="%s">%s</a></p>',
+			esc_html(
+				sprintf(
+					/* translators: 1: currency code, 2: comma separated problems */
+					__( 'Prices are not being calculated because the currency %1$s cannot be used: %2$s.', 'ratebridge-woo' ),
+					$currency->code,
+					implode( __( ' and ', 'ratebridge-woo' ), $problems )
+				)
+			),
+			esc_url( admin_url( 'admin.php?page=ratebridge-woo' ) ),
+			esc_html__( 'Fix it in the currency settings', 'ratebridge-woo' )
+		);
 	}
 
 	/**
@@ -456,8 +558,15 @@ final class ProductFields {
 
 		$data    = ProductData::read( $variation_id );
 		$enabled = ProductData::is_enabled( $parent_id );
-		$parent  = $parent_id > 0 ? get_post_meta( $parent_id, ProductData::META_CURRENCY, true ) : '';
+		$parent  = $parent_id > 0 ? ProductData::currency_code( $parent_id ) : '';
+		$loop    = (int) $loop;
 
+		/*
+		 * The hook fires inside WooCommerce's `.variable_pricing` flex row, right
+		 * after the regular/sale price inputs. A full-width block with a leading
+		 * clear keeps it on its own line instead of squeezing into the flex row
+		 * (which used to scatter the fields above the variation).
+		 */
 		echo '<div class="rbw-variation-fields">';
 
 		if ( ! $enabled ) {
@@ -465,66 +574,78 @@ final class ProductFields {
 				'<p class="rbw-product-note">%s</p>',
 				esc_html__( 'Enable “Pricing by currency” on the parent product to price this variation by a currency.', 'ratebridge-woo' )
 			);
-		} else {
+
+			echo '</div>';
+
+			return;
+		}
+
+		printf(
+			'<p class="rbw-product-note">%s</p>',
+			esc_html(
+				sprintf(
+					/* translators: %s: parent currency code */
+					__( 'Prices of this variation are calculated from the parent currency (%s).', 'ratebridge-woo' ),
+					'' !== $parent ? $parent : __( 'not set', 'ratebridge-woo' )
+				)
+			)
+		);
+
+		// Same sanity check as the parent, so a disabled currency is obvious here.
+		$parent_currency = '' !== $parent ? ( new CurrencyRepository() )->get_by_code( $parent ) : null;
+
+		if ( $parent_currency instanceof Currency && ( ! $parent_currency->is_enabled || ! $parent_currency->has_rate() ) ) {
 			printf(
-				'<p class="rbw-product-note">%s</p>',
-				esc_html(
-					sprintf(
-						/* translators: %s: parent currency code */
-						__( 'Prices of this variation are calculated from the parent currency (%s).', 'ratebridge-woo' ),
-						'' !== $parent ? $parent : '—'
-					)
+				'<p class="rbw-product-note rbw-product-note-warning">%s</p>',
+				esc_html__(
+					'The parent currency is disabled or has no rate, so this variation keeps its current price (or shows as unavailable when it has none).',
+					'ratebridge-woo'
 				)
 			);
 		}
 
-		// Base price input, prefixed with the loop wrapper WooCommerce expects.
-		woocommerce_wp_text_input(
-			array(
-				'id'            => 'rbw_variation_base_price_' . $loop,
-				'name'          => 'rbw_variation_base_price[' . $loop . ']',
-				'value'         => '' === $this->number_to_string( $data['base_price'] ) ? '' : $this->number_to_string( $data['base_price'] ),
-				'label'         => __( 'Base price (in the currency)', 'ratebridge-woo' ),
-				'desc_tip'      => true,
-				'description'   => __( 'Price of this variation in the parent currency.', 'ratebridge-woo' ),
-				'wrapper_class' => 'form-row form-row-first rbw-variation-field',
-				'custom_attributes' => array(
-					'dir'         => 'ltr',
-					'inputmode'   => 'decimal',
-					'data-rbw'    => 'variation-base',
-				),
-			)
+		// Base price.
+		printf(
+			'<p class="form-row form-row-first rbw-variation-field">
+				<label for="rbw_variation_base_price_%1$s">%2$s</label>
+				<input type="text" class="short wc_input_price rbw-number" id="rbw_variation_base_price_%1$s"
+					name="rbw_variation_base_price[%3$d]" value="%4$s" dir="ltr" inputmode="decimal"
+					data-rbw="variation-base" placeholder="0" />
+				<span class="description">%5$s</span>
+			</p>',
+			esc_attr( (string) $loop ),
+			esc_html__( 'Base price (in the currency)', 'ratebridge-woo' ),
+			$loop,
+			esc_attr( $this->number_to_string( $data['base_price'] ) ),
+			esc_html__( 'Price of this variation in the parent currency.', 'ratebridge-woo' )
 		);
 
-		woocommerce_wp_text_input(
-			array(
-				'id'            => 'rbw_variation_sale_base_price_' . $loop,
-				'name'          => 'rbw_variation_sale_base_price[' . $loop . ']',
-				'value'         => '' === $this->number_to_string( $data['sale_price'] ) ? '' : $this->number_to_string( $data['sale_price'] ),
-				'label'         => __( 'Sale base price (optional)', 'ratebridge-woo' ),
-				'desc_tip'      => true,
-				'description'   => __( 'Optional sale price in the parent currency.', 'ratebridge-woo' ),
-				'wrapper_class' => 'form-row form-row-last rbw-variation-field',
-				'custom_attributes' => array(
-					'dir'       => 'ltr',
-					'inputmode' => 'decimal',
-				),
-			)
+		// Optional sale base price.
+		printf(
+			'<p class="form-row form-row-last rbw-variation-field">
+				<label for="rbw_variation_sale_base_price_%1$s">%2$s</label>
+				<input type="text" class="short wc_input_price rbw-number" id="rbw_variation_sale_base_price_%1$s"
+					name="rbw_variation_sale_base_price[%3$d]" value="%4$s" dir="ltr" inputmode="decimal" placeholder="0" />
+				<span class="description">%5$s</span>
+			</p>',
+			esc_attr( (string) $loop ),
+			esc_html__( 'Sale base price (optional)', 'ratebridge-woo' ),
+			$loop,
+			esc_attr( $this->number_to_string( $data['sale_price'] ) ),
+			esc_html__( 'Optional sale price in the parent currency.', 'ratebridge-woo' )
 		);
 
 		// Optional currency override for this variation.
-		$currencies = $this->currencies();
-
 		echo '<p class="form-row form-row-full rbw-variation-field">';
 		printf(
 			'<label for="rbw_variation_currency_%1$s">%2$s</label>',
 			esc_attr( (string) $loop ),
 			esc_html__( 'Currency (parent currency)', 'ratebridge-woo' )
 		);
-		printf( '<select id="rbw_variation_currency_%1$s" name="rbw_variation_currency[%1$s]">', esc_attr( (string) $loop ) );
+		printf( '<select id="rbw_variation_currency_%1$s" name="rbw_variation_currency[%1$d]" class="rbw-variation-currency">', $loop );
 		printf( '<option value="">%s</option>', esc_html__( 'Use the parent currency', 'ratebridge-woo' ) );
 
-		foreach ( $currencies as $currency ) {
+		foreach ( $this->currencies() as $currency ) {
 			printf(
 				'<option value="%s"%s>%s</option>',
 				esc_attr( $currency->code ),
@@ -536,12 +657,10 @@ final class ProductFields {
 		echo '</select>';
 		echo '</p>';
 
-		if ( $enabled ) {
-			printf(
-				'<p class="rbw-product-note">%s</p>',
-				esc_html__( 'The regular price and the sale price of this variation are controlled by the currency and are read-only.', 'ratebridge-woo' )
-			);
-		}
+		printf(
+			'<p class="rbw-product-note">%s</p>',
+			esc_html__( 'The regular price and the sale price of this variation are controlled by the currency and are read-only.', 'ratebridge-woo' )
+		);
 
 		echo '</div>';
 	}
@@ -633,7 +752,77 @@ final class ProductFields {
 			return;
 		}
 
-		( new Repricer() )->reprice_product( $product );
+		$result = ( new Repricer() )->reprice_product( $product );
+
+		/*
+		 * A skipped run leaves the product without a calculated price. On a
+		 * freshly created variation that means WooCommerce prints "out of
+		 * stock" on the front end, which is impossible to diagnose from the
+		 * editor, so the admin is told right away.
+		 */
+		if ( 'skipped' === $result['status'] && 'not_managed' !== $result['reason'] ) {
+			$this->queue_admin_notice(
+				sprintf(
+					/* translators: 1: product name, 2: reason message */
+					__( 'The price of “%1$s” was not calculated: %2$s', 'ratebridge-woo' ),
+					$product->get_name(),
+					$result['message']
+				)
+			);
+		}
+	}
+
+	/**
+	 * Remember a message to show on the next admin page load.
+	 *
+	 * Uses a short-lived per-user transient so it survives the redirect that
+	 * follows a product save (a plain notice would be lost).
+	 *
+	 * @param string $message Message text.
+	 * @return void
+	 */
+	private function queue_admin_notice( string $message ): void {
+		$key   = 'rbw_product_notice_' . get_current_user_id();
+		$queue = get_transient( $key );
+
+		if ( ! is_array( $queue ) ) {
+			$queue = array();
+		}
+
+		if ( in_array( $message, $queue, true ) ) {
+			return;
+		}
+
+		$queue[] = $message;
+
+		set_transient( $key, array_slice( $queue, -5 ), 5 * MINUTE_IN_SECONDS );
+	}
+
+	/**
+	 * Print and clear the queued product messages.
+	 *
+	 * @return void
+	 */
+	public function render_queued_notices(): void {
+		if ( ! current_user_can( 'edit_products' ) ) {
+			return;
+		}
+
+		$key   = 'rbw_product_notice_' . get_current_user_id();
+		$queue = get_transient( $key );
+
+		if ( ! is_array( $queue ) || empty( $queue ) ) {
+			return;
+		}
+
+		delete_transient( $key );
+
+		foreach ( $queue as $message ) {
+			printf(
+				'<div class="notice notice-warning is-dismissible"><p>%s</p></div>',
+				esc_html( (string) $message )
+			);
+		}
 	}
 
 	/**
@@ -730,6 +919,13 @@ final class ProductFields {
 
 		echo '<code>' . esc_html( '' !== $code ? $code : '—' ) . '</code>';
 
+		// Why a managed product may still have no calculated price.
+		$problem = $this->unpriced_reason( $post_id, $code );
+
+		if ( '' !== $problem ) {
+			printf( '<div class="rbw-col-warning">%s</div>', esc_html( $problem ) );
+		}
+
 		if ( $last > 0 ) {
 			printf(
 				'<div class="rbw-muted">%s</div>',
@@ -742,6 +938,46 @@ final class ProductFields {
 				)
 			);
 		}
+	}
+
+	/**
+	 * Short reason why a managed product has no calculated price yet.
+	 *
+	 * @param int    $post_id Product id.
+	 * @param string $code    Stored currency code.
+	 * @return string Empty when there is nothing to report.
+	 */
+	private function unpriced_reason( int $post_id, string $code ): string {
+		if ( '' === $code ) {
+			return __( 'No currency selected', 'ratebridge-woo' );
+		}
+
+		$currency = ( new CurrencyRepository() )->get_by_code( $code );
+
+		if ( ! $currency instanceof Currency ) {
+			/* translators: %s: currency code */
+			return sprintf( __( '%s is missing', 'ratebridge-woo' ), $code );
+		}
+
+		if ( ! $currency->is_enabled ) {
+			return __( 'Currency disabled', 'ratebridge-woo' );
+		}
+
+		if ( ! $currency->has_rate() ) {
+			return __( 'Currency has no rate', 'ratebridge-woo' );
+		}
+
+		$product = wc_get_product( $post_id );
+
+		if ( $product instanceof WC_Product && $product->is_type( 'variable' ) ) {
+			return '';
+		}
+
+		if ( ProductData::base_price( $post_id ) <= 0 ) {
+			return __( 'No base price', 'ratebridge-woo' );
+		}
+
+		return '';
 	}
 
 	/**
@@ -772,6 +1008,103 @@ final class ProductFields {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Add the "recalculate prices" bulk action.
+	 *
+	 * @param array<string, string> $actions Existing actions.
+	 * @return array<string, string>
+	 */
+	public function add_bulk_action( $actions ): array {
+		if ( ! is_array( $actions ) || ! current_user_can( 'edit_products' ) ) {
+			return is_array( $actions ) ? $actions : array();
+		}
+
+		$actions['rbw_reprice'] = __( 'Recalculate currency prices', 'ratebridge-woo' );
+
+		return $actions;
+	}
+
+	/**
+	 * Run the bulk action for the selected products.
+	 *
+	 * @param string $redirect_to Redirect URL.
+	 * @param string $action      Action key.
+	 * @param int[]  $post_ids    Selected product ids.
+	 * @return string Redirect URL (with a result count).
+	 */
+	public function handle_bulk_action( $redirect_to, $action, $post_ids ): string {
+		$redirect_to = (string) $redirect_to;
+
+		if ( 'rbw_reprice' !== $action || ! current_user_can( 'edit_products' ) ) {
+			return $redirect_to;
+		}
+
+		$repricer = new Repricer();
+		$counts   = array(
+			'repriced' => 0,
+			'skipped'  => 0,
+			'failed'   => 0,
+		);
+
+		foreach ( (array) $post_ids as $post_id ) {
+			$product = wc_get_product( (int) $post_id );
+
+			if ( ! $product instanceof WC_Product ) {
+				continue;
+			}
+
+			$result = $repricer->reprice_product( $product );
+
+			if ( 'repriced' === $result['status'] ) {
+				++$counts['repriced'];
+			} elseif ( 'failed' === $result['status'] ) {
+				++$counts['failed'];
+			} else {
+				++$counts['skipped'];
+			}
+		}
+
+		return add_query_arg(
+			array(
+				'rbw_repriced' => $counts['repriced'],
+				'rbw_skipped'  => $counts['skipped'],
+				'rbw_failed'   => $counts['failed'],
+			),
+			$redirect_to
+		);
+	}
+
+	/**
+	 * Show the outcome of the bulk recalculation.
+	 *
+	 * @return void
+	 */
+	public function render_bulk_result_notice(): void {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- read-only result counters.
+		if ( ! isset( $_GET['rbw_repriced'] ) ) {
+			return;
+		}
+
+		$repriced = absint( $_GET['rbw_repriced'] );
+		$skipped  = isset( $_GET['rbw_skipped'] ) ? absint( $_GET['rbw_skipped'] ) : 0;
+		$failed   = isset( $_GET['rbw_failed'] ) ? absint( $_GET['rbw_failed'] ) : 0;
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		printf(
+			'<div class="notice %s is-dismissible"><p>%s</p></div>',
+			$failed > 0 ? 'notice-warning' : 'notice-success',
+			esc_html(
+				sprintf(
+					/* translators: 1: repriced count, 2: skipped count, 3: failed count */
+					__( 'Recalculation finished: %1$d repriced, %2$d skipped (no usable currency or no base price), %3$d failed.', 'ratebridge-woo' ),
+					$repriced,
+					$skipped,
+					$failed
+				)
+			)
+		);
 	}
 
 	/**

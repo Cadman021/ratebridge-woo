@@ -58,3 +58,25 @@
 	margin-inline-start: 6px;
 	margin-inline-end: 0;
 }
+
+/* Variation block sits flush to the right edge of the variation panel. */
+.rbw-variation-fields {
+	border-inline-start: 3px solid #2271b1;
+	border-inline-end: 0;
+	text-align: right;
+}
+
+.rbw-variation-fields .form-row label {
+	text-align: right;
+}
+
+.rbw-variation-fields .rbw-number {
+	direction: ltr;
+	unicode-bidi: isolate;
+	text-align: left;
+}
+
+.rbw-variation-fields .rbw-variation-currency {
+	direction: rtl;
+	text-align: right;
+}
