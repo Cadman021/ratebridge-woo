@@ -30,11 +30,14 @@
 /*
  * Latin/numeric fragments stay LTR: an amount like "60,000,000" must not be
  * reordered and a trailing unit must not jump to the wrong side.
+ *
+ * The currency-code cell in the products list is handled in product.css
+ * (nowrap + isolate) and must NOT receive `text-align: left` here, otherwise the
+ * code jumps to the far edge of the RTL cell.
  */
 .rbw-product-panel .rbw-number,
 .rbw-preview-table td,
-.rbw-modal-content .rbw-rule input,
-.column-rbw_currency code {
+.rbw-modal-content .rbw-rule input {
 	direction: ltr;
 	unicode-bidi: isolate;
 	text-align: left;

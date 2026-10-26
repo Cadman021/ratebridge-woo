@@ -901,16 +901,18 @@ final class ProductFields {
 
 		$rendered[ $post_id ] = true;
 
+		echo '<div class="rbw-col-currency">';
+
 		if ( ! ProductData::is_enabled( $post_id ) ) {
 			// A variable product may still have managed variations.
 			$variation_code = $this->first_variation_currency( $post_id );
 
 			if ( '' === $variation_code ) {
-				echo '<span class="rbw-muted">—</span>';
+				echo '<span class="rbw-muted">—</span></div>';
 				return;
 			}
 
-			echo '<code>' . esc_html( $variation_code ) . '</code>';
+			echo '<code>' . esc_html( $variation_code ) . '</code></div>';
 			return;
 		}
 
@@ -927,17 +929,21 @@ final class ProductFields {
 		}
 
 		if ( $last > 0 ) {
+			/*
+			 * The timestamp is split into a label and a `dir="ltr"` value: the
+			 * date is a single short token that must stay on one line, and the
+			 * label may wrap. This keeps the cell readable even when a site
+			 * dequeues product.css.
+			 */
 			printf(
-				'<div class="rbw-muted">%s</div>',
-				esc_html(
-					sprintf(
-						/* translators: %s: formatted date and time */
-						__( 'Last calculation: %s', 'ratebridge-woo' ),
-						wp_date( 'Y-m-d H:i', $last )
-					)
-				)
+				'<span class="rbw-col-date"><span class="rbw-col-date-label">%s</span> <time dir="ltr" datetime="%s">%s</time></span>',
+				esc_html__( 'Last calculation:', 'ratebridge-woo' ),
+				esc_attr( gmdate( 'c', $last ) ),
+				esc_html( wp_date( 'Y-m-d H:i', $last ) )
 			);
 		}
+
+		echo '</div>';
 	}
 
 	/**
@@ -1108,22 +1114,14 @@ final class ProductFields {
 	}
 
 	/**
-	 * Enqueue the product editor assets.
+	 * Enqueue the product stylesheet (+ its RTL companion).
 	 *
-	 * @param string $hook_suffix Current admin page.
+	 * Shared by the editor and the products list so the «ارز» column and the
+	 * editor panel never drift apart.
+	 *
 	 * @return void
 	 */
-	public function enqueue_assets( $hook_suffix ): void {
-		if ( ! in_array( (string) $hook_suffix, array( 'post.php', 'post-new.php' ), true ) ) {
-			return;
-		}
-
-		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-
-		if ( ! $screen instanceof \WP_Screen || 'product' !== $screen->post_type ) {
-			return;
-		}
-
+	private function enqueue_styles(): void {
 		wp_enqueue_style(
 			self::HANDLE,
 			RBW_PLUGIN_URL . 'assets/admin/css/product.css',
@@ -1139,6 +1137,38 @@ final class ProductFields {
 				RBW_VERSION
 			);
 		}
+	}
+
+	/**
+	 * Enqueue the product editor assets.
+	 *
+	 * @param string $hook_suffix Current admin page.
+	 * @return void
+	 */
+	public function enqueue_assets( $hook_suffix ): void {
+		$hook_suffix = (string) $hook_suffix;
+		$screen      = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+
+		if ( ! $screen instanceof \WP_Screen || 'product' !== $screen->post_type ) {
+			return;
+		}
+
+		/*
+		 * The products list (edit.php) needs the stylesheet for the «ارز»
+		 * column but none of the editor JS. Without it the column had no CSS at
+		 * all and browsers broke "USD" one character per line.
+		 */
+		if ( 'edit.php' === $hook_suffix ) {
+			$this->enqueue_styles();
+
+			return;
+		}
+
+		if ( ! in_array( $hook_suffix, array( 'post.php', 'post-new.php' ), true ) ) {
+			return;
+		}
+
+		$this->enqueue_styles();
 
 		wp_enqueue_script(
 			self::HANDLE,

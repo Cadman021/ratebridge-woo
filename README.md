@@ -554,6 +554,11 @@ Nothing happens when the unit did not really change.
 - The products list gets an «ارز» column: currency code, «آخرین محاسبه» timestamp, and a red
   reason when the product still has no calculated price («ارز غیرفعال است»، «ارز نرخ ندارد»،
   «قیمت پایه ندارد»، «ارزی انتخاب نشده است»).
+  The column needs `product.css`, which is therefore also enqueued on `edit.php`
+  (`ProductFields::enqueue_styles()`), not only in the editor. Without it the narrow cell had no
+  wrapping rules and browsers broke the code one character per line (`U` / `S` / `D`). The code
+  is `white-space: nowrap` + `unicode-bidi: isolate`, the timestamp is a `<time dir="ltr">`
+  element that also stays on one line.
 - A **bulk action «محاسبه دوباره قیمت‌های ارزی»** recalculates the selected products immediately
   and reports repriced / skipped / failed counts.
 
