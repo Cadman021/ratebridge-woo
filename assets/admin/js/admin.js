@@ -484,6 +484,15 @@
 		modal.querySelector( '[name="sort_order"]' ).value = isEdit ? currency.sort_order : 0;
 		modal.querySelector( '[name="is_enabled"]' ).checked = isEdit ? !! currency.is_enabled : false;
 
+		// Pricing section (percent/fixed + amounts).
+		setRuleField( modal, 'profit', isEdit ? currency.profit_type : 'percent', isEdit ? currency.profit_value : 0 );
+		setRuleField( modal, 'commission', isEdit ? currency.commission_type : 'percent', isEdit ? currency.commission_value : 0 );
+
+		var extraField = modal.querySelector( '[name="extra_amount"]' );
+		if ( extraField ) {
+			extraField.value = isEdit && currency.extra_amount > 0 ? String( currency.extra_amount ) : '0';
+		}
+
 		clearModalError( 'rbw-currency-error' );
 		modal.hidden = false;
 
@@ -494,6 +503,58 @@
 		if ( firstField ) {
 			firstField.focus();
 		}
+	}
+
+	/**
+	 * Fill one profit/commission rule and sync the unit hint.
+	 *
+	 * @param {HTMLElement} modal Modal element.
+	 * @param {string}      slot  profit|commission.
+	 * @param {string}      type  percent|fixed.
+	 * @param {number}      value Amount.
+	 */
+	function setRuleField( modal, slot, type, value ) {
+		var typeField = modal.querySelector( '[name="' + slot + '_type"]' );
+		var valueField = modal.querySelector( '[name="' + slot + '_value"]' );
+
+		if ( typeField ) {
+			typeField.value = 'fixed' === type ? 'fixed' : 'percent';
+		}
+
+		if ( valueField ) {
+			valueField.value = value > 0 ? String( value ) : '0';
+		}
+
+		updateRuleUnit( slot );
+	}
+
+	/**
+	 * Show "%" or the store unit next to a rule input.
+	 *
+	 * @param {string} slot profit|commission.
+	 */
+	function updateRuleUnit( slot ) {
+		var typeField = qs( '#rbw-field-' + slot + '-type' );
+		var unitLabel = qs( '.rbw-rule-unit[data-slot="' + slot + '"]' );
+
+		if ( ! unitLabel ) {
+			return;
+		}
+
+		unitLabel.textContent = typeField && 'fixed' === typeField.value
+			? ( config.storeUnitLabel || '' )
+			: '%';
+	}
+
+	/**
+	 * Bind the rule type selects inside the currency dialog.
+	 */
+	function bindRuleFields() {
+		qsa( '.rbw-type-select' ).forEach( function ( select ) {
+			select.addEventListener( 'change', function () {
+				updateRuleUnit( select.getAttribute( 'data-slot' ) );
+			} );
+		} );
 	}
 
 	function closeModal() {
@@ -537,7 +598,12 @@
 					rate: form.querySelector( '[name="rate"]' ).value,
 					update_interval_minutes: form.querySelector( '[name="update_interval_minutes"]' ).value,
 					sort_order: form.querySelector( '[name="sort_order"]' ).value,
-					is_enabled: form.querySelector( '[name="is_enabled"]' ).checked ? '1' : '0'
+					is_enabled: form.querySelector( '[name="is_enabled"]' ).checked ? '1' : '0',
+					profit_type: form.querySelector( '[name="profit_type"]' ).value,
+					profit_value: form.querySelector( '[name="profit_value"]' ).value,
+					commission_type: form.querySelector( '[name="commission_type"]' ).value,
+					commission_value: form.querySelector( '[name="commission_value"]' ).value,
+					extra_amount: form.querySelector( '[name="extra_amount"]' ).value
 				};
 
 				if ( button ) {
@@ -660,6 +726,28 @@
 		output.textContent = result.toLocaleString();
 	}
 
+	/**
+	 * Explain the effect of a store-unit change, inline.
+	 */
+	function unitWarning() {
+		var box = qs( '#rbw-unit-warning' );
+
+		if ( ! box ) {
+			return;
+		}
+
+		var chosen = ( qs( 'input[name="store_currency_unit"]:checked' ) || {} ).value || 'toman';
+
+		if ( chosen === ( config.storeUnit || 'toman' ) ) {
+			box.hidden = true;
+			box.textContent = '';
+			return;
+		}
+
+		box.hidden = false;
+		box.textContent = strings.unitChangeWarning || '';
+	}
+
 	function bindGeneral() {
 		var form = qs( '#rbw-general-form' );
 		if ( ! form ) {
@@ -676,17 +764,34 @@
 
 		roundingPreview();
 
+		qsa( 'input[name="store_currency_unit"]' ).forEach( function ( radio ) {
+			radio.addEventListener( 'change', unitWarning );
+		} );
+
+		unitWarning();
+
 		form.addEventListener( 'submit', function ( event ) {
 			event.preventDefault();
 
 			var button = qs( '#rbw-save-settings' );
+			var chosenUnit = ( qs( 'input[name="store_currency_unit"]:checked' ) || {} ).value || 'toman';
+			var unitChanged = chosenUnit !== ( config.storeUnit || 'toman' );
+			var ageField = qs( '#rbw-max-rate-age' );
+
 			var payload = {
-				store_currency_unit: ( qs( 'input[name="store_currency_unit"]:checked' ) || {} ).value || 'toman',
+				store_currency_unit: chosenUnit,
 				rounding_mode: qs( '#rbw-rounding-mode' ).value,
 				rounding_step: qs( '#rbw-rounding-step' ).value,
 				default_update_interval: qs( '#rbw-default-interval' ).value,
-				delete_data_on_uninstall: form.querySelector( '[name="delete_data_on_uninstall"]' ).checked ? '1' : '0'
+				max_rate_age_hours: ageField ? ageField.value : '48',
+				delete_data_on_uninstall: form.querySelector( '[name="delete_data_on_uninstall"]' ).checked ? '1' : '0',
+				confirm_unit_change: unitChanged ? '1' : '0'
 			};
+
+			// The unit change rewrites every stored rate: ask explicitly.
+			if ( unitChanged && ! window.confirm( strings.confirmUnitChange || 'Convert all stored rates?' ) ) {
+				return;
+			}
 
 			if ( button ) {
 				button.disabled = true;
@@ -1362,11 +1467,33 @@
 		}
 	}
 
+	/**
+	 * Dismiss the stale-rate notice for the current user.
+	 *
+	 * The notice is also shown on the Products screen, where this script is not
+	 * enqueued, so it degrades to hiding the notice for this page view.
+	 */
+	function bindStaleNotice() {
+		qsa( '.rbw-stale-notice' ).forEach( function ( notice ) {
+			var button = notice.querySelector( '.notice-dismiss' );
+
+			if ( ! button ) {
+				return;
+			}
+
+			button.addEventListener( 'click', function () {
+				request( 'dismiss_stale_notice', {} ).catch( function () {} );
+			} );
+		} );
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		bindToolbar();
 		bindTable();
 		bindModal();
+		bindRuleFields();
 		bindGeneral();
+		bindStaleNotice();
 		bindSymbolPicker();
 		bindPresets();
 		bindSources();

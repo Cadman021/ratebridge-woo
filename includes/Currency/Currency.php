@@ -29,6 +29,11 @@ final class Currency {
 	 * @param string|null $last_updated            UTC datetime string or null.
 	 * @param string|null $last_error              Last provider error, if any.
 	 * @param int         $sort_order              Admin ordering.
+	 * @param string      $profit_type             'percent' or 'fixed'.
+	 * @param float       $profit_value            Profit amount (percent or store unit).
+	 * @param string      $commission_type         'percent' or 'fixed'.
+	 * @param float       $commission_value        Commission amount.
+	 * @param float       $extra_amount            Fixed store-unit amount added to every price.
 	 */
 	public function __construct(
 		public readonly int $id,
@@ -43,6 +48,11 @@ final class Currency {
 		public readonly ?string $last_updated,
 		public readonly ?string $last_error,
 		public readonly int $sort_order,
+		public readonly string $profit_type = 'percent',
+		public readonly float $profit_value = 0.0,
+		public readonly string $commission_type = 'percent',
+		public readonly float $commission_value = 0.0,
+		public readonly float $extra_amount = 0.0,
 	) {}
 
 	/**
@@ -64,7 +74,12 @@ final class Currency {
 			(int) ( $row->update_interval_minutes ?? 60 ),
 			! empty( $row->last_updated ) ? (string) $row->last_updated : null,
 			! empty( $row->last_error ) ? (string) $row->last_error : null,
-			(int) ( $row->sort_order ?? 0 )
+			(int) ( $row->sort_order ?? 0 ),
+			'fixed' === ( $row->profit_type ?? '' ) ? 'fixed' : 'percent',
+			max( 0.0, (float) ( $row->profit_value ?? 0 ) ),
+			'fixed' === ( $row->commission_type ?? '' ) ? 'fixed' : 'percent',
+			max( 0.0, (float) ( $row->commission_value ?? 0 ) ),
+			max( 0.0, (float) ( $row->extra_amount ?? 0 ) )
 		);
 	}
 
@@ -87,6 +102,47 @@ final class Currency {
 			'last_updated'            => $this->last_updated,
 			'last_error'              => $this->last_error,
 			'sort_order'              => $this->sort_order,
+			'profit_type'             => $this->profit_type,
+			'profit_value'            => $this->profit_value,
+			'commission_type'         => $this->commission_type,
+			'commission_value'        => $this->commission_value,
+			'extra_amount'            => $this->extra_amount,
+		);
+	}
+
+	/**
+	 * Currency-level profit rule, shaped for PriceCalculator.
+	 *
+	 * @return array{type:string,value:float}
+	 */
+	public function profit_rule(): array {
+		return array(
+			'type'  => $this->profit_type,
+			'value' => $this->profit_value,
+		);
+	}
+
+	/**
+	 * Currency-level commission rule, shaped for PriceCalculator.
+	 *
+	 * @return array{type:string,value:float}
+	 */
+	public function commission_rule(): array {
+		return array(
+			'type'  => $this->commission_type,
+			'value' => $this->commission_value,
+		);
+	}
+
+	/**
+	 * Currency-level extra amount, shaped for PriceCalculator.
+	 *
+	 * @return array{type:string,value:float}
+	 */
+	public function extra_rule(): array {
+		return array(
+			'type'  => 'fixed',
+			'value' => $this->extra_amount,
 		);
 	}
 

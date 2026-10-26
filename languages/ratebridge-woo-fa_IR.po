@@ -733,3 +733,300 @@ msgstr "این کد قبلاً استفاده شده است. پیشنهاد: %s"
 
 msgid "The server did not recognise this request (HTTP %d). Please refresh the page."
 msgstr "درخواست توسط سرور شناسایی نشد (HTTP %d). صفحه را رفرش کنید."
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 3 — product pricing
+# ─────────────────────────────────────────────────────────────────────────────
+
+msgid "%1$s: repriced %2$d, skipped %3$d, unchanged-by-fluctuation %4$d, failed %5$d."
+msgstr "%1$s: قیمت‌گذاری مجدد %2$d، رد‌شده %3$d، بدون تغییر به‌دلیل حاشیه نوسان %4$d، ناموفق %5$d."
+
+msgid "%s: repricing stopped after too many batches."
+msgstr "%s: قیمت‌گذاری مجدد پس از تعداد زیادی دسته متوقف شد."
+
+msgid "A percentage is applied to the converted base value (profit) and to value + profit (commission). Fixed amounts are in the store unit."
+msgstr "درصد روی ارزش تبدیل‌شده (سود) و روی ارزش به‌همراه سود (کارمزد) اعمال می‌شود. مبالغ ثابت به واحد فروشگاه (تومان/ریال) هستند."
+
+msgid "A pricing setting (profit, commission or extra) is out of range."
+msgstr "یکی از تنظیمات قیمت‌گذاری (سود، کارمزد یا مقدار اضافه) خارج از محدوده مجاز است."
+
+msgid "A pricing setting is out of range."
+msgstr "یکی از تنظیمات قیمت‌گذاری خارج از محدوده مجاز است."
+
+msgid "Add the product values to the currency values"
+msgstr "افزودن مقدار محصول به مقدار ارز"
+
+msgid "After rounding"
+msgstr "پس از گرد کردن"
+
+msgid "After the minimum"
+msgstr "پس از اعمال حداقل قیمت"
+
+msgid "Amount in the store unit"
+msgstr "مبلغ به واحد فروشگاه"
+
+msgid "Applied to every product priced by this currency. Products can override or extend these values."
+msgstr "روی همه محصولاتی که با این ارز قیمت‌گذاری می‌شوند اعمال می‌شود. هر محصول می‌تواند این مقادیر را جایگزین یا تکمیل کند."
+
+msgid "Attention: this converts every stored rate, every fixed profit/commission/extra amount, product minimum prices and fluctuation margins, then recalculates all product prices connected to currencies."
+msgstr "توجه: با این کار همه نرخ‌های ذخیره‌شده، همه مبالغ ثابت سود/کارمزد/مقدار اضافه، حداقل قیمت محصولات و حاشیه نوسان تبدیل می‌شوند و قیمت همه محصولات متصل به ارزها دوباره محاسبه می‌شود."
+
+msgid "Base price (in the currency)"
+msgstr "قیمت پایه (به واحد ارز)"
+
+msgid "Base value (price × rate)"
+msgstr "ارزش پایه (قیمت × نرخ)"
+
+msgid "Calculated price"
+msgstr "قیمت محاسبه‌شده"
+
+msgid "Calculating…"
+msgstr "در حال محاسبه…"
+
+msgid "Change is inside the fluctuation margin, the price was kept."
+msgstr "تغییر در محدوده حاشیه نوسان است؛ قیمت قبلی حفظ شد."
+
+msgid "Changing the store unit converts every rate and every fixed amount. Please confirm the change."
+msgstr "تغییر واحد فروشگاه، همه نرخ‌ها و همه مبالغ ثابت را تبدیل می‌کند. لطفاً این تغییر را تأیید کنید."
+
+msgid "Changing the store unit multiplies or divides every stored rate and every fixed amount by 10, and all product prices will be recalculated. Continue?"
+msgstr "تغییر واحد فروشگاه همه نرخ‌های ذخیره‌شده و همه مبالغ ثابت را در ۱۰ ضرب یا بر ۱۰ تقسیم می‌کند و قیمت همه محصولات دوباره محاسبه می‌شود. ادامه می‌دهید؟"
+
+msgid "Commission"
+msgstr "کارمزد"
+
+msgid "Controlled by the currency"
+msgstr "کنترل‌شده توسط ارز"
+
+msgid "Converted %1$d currencies and %2$d products. Prices are being recalculated in the background."
+msgstr "%1$d ارز و %2$d محصول تبدیل شد. قیمت‌ها در پس‌زمینه دوباره محاسبه می‌شوند."
+
+msgid "Currency (parent currency)"
+msgstr "ارز (ارز والد)"
+
+msgid "Enable “Pricing by currency” on the parent product to price this variation by a currency."
+msgstr "برای قیمت‌گذاری این تنوع با ارز، گزینه «قیمت‌گذاری با نرخ ارز» را در محصول والد فعال کنید."
+
+msgid "Enter the base price first."
+msgstr "ابتدا قیمت پایه را وارد کنید."
+
+msgid "Extra amount"
+msgstr "مقدار اضافه"
+
+msgid "Final price"
+msgstr "قیمت نهایی"
+
+msgid "Final sale price"
+msgstr "قیمت ویژه نهایی"
+
+msgid "Fixed amount"
+msgstr "مبلغ ثابت"
+
+msgid "Fluctuation margin (%s)"
+msgstr "حاشیه نوسان (%s)"
+
+msgid "For example 100 for USD 100, or 4.75 for 4.75 grams of 18K gold."
+msgstr "برای مثال ۱۰۰ برای ۱۰۰ دلار، یا ۴٫۷۵ برای ۴٫۷۵ گرم طلای ۱۸ عیار."
+
+msgid "If a rate is older than this, product prices are left unchanged and a warning is shown. Enter 0 to disable the limit. Manual currencies without a timestamp are never considered stale."
+msgstr "اگر نرخی قدیمی‌تر از این مقدار باشد، قیمت محصولات تغییر نمی‌کند و یک هشدار نمایش داده می‌شود. برای غیرفعال کردن محدودیت، ۰ وارد کنید. ارزهای دستی که تاریخ به‌روزرسانی ندارند هرگز کهنه در نظر گرفته نمی‌شوند."
+
+msgid "If the new price differs from the previous one by less than this amount, the old price is kept."
+msgstr "اگر اختلاف قیمت جدید با قیمت قبلی کمتر از این مقدار باشد، قیمت قبلی حفظ می‌شود."
+
+msgid "Inside the fluctuation margin: the previous price is kept."
+msgstr "در محدوده حاشیه نوسان: قیمت قبلی حفظ می‌شود."
+
+msgid "Last calculation: %s"
+msgstr "آخرین محاسبه: %s"
+
+msgid "Maximum rate age (hours)"
+msgstr "حداکثر سن نرخ (ساعت)"
+
+msgid "Minimum price (%s)"
+msgstr "حداقل قیمت (%s)"
+
+msgid "Notice dismissed."
+msgstr "اعلان بسته شد."
+
+msgid "Optional sale price in the parent currency."
+msgstr "قیمت ویژه اختیاری به ارز والد."
+
+msgid "Optional, in the same currency. Leave empty for no sale price."
+msgstr "اختیاری، به همان ارز. برای نداشتن قیمت ویژه خالی بگذارید."
+
+msgid "Percent"
+msgstr "درصد"
+
+msgid "Percentage"
+msgstr "درصد"
+
+msgid "Percentages must be between 0 and 1000."
+msgstr "درصد باید بین ۰ و ۱۰۰۰ باشد."
+
+msgid "Price of this variation in the parent currency."
+msgstr "قیمت این تنوع به ارز والد."
+
+msgid "Price preview"
+msgstr "پیش‌نمایش قیمت"
+
+msgid "Prices are kept as they are until a fresh rate arrives. You can change the limit in the settings."
+msgstr "قیمت‌ها تا رسیدن نرخ تازه بدون تغییر می‌مانند. می‌توانید این محدودیت را در تنظیمات تغییر دهید."
+
+msgid "Prices of this variation are calculated from the parent currency (%s)."
+msgstr "قیمت این تنوع از ارز والد (%s) محاسبه می‌شود."
+
+msgid "Pricing by currency"
+msgstr "قیمت‌گذاری با نرخ ارز"
+
+msgid "Pricing settings"
+msgstr "تنظیمات قیمت‌گذاری"
+
+msgid "Profit"
+msgstr "سود"
+
+msgid "Profit, commission and extra amount must be zero or a positive number."
+msgstr "سود، کارمزد و مقدار اضافه باید صفر یا عددی مثبت باشند."
+
+msgid "Profit, commission and extra mode"
+msgstr "حالت سود، کارمزد و مقدار اضافه"
+
+msgid "Rate"
+msgstr "نرخ"
+
+msgid "RateBridge Woo: stale exchange rates"
+msgstr "نرخ ساز: نرخ‌های کهنه"
+
+msgid "Rates and fixed amounts (profit, commission, extra amount, minimum price, fluctuation margin) are stored in this unit. Changing it converts every stored amount and recalculates product prices."
+msgstr "نرخ‌ها و مبالغ ثابت (سود، کارمزد، مقدار اضافه، حداقل قیمت، حاشیه نوسان) به این واحد ذخیره می‌شوند. با تغییر آن، همه مبالغ ذخیره‌شده تبدیل و قیمت محصولات دوباره محاسبه می‌شود."
+
+msgid "Replace the currency values with the product values"
+msgstr "جایگزینی مقدار ارز با مقدار محصول"
+
+msgid "Sale base price (optional)"
+msgstr "قیمت پایه ویژه (اختیاری)"
+
+msgid "Select a currency first."
+msgstr "ابتدا یک ارز انتخاب کنید."
+
+msgid "Select a currency…"
+msgstr "یک ارز انتخاب کنید…"
+
+msgid "Settings saved. The store unit changed from %1$s to %2$s; %3$d currencies and %4$d products were converted and prices are being recalculated."
+msgstr "تنظیمات ذخیره شد. واحد فروشگاه از %1$s به %2$s تغییر کرد؛ %3$d ارز و %4$d محصول تبدیل شد و قیمت‌ها دوباره محاسبه می‌شوند."
+
+msgid "Store unit changed from %1$s to %2$s. Converted %3$d currencies and %4$d products; rounding step is now %5$s."
+msgstr "واحد فروشگاه از %1$s به %2$s تغییر کرد. %3$d ارز و %4$d محصول تبدیل شد؛ گام گرد کردن اکنون %5$s است."
+
+msgid "The base price is empty, so the price was left unchanged."
+msgstr "قیمت پایه خالی است، بنابراین قیمت بدون تغییر ماند."
+
+msgid "The base price is not valid."
+msgstr "قیمت پایه معتبر نیست."
+
+msgid "The calculated price is never written below this amount. Leave empty for none."
+msgstr "قیمت محاسبه‌شده هرگز کمتر از این مقدار نوشته نمی‌شود. برای نداشتن حداقل، خالی بگذارید."
+
+msgid "The calculation produced a non-finite number."
+msgstr "محاسبه عددی نامعتبر تولید کرد."
+
+msgid "The calculation produced a price of zero or less."
+msgstr "محاسبه قیمتی برابر صفر یا کمتر تولید کرد."
+
+msgid "The commission was converted from a percentage to an amount because the types differ."
+msgstr "کارمزد به‌دلیل تفاوت نوع، از درصد به مبلغ تبدیل شد."
+
+msgid "The currency has no rate yet."
+msgstr "این ارز هنوز نرخی ندارد."
+
+msgid "The currency is disabled."
+msgstr "این ارز غیرفعال است."
+
+msgid "The currency of this product no longer exists."
+msgstr "ارز این محصول دیگر وجود ندارد."
+
+msgid "The currency rate is not valid."
+msgstr "نرخ ارز معتبر نیست."
+
+msgid "The exchange rate is older than the configured maximum age."
+msgstr "نرخ ارز قدیمی‌تر از حداکثر سن تعیین‌شده است."
+
+msgid "The minimum price was applied."
+msgstr "حداقل قیمت اعمال شد."
+
+msgid "The price could not be calculated."
+msgstr "قیمت محاسبه نشد."
+
+msgid "The price could not be calculated. Check the currency rate and the base price."
+msgstr "قیمت محاسبه نشد. نرخ ارز و قیمت پایه را بررسی کنید."
+
+msgid "The price is already up to date."
+msgstr "قیمت از قبل به‌روز است."
+
+msgid "The price was recalculated."
+msgstr "قیمت دوباره محاسبه شد."
+
+msgid "The price was rounded."
+msgstr "قیمت گرد شد."
+
+msgid "The product could not be loaded as a variable product."
+msgstr "محصول به‌عنوان محصول متغیر بارگذاری نشد."
+
+msgid "The profit was converted from a percentage to an amount because the types differ."
+msgstr "سود به‌دلیل تفاوت نوع، از درصد به مبلغ تبدیل شد."
+
+msgid "The regular price and the sale price are controlled by the currency and are read-only while pricing by currency is enabled."
+msgstr "قیمت عادی و قیمت ویژه توسط ارز کنترل می‌شوند و تا زمانی که قیمت‌گذاری با نرخ ارز فعال است قابل ویرایش نیستند."
+
+msgid "The regular price and the sale price of this variation are controlled by the currency and are read-only."
+msgstr "قیمت عادی و قیمت ویژه این تنوع توسط ارز کنترل می‌شوند و قابل ویرایش نیستند."
+
+msgid "The sale price is not lower than the regular price, so it will not be stored."
+msgstr "قیمت ویژه کمتر از قیمت عادی نیست، بنابراین ذخیره نمی‌شود."
+
+msgid "The store unit did not change, so nothing was converted."
+msgstr "واحد فروشگاه تغییر نکرد، بنابراین چیزی تبدیل نشد."
+
+msgid "There is no enabled currency yet. Enable one in WooCommerce → نرخ ساز → Currencies first."
+msgstr "هنوز هیچ ارز فعالی وجود ندارد. ابتدا یکی را در ووکامرس ← نرخ ساز ← ارزها فعال کنید."
+
+msgid "These currencies have not been updated for more than %1$d hours, so product prices are not being recalculated: %2$s"
+msgstr "این ارزها بیش از %1$d ساعت به‌روزرسانی نشده‌اند، بنابراین قیمت محصولات دوباره محاسبه نمی‌شود: %2$s"
+
+msgid "This currency has no rate yet."
+msgstr "این ارز هنوز نرخی ندارد."
+
+msgid "This currency is disabled."
+msgstr "این ارز غیرفعال است."
+
+msgid "This product is not priced by a currency."
+msgstr "این محصول با ارز قیمت‌گذاری نشده است."
+
+msgid "This variable product has no variations."
+msgstr "این محصول متغیر هیچ تنوعی ندارد."
+
+msgid "Total before the minimum"
+msgstr "جمع پیش از حداقل قیمت"
+
+msgid "Use the currency values"
+msgstr "استفاده از مقدار ارز"
+
+msgid "Use the parent currency"
+msgstr "استفاده از ارز والد"
+
+msgid "Variations are repriced through their parent product."
+msgstr "تنوع‌ها از طریق محصول والد قیمت‌گذاری می‌شوند."
+
+msgid "Variations: repriced %1$d, skipped %2$d, failed %3$d."
+msgstr "تنوع‌ها: قیمت‌گذاری مجدد %1$d، رد‌شده %2$d، ناموفق %3$d."
+
+msgid "When enabled, the price is calculated from the currency rate in this plugin."
+msgstr "در صورت فعال بودن، قیمت از نرخ ارز در این افزونه محاسبه می‌شود."
+
+msgid "With “add”, a percentage and a fixed amount are combined after the percentage is converted to an amount."
+msgstr "در حالت «افزودن»، درصد و مبلغ ثابت پس از تبدیل درصد به مبلغ با هم جمع می‌شوند."
+
+msgid "no rate yet"
+msgstr "بدون نرخ"
+
+msgid "rate: %1$s %2$s"
+msgstr "نرخ: %1$s %2$s"

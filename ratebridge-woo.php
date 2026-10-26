@@ -3,7 +3,7 @@
  * Plugin Name:       نرخ ساز
  * Plugin URI:        https://example.com/ratebridge-woo
  * Description:       قیمت محصولات را به ارز یا کالای خارجی (دلار، یورو، طلا، سکه و…) تعریف کنید و قیمت تومانی/ریالی فروشگاه را به‌صورت خودکار از نرخ‌های روز به‌روزرسانی کنید.
- * Version:           0.2.5
+ * Version:           0.3.0
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Requires Plugins:  woocommerce
@@ -22,7 +22,7 @@ namespace RateBridge;
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'RBW_VERSION', '0.2.5' );
+define( 'RBW_VERSION', '0.3.0' );
 define( 'RBW_PLUGIN_FILE', __FILE__ );
 define( 'RBW_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'RBW_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -59,7 +59,7 @@ spl_autoload_register(
  */
 function rbw_bootstrap(): void {
 	if ( ! class_exists( 'WooCommerce' ) ) {
-		add_action( 'admin_notices', array( Notices\AdminNotices::class, 'render_woocommerce_missing' ) );
+		add_action( 'admin_notices', array( Admin\AdminNotices::class, 'render_woocommerce_missing' ) );
 		return;
 	}
 

@@ -24,7 +24,21 @@ final class Installer {
 	/**
 	 * Current DB schema version.
 	 */
-	public const DB_VERSION = '1.0.0';
+	public const DB_VERSION = '1.1.0';
+
+	/**
+	 * Columns added by 1.1.0 (Phase 3 pricing settings).
+	 *
+	 * Listed so maybe_upgrade() can report what it added and so the schema is
+	 * documented in one place.
+	 */
+	public const PRICING_COLUMNS = array(
+		'profit_type'      => "varchar(16) NOT NULL DEFAULT 'percent'",
+		'profit_value'     => 'decimal(30,10) NOT NULL DEFAULT 0.0000000000',
+		'commission_type'  => "varchar(16) NOT NULL DEFAULT 'percent'",
+		'commission_value' => 'decimal(30,10) NOT NULL DEFAULT 0.0000000000',
+		'extra_amount'     => 'decimal(30,10) NOT NULL DEFAULT 0.0000000000',
+	);
 
 	/**
 	 * Activation: create tables, options and seed defaults.
@@ -66,9 +80,55 @@ final class Installer {
 		}
 
 		self::create_tables();
+		self::backfill_pricing_columns();
 		self::install_default_options();
 		self::seed_currencies();
 		update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
+	}
+
+	/**
+	 * Make sure the 1.1.0 pricing columns exist and carry sane values.
+	 *
+	 * dbDelta() adds missing columns, but it does not change NULL defaults on
+	 * tables created by an older version on some MySQL flavours, and existing
+	 * rows may hold empty strings. This runs a single, idempotent UPDATE so
+	 * existing rows behave exactly like freshly seeded ones.
+	 *
+	 * @return void
+	 */
+	private static function backfill_pricing_columns(): void {
+		global $wpdb;
+
+		$table  = self::currencies_table();
+		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+
+		if ( $exists !== $table ) {
+			return;
+		}
+
+		$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}", 0 ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+
+		if ( ! is_array( $columns ) ) {
+			return;
+		}
+
+		foreach ( array_keys( self::PRICING_COLUMNS ) as $column ) {
+			if ( in_array( $column, $columns, true ) ) {
+				continue;
+			}
+
+			// dbDelta missed it (should not happen, but never leave the schema broken).
+			$wpdb->query( "ALTER TABLE {$table} ADD COLUMN {$column} " . self::PRICING_COLUMNS[ $column ] ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+		}
+
+		$wpdb->query( // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+			"UPDATE {$table}
+			 SET profit_type = CASE WHEN profit_type IN ('percent','fixed') THEN profit_type ELSE 'percent' END,
+			     commission_type = CASE WHEN commission_type IN ('percent','fixed') THEN commission_type ELSE 'percent' END,
+			     profit_value = CASE WHEN profit_value IS NULL OR profit_value < 0 THEN 0 ELSE profit_value END,
+			     commission_value = CASE WHEN commission_value IS NULL OR commission_value < 0 THEN 0 ELSE commission_value END,
+			     extra_amount = CASE WHEN extra_amount IS NULL OR extra_amount < 0 THEN 0 ELSE extra_amount END"
+		);
 	}
 
 	/**
@@ -103,6 +163,11 @@ final class Installer {
 			provider varchar(64) NOT NULL DEFAULT 'manual',
 			provider_symbol varchar(64) NOT NULL DEFAULT '',
 			rate decimal(30,10) NOT NULL DEFAULT 0.0000000000,
+			profit_type varchar(16) NOT NULL DEFAULT 'percent',
+			profit_value decimal(30,10) NOT NULL DEFAULT 0.0000000000,
+			commission_type varchar(16) NOT NULL DEFAULT 'percent',
+			commission_value decimal(30,10) NOT NULL DEFAULT 0.0000000000,
+			extra_amount decimal(30,10) NOT NULL DEFAULT 0.0000000000,
 			is_enabled tinyint(1) NOT NULL DEFAULT 0,
 			update_interval_minutes int(11) NOT NULL DEFAULT 60,
 			last_updated datetime DEFAULT NULL,

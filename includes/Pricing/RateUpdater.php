@@ -23,6 +23,11 @@ defined( 'ABSPATH' ) || exit;
 final class RateUpdater {
 
 	/**
+	 * Minimum absolute difference that counts as a real rate change.
+	 */
+	public const RATE_EPSILON = 0.0000001;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param CurrencyRepository|null $repository Currency repository.
@@ -211,6 +216,23 @@ final class RateUpdater {
 
 				if ( $this->repository->update_rate( $currency->id, $rate ) ) {
 					++$summary['updated'];
+
+					/*
+					 * Product prices follow the rate. The action only fires when
+					 * the stored value really changed (a provider that keeps
+					 * returning the same number must not enqueue jobs forever).
+					 */
+					if ( abs( $rate - $currency->rate ) > self::RATE_EPSILON ) {
+						/**
+						 * A currency rate changed.
+						 *
+						 * @param string $code     Currency code (e.g. USD).
+						 * @param float  $old_rate Previous rate (0 when never set).
+						 * @param float  $new_rate New rate, in the store unit.
+						 * @param int    $currency_id Currency row id.
+						 */
+						do_action( 'rbw_rate_updated', $currency->code, (float) $currency->rate, (float) $rate, (int) $currency->id );
+					}
 				} else {
 					++$summary['failed'];
 					$errors[] = sprintf(

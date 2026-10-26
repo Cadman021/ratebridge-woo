@@ -1,0 +1,868 @@
+<?php
+/**
+ * Classic product editor fields (simple + variable products).
+ *
+ * Everything goes through native WooCommerce hooks; prices are only ever
+ * written through the CRUD API (`set_regular_price`, `set_sale_price`).
+ *
+ * @package RateBridge
+ */
+
+namespace RateBridge\Product;
+
+use RateBridge\Admin\AjaxController;
+use RateBridge\Admin\SettingsPage;
+use RateBridge\Core\Settings;
+use RateBridge\Currency\Currency;
+use RateBridge\Currency\CurrencyRepository;
+use RateBridge\Pricing\PriceCalculator;
+use RateBridge\Pricing\Repricer;
+use WC_Product;
+use WC_Product_Variation;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * Renders and saves the "pricing by currency" product fields.
+ */
+final class ProductFields {
+
+	/**
+	 * Asset handle.
+	 */
+	public const HANDLE = 'rbw-product';
+
+	/**
+	 * Register every hook.
+	 *
+	 * @return void
+	 */
+	public function register(): void {
+		// Simple products.
+		add_action( 'woocommerce_product_options_pricing', array( $this, 'render_simple_fields' ) );
+		add_action( 'woocommerce_admin_process_product_object', array( $this, 'save_simple' ) );
+
+		// Variations.
+		add_action( 'woocommerce_variation_options_pricing', array( $this, 'render_variation_fields' ), 10, 3 );
+		add_action( 'woocommerce_save_product_variation', array( $this, 'save_variation' ), 10, 2 );
+
+		// Re-reprice after WooCommerce has stored our meta.
+		add_action( 'woocommerce_update_product', array( $this, 'reprice_after_save' ), 20, 1 );
+		add_action( 'woocommerce_update_product_variation', array( $this, 'reprice_parent_after_variation_save' ), 20, 1 );
+
+		/*
+		 * Products list column.
+		 *
+		 * WooCommerce 8+ (including HPOS) uses `manage_product_posts_columns`
+		 * through its own list table; the classic post-type hook is kept as a
+		 * fallback for older/edge setups. Registering both is harmless: the
+		 * callback is idempotent and only adds a missing key.
+		 */
+		add_filter( 'manage_product_posts_columns', array( $this, 'add_column' ), 20 );
+		add_filter( 'manage_edit-product_columns', array( $this, 'add_column' ), 20 );
+		add_action( 'manage_product_posts_custom_column', array( $this, 'render_column' ), 10, 2 );
+		add_action( 'manage_posts_custom_column', array( $this, 'render_column' ), 10, 2 );
+
+		// Assets on the product edit screen.
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+	}
+
+	/**
+	 * Make sure the WooCommerce meta-box helpers are available.
+	 *
+	 * `woocommerce_wp_text_input()` / `woocommerce_wp_checkbox()` live in
+	 * `wc-meta-box-functions.php`, which WooCommerce only loads on admin screens.
+	 * The product editor always has them, but loading the file defensively keeps
+	 * these renderers usable from any context (REST, CLI, tests).
+	 *
+	 * @return void
+	 */
+	private function load_meta_box_functions(): void {
+		if ( function_exists( 'woocommerce_wp_text_input' ) ) {
+			return;
+		}
+
+		$file = defined( 'WC_ABSPATH' ) ? WC_ABSPATH . 'includes/admin/wc-meta-box-functions.php' : '';
+
+		if ( '' !== $file && is_readable( $file ) ) {
+			require_once $file;
+		}
+	}
+
+	/**
+	 * Enabled currencies for the dropdowns (code + name + rate).
+	 *
+	 * @return Currency[]
+	 */
+	private function currencies(): array {
+		return ( new CurrencyRepository() )->get_enabled();
+	}
+
+	/**
+	 * Format a rate for the dropdown label.
+	 *
+	 * @param Currency $currency Currency.
+	 * @return string
+	 */
+	private function currency_label( Currency $currency ): string {
+		$rate = $currency->has_rate()
+			? sprintf(
+				/* translators: 1: rate, 2: unit label (Rial/Toman) */
+				__( 'rate: %1$s %2$s', 'ratebridge-woo' ),
+				SettingsPage::format_rate( $currency ),
+				SettingsPage::unit_label()
+			)
+			: __( 'no rate yet', 'ratebridge-woo' );
+
+		return sprintf( '%s — %s (%s)', $currency->code, $currency->name, $rate );
+	}
+
+	/**
+	 * Render the simple-product section.
+	 *
+	 * @return void
+	 */
+	public function render_simple_fields(): void {
+		$this->load_meta_box_functions();
+
+		global $post;
+
+		$post_id    = $post instanceof \WP_Post ? (int) $post->ID : 0;
+		$data       = $post_id > 0 ? ProductData::read( $post_id ) : ProductData::read( 0 );
+		$currencies = $this->currencies();
+		$unit       = SettingsPage::unit_label();
+
+		echo '<div class="options_group rbw-product-panel">';
+
+		woocommerce_wp_checkbox(
+			array(
+				'id'            => 'rbw_enabled',
+				'value'         => $data['enabled'] ? 'yes' : 'no',
+				'label'         => __( 'Pricing by currency', 'ratebridge-woo' ),
+				'description'   => __( 'When enabled, the price is calculated from the currency rate in this plugin.', 'ratebridge-woo' ),
+				'desc_tip'      => true,
+				'wrapper_class' => 'rbw-field-enabled',
+			)
+		);
+
+		echo '<div class="rbw-product-fields" id="rbw-simple-fields"' . ( $data['enabled'] ? '' : ' hidden' ) . '>';
+
+		if ( empty( $currencies ) ) {
+			printf(
+				'<p class="rbw-product-note rbw-product-note-warning">%s</p>',
+				esc_html__( 'There is no enabled currency yet. Enable one in WooCommerce → نرخ ساز → Currencies first.', 'ratebridge-woo' )
+			);
+		}
+
+		// Currency select.
+		echo '<p class="form-field rbw-field">';
+		echo '<label for="rbw_currency">' . esc_html__( 'Currency', 'ratebridge-woo' ) . '</label>';
+		echo '<select id="rbw_currency" name="rbw_currency" class="wc-enhanced-select">';
+		echo '<option value="">' . esc_html__( 'Select a currency…', 'ratebridge-woo' ) . '</option>';
+
+		foreach ( $currencies as $currency ) {
+			printf(
+				'<option value="%s"%s>%s</option>',
+				esc_attr( $currency->code ),
+				selected( $data['currency'], $currency->code, false ),
+				esc_html( $this->currency_label( $currency ) )
+			);
+		}
+
+		echo '</select>';
+		echo '</p>';
+
+		$this->render_numeric_field(
+			'base_price',
+			__( 'Base price (in the currency)', 'ratebridge-woo' ),
+			$data['base_price'],
+			__( 'For example 100 for USD 100, or 4.75 for 4.75 grams of 18K gold.', 'ratebridge-woo' )
+		);
+		$this->render_numeric_field(
+			'sale_base_price',
+			__( 'Sale base price (optional)', 'ratebridge-woo' ),
+			$data['sale_price'],
+			__( 'Optional, in the same currency. Leave empty for no sale price.', 'ratebridge-woo' )
+		);
+		$this->render_numeric_field(
+			'min_price',
+			sprintf(
+				/* translators: %s: unit label */
+				__( 'Minimum price (%s)', 'ratebridge-woo' ),
+				$unit
+			),
+			$data['min_price'],
+			__( 'The calculated price is never written below this amount. Leave empty for none.', 'ratebridge-woo' )
+		);
+		$this->render_numeric_field(
+			'fluctuation',
+			sprintf(
+				/* translators: %s: unit label */
+				__( 'Fluctuation margin (%s)', 'ratebridge-woo' ),
+				$unit
+			),
+			$data['fluctuation'],
+			__( 'If the new price differs from the previous one by less than this amount, the old price is kept.', 'ratebridge-woo' )
+		);
+
+		// Profit / commission / extra with a mode select.
+		$this->render_rule_section( 'profit', __( 'Profit', 'ratebridge-woo' ), $data );
+		$this->render_rule_section( 'commission', __( 'Commission', 'ratebridge-woo' ), $data );
+		$this->render_rule_section( 'extra', __( 'Extra amount', 'ratebridge-woo' ), $data, true );
+
+		echo '<p class="form-field rbw-preview-row">';
+		printf(
+			'<button type="button" class="button rbw-preview-button" data-target="rbw-simple-preview">%s</button>',
+			esc_html__( 'Price preview', 'ratebridge-woo' )
+		);
+		echo '<span class="rbw-preview-output" id="rbw-simple-preview" aria-live="polite"></span>';
+		echo '</p>';
+
+		echo '</div><!-- .rbw-product-fields -->';
+		echo '<p class="rbw-product-note rbw-managed-note" id="rbw-managed-note"' . ( $data['enabled'] ? '' : ' hidden' ) . '>';
+		esc_html_e( 'The regular price and the sale price are controlled by the currency and are read-only while pricing by currency is enabled.', 'ratebridge-woo' );
+		echo '</p>';
+
+		echo '</div><!-- .rbw-product-panel -->';
+	}
+
+	/**
+	 * Render a numeric field inside the panel.
+	 *
+	 * @param string $name        Field name (without prefix).
+	 * @param string $label       Label.
+	 * @param float  $value       Current value.
+	 * @param string $description Help text.
+	 * @return void
+	 */
+	private function render_numeric_field( string $name, string $label, float $value, string $description ): void {
+		printf(
+			'<p class="form-field rbw-field">
+				<label for="rbw_%1$s">%2$s</label>
+				<input type="text" class="short wc_input_price rbw-number" id="rbw_%1$s" name="rbw_%1$s" value="%3$s" dir="ltr" inputmode="decimal" />
+				<span class="description">%4$s</span>
+			</p>',
+			esc_attr( $name ),
+			esc_html( $label ),
+			esc_attr( '' === $this->number_to_string( $value ) ? '' : $this->number_to_string( $value ) ),
+			esc_html( $description )
+		);
+	}
+
+	/**
+	 * Render one rule block (type + value + the shared mode select on profit).
+	 *
+	 * @param string               $slot       profit|commission|extra.
+	 * @param string               $label      Label.
+	 * @param array<string, mixed> $data       Product data.
+	 * @param bool                 $fixed_only Whether the type select is hidden (extra is always fixed).
+	 * @return void
+	 */
+	private function render_rule_section( string $slot, string $label, array $data, bool $fixed_only = false ): void {
+		$rule = is_array( $data[ $slot ] ?? null ) ? $data[ $slot ] : array(
+			'type'  => 'percent',
+			'value' => 0.0,
+		);
+
+		if ( $fixed_only ) {
+			$rule['type'] = 'fixed';
+		}
+
+		echo '<div class="rbw-rule-group">';
+
+		if ( 'profit' === $slot ) {
+			printf(
+				'<p class="form-field rbw-field">
+					<label for="rbw_profit_mode">%1$s</label>
+					<select id="rbw_profit_mode" name="rbw_profit_mode" class="rbw-mode">
+						<option value="none"%2$s>%3$s</option>
+						<option value="add"%4$s>%5$s</option>
+						<option value="replace"%6$s>%7$s</option>
+					</select>
+					<span class="description">%8$s</span>
+				</p>',
+				esc_html__( 'Profit, commission and extra mode', 'ratebridge-woo' ),
+				selected( $data['profit_mode'] ?? 'none', 'none', false ),
+				esc_html__( 'Use the currency values', 'ratebridge-woo' ),
+				selected( $data['profit_mode'] ?? 'none', 'add', false ),
+				esc_html__( 'Add the product values to the currency values', 'ratebridge-woo' ),
+				selected( $data['profit_mode'] ?? 'none', 'replace', false ),
+				esc_html__( 'Replace the currency values with the product values', 'ratebridge-woo' ),
+				esc_html__( 'With “add”, a percentage and a fixed amount are combined after the percentage is converted to an amount.', 'ratebridge-woo' )
+			);
+		}
+
+		echo '<p class="form-field rbw-field rbw-rule">';
+		printf( '<label for="rbw_%1$s_value">%2$s</label>', esc_attr( $slot ), esc_html( $label ) );
+
+		if ( ! $fixed_only ) {
+			printf(
+				'<select name="rbw_%1$s_type" id="rbw_%1$s_type" class="rbw-rule-type" data-slot="%1$s">
+					<option value="percent"%2$s>%3$s</option>
+					<option value="fixed"%4$s>%5$s</option>
+				</select>',
+				esc_attr( $slot ),
+				selected( $rule['type'], 'percent', false ),
+				esc_html__( 'Percent', 'ratebridge-woo' ),
+				selected( $rule['type'], 'fixed', false ),
+				esc_html__( 'Fixed amount', 'ratebridge-woo' )
+			);
+		} else {
+			printf( '<input type="hidden" name="rbw_%s_type" value="fixed" />', esc_attr( $slot ) );
+		}
+
+		printf(
+			'<input type="text" class="short rbw-number" id="rbw_%1$s_value" name="rbw_%1$s_value" value="%2$s" dir="ltr" inputmode="decimal" />',
+			esc_attr( $slot ),
+			esc_attr( $this->number_to_string( (float) $rule['value'] ) )
+		);
+
+		echo '<span class="description rbw-rule-hint" data-slot="' . esc_attr( $slot ) . '">';
+		echo esc_html( 'percent' === $rule['type'] ? __( 'Percentage', 'ratebridge-woo' ) : __( 'Amount in the store unit', 'ratebridge-woo' ) );
+		echo '</span>';
+		echo '</p>';
+
+		echo '</div>';
+	}
+
+	/**
+	 * Save the simple-product fields.
+	 *
+	 * WooCommerce already verified the nonce and the capability before this
+	 * hook fires, so only sanitisation and persistence are needed here.
+	 *
+	 * @param WC_Product $product Product being saved.
+	 * @return void
+	 */
+	public function save_simple( WC_Product $product ): void {
+		$this->save_fields( (int) $product->get_id(), 'product', $product );
+	}
+
+	/**
+	 * Persist the `_rbw_*` meta for a post with a given input scope.
+	 *
+	 * @param int             $post_id Post id.
+	 * @param string          $scope   'product' or 'variation'.
+	 * @param WC_Product|null $product Product object (for the repricing call).
+	 * @return void
+	 */
+	private function save_fields( int $post_id, string $scope, ?WC_Product $product = null ): void {
+		if ( $post_id <= 0 ) {
+			return;
+		}
+
+		if ( ! current_user_can( 'edit_product', $post_id ) && ! current_user_can( 'edit_products' ) ) {
+			return;
+		}
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- WooCommerce verifies the nonce before these hooks.
+		$enabled = isset( $_POST['rbw_enabled'] ) && 'yes' === sanitize_text_field( wp_unslash( (string) $_POST['rbw_enabled'] ) );
+
+		/*
+		 * Variations have no checkbox of their own: they inherit the parent's
+		 * state, so a variation of a disabled parent is never published as a
+		 * managed price.
+		 */
+		if ( 'variation' === $scope ) {
+			$parent_id = (int) wp_get_post_parent_id( $post_id );
+			$enabled   = $parent_id > 0 && ProductData::is_enabled( $parent_id );
+		}
+
+		if ( $enabled ) {
+			update_post_meta( $post_id, ProductData::META_ENABLED, 'yes' );
+
+			$currency = isset( $_POST['rbw_currency'] ) ? strtoupper( sanitize_text_field( wp_unslash( (string) $_POST['rbw_currency'] ) ) ) : '';
+
+			if ( '' !== $currency ) {
+				$exists = ( new CurrencyRepository() )->get_by_code( $currency );
+
+				if ( $exists instanceof Currency ) {
+					update_post_meta( $post_id, ProductData::META_CURRENCY, $exists->code );
+				}
+			}
+
+			foreach ( array(
+				'base_price'      => ProductData::META_BASE_PRICE,
+				'sale_base_price' => ProductData::META_SALE_BASE_PRICE,
+				'min_price'       => ProductData::META_MIN_PRICE,
+				'fluctuation'     => ProductData::META_FLUCTUATION,
+			) as $field => $meta_key ) {
+				if ( ! isset( $_POST[ 'rbw_' . $field ] ) ) {
+					continue;
+				}
+
+				$raw   = wp_unslash( (string) $_POST[ 'rbw_' . $field ] );
+				$value = ProductData::to_decimal( $raw );
+
+				if ( $value > 0 ) {
+					update_post_meta( $post_id, $meta_key, wc_format_decimal( $value, 4 ) );
+				} else {
+					delete_post_meta( $post_id, $meta_key );
+				}
+			}
+
+			if ( isset( $_POST['rbw_profit_mode'] ) ) {
+				update_post_meta( $post_id, ProductData::META_PROFIT_MODE, PriceCalculator::to_mode( sanitize_key( wp_unslash( (string) $_POST['rbw_profit_mode'] ) ) ) );
+			}
+
+			foreach ( array(
+				'profit'     => array( ProductData::META_PROFIT_TYPE, ProductData::META_PROFIT_VALUE ),
+				'commission' => array( ProductData::META_COMMISSION_TYPE, ProductData::META_COMMISSION_VALUE ),
+			) as $slot => $keys ) {
+				if ( isset( $_POST[ 'rbw_' . $slot . '_type' ] ) ) {
+					$type = PriceCalculator::to_type( sanitize_key( wp_unslash( (string) $_POST[ 'rbw_' . $slot . '_type' ] ) ) );
+					update_post_meta( $post_id, $keys[0], $type );
+				}
+
+				if ( isset( $_POST[ 'rbw_' . $slot . '_value' ] ) ) {
+					$value = PriceCalculator::sanitize_rule(
+						array(
+							'type'  => (string) get_post_meta( $post_id, $keys[0], true ),
+							'value' => wp_unslash( (string) $_POST[ 'rbw_' . $slot . '_value' ] ),
+						)
+					);
+
+					update_post_meta( $post_id, $keys[1], wc_format_decimal( (float) ( $value['value'] ?? 0 ), 4 ) );
+				}
+			}
+
+			if ( isset( $_POST['rbw_extra_value'] ) ) {
+				$extra = ProductData::to_decimal( wp_unslash( (string) $_POST['rbw_extra_value'] ) );
+				update_post_meta( $post_id, ProductData::META_EXTRA_AMOUNT, wc_format_decimal( $extra, 4 ) );
+			}
+		} else {
+			foreach ( ProductData::all_meta_keys() as $meta_key ) {
+				delete_post_meta( $post_id, $meta_key );
+			}
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		unset( $product );
+	}
+
+	/**
+	 * Render the per-variation fields.
+	 *
+	 * @param int     $loop           Variation loop index.
+	 * @param array   $variation_data Variation data.
+	 * @param \WP_Post $variation     Variation post.
+	 * @return void
+	 */
+	public function render_variation_fields( $loop, $variation_data, $variation ): void {
+		$this->load_meta_box_functions();
+
+		$variation_id = is_object( $variation ) ? (int) $variation->ID : 0;
+		$parent_id    = is_object( $variation ) ? (int) $variation->post_parent : 0;
+
+		$data    = ProductData::read( $variation_id );
+		$enabled = ProductData::is_enabled( $parent_id );
+		$parent  = $parent_id > 0 ? get_post_meta( $parent_id, ProductData::META_CURRENCY, true ) : '';
+
+		echo '<div class="rbw-variation-fields">';
+
+		if ( ! $enabled ) {
+			printf(
+				'<p class="rbw-product-note">%s</p>',
+				esc_html__( 'Enable “Pricing by currency” on the parent product to price this variation by a currency.', 'ratebridge-woo' )
+			);
+		} else {
+			printf(
+				'<p class="rbw-product-note">%s</p>',
+				esc_html(
+					sprintf(
+						/* translators: %s: parent currency code */
+						__( 'Prices of this variation are calculated from the parent currency (%s).', 'ratebridge-woo' ),
+						'' !== $parent ? $parent : '—'
+					)
+				)
+			);
+		}
+
+		// Base price input, prefixed with the loop wrapper WooCommerce expects.
+		woocommerce_wp_text_input(
+			array(
+				'id'            => 'rbw_variation_base_price_' . $loop,
+				'name'          => 'rbw_variation_base_price[' . $loop . ']',
+				'value'         => '' === $this->number_to_string( $data['base_price'] ) ? '' : $this->number_to_string( $data['base_price'] ),
+				'label'         => __( 'Base price (in the currency)', 'ratebridge-woo' ),
+				'desc_tip'      => true,
+				'description'   => __( 'Price of this variation in the parent currency.', 'ratebridge-woo' ),
+				'wrapper_class' => 'form-row form-row-first rbw-variation-field',
+				'custom_attributes' => array(
+					'dir'         => 'ltr',
+					'inputmode'   => 'decimal',
+					'data-rbw'    => 'variation-base',
+				),
+			)
+		);
+
+		woocommerce_wp_text_input(
+			array(
+				'id'            => 'rbw_variation_sale_base_price_' . $loop,
+				'name'          => 'rbw_variation_sale_base_price[' . $loop . ']',
+				'value'         => '' === $this->number_to_string( $data['sale_price'] ) ? '' : $this->number_to_string( $data['sale_price'] ),
+				'label'         => __( 'Sale base price (optional)', 'ratebridge-woo' ),
+				'desc_tip'      => true,
+				'description'   => __( 'Optional sale price in the parent currency.', 'ratebridge-woo' ),
+				'wrapper_class' => 'form-row form-row-last rbw-variation-field',
+				'custom_attributes' => array(
+					'dir'       => 'ltr',
+					'inputmode' => 'decimal',
+				),
+			)
+		);
+
+		// Optional currency override for this variation.
+		$currencies = $this->currencies();
+
+		echo '<p class="form-row form-row-full rbw-variation-field">';
+		printf(
+			'<label for="rbw_variation_currency_%1$s">%2$s</label>',
+			esc_attr( (string) $loop ),
+			esc_html__( 'Currency (parent currency)', 'ratebridge-woo' )
+		);
+		printf( '<select id="rbw_variation_currency_%1$s" name="rbw_variation_currency[%1$s]">', esc_attr( (string) $loop ) );
+		printf( '<option value="">%s</option>', esc_html__( 'Use the parent currency', 'ratebridge-woo' ) );
+
+		foreach ( $currencies as $currency ) {
+			printf(
+				'<option value="%s"%s>%s</option>',
+				esc_attr( $currency->code ),
+				selected( $data['currency'], $currency->code, false ),
+				esc_html( $this->currency_label( $currency ) )
+			);
+		}
+
+		echo '</select>';
+		echo '</p>';
+
+		if ( $enabled ) {
+			printf(
+				'<p class="rbw-product-note">%s</p>',
+				esc_html__( 'The regular price and the sale price of this variation are controlled by the currency and are read-only.', 'ratebridge-woo' )
+			);
+		}
+
+		echo '</div>';
+	}
+
+	/**
+	 * Save the per-variation fields.
+	 *
+	 * @param int $variation_id Variation id.
+	 * @param int $loop         Variation loop index.
+	 * @return void
+	 */
+	public function save_variation( $variation_id, $loop ): void {
+		$variation_id = (int) $variation_id;
+		$loop         = (int) $loop;
+
+		if ( $variation_id <= 0 || ! current_user_can( 'edit_product', $variation_id ) ) {
+			return;
+		}
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- WooCommerce verified the nonce.
+		$base = isset( $_POST['rbw_variation_base_price'][ $loop ] )
+			? ProductData::to_decimal( wp_unslash( (string) $_POST['rbw_variation_base_price'][ $loop ] ) )
+			: 0.0;
+
+		$sale = isset( $_POST['rbw_variation_sale_base_price'][ $loop ] )
+			? ProductData::to_decimal( wp_unslash( (string) $_POST['rbw_variation_sale_base_price'][ $loop ] ) )
+			: 0.0;
+
+		$code = isset( $_POST['rbw_variation_currency'][ $loop ] )
+			? strtoupper( sanitize_text_field( wp_unslash( (string) $_POST['rbw_variation_currency'][ $loop ] ) ) )
+			: '';
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		if ( $base > 0 ) {
+			update_post_meta( $variation_id, ProductData::META_BASE_PRICE, wc_format_decimal( $base, 4 ) );
+
+			// The flag mirrors the parent so a disabled parent stops repricing.
+			$parent_id = (int) wp_get_post_parent_id( $variation_id );
+
+			if ( $parent_id > 0 && ProductData::is_enabled( $parent_id ) ) {
+				update_post_meta( $variation_id, ProductData::META_ENABLED, 'yes' );
+			} else {
+				delete_post_meta( $variation_id, ProductData::META_ENABLED );
+			}
+		} else {
+			delete_post_meta( $variation_id, ProductData::META_BASE_PRICE );
+			delete_post_meta( $variation_id, ProductData::META_ENABLED );
+		}
+
+		if ( $sale > 0 ) {
+			update_post_meta( $variation_id, ProductData::META_SALE_BASE_PRICE, wc_format_decimal( $sale, 4 ) );
+		} else {
+			delete_post_meta( $variation_id, ProductData::META_SALE_BASE_PRICE );
+		}
+
+		if ( '' !== $code && ( new CurrencyRepository() )->get_by_code( $code ) instanceof Currency ) {
+			update_post_meta( $variation_id, ProductData::META_CURRENCY, $code );
+		} else {
+			delete_post_meta( $variation_id, ProductData::META_CURRENCY );
+		}
+
+		// Audit meta is stale after a manual edit.
+		delete_post_meta( $variation_id, ProductData::META_LAST_PRICE );
+	}
+
+	/**
+	 * Reprice a product after the editor saved it.
+	 *
+	 * Re-entrancy guard: Repricer::apply_to_product() saves the product again,
+	 * which fires this hook; `Repricer::is_saving()` breaks that loop.
+	 *
+	 * @param int $product_id Product id.
+	 * @return void
+	 */
+	public function reprice_after_save( $product_id ): void {
+		$product_id = (int) $product_id;
+
+		if ( $product_id <= 0 || Repricer::is_saving() ) {
+			return;
+		}
+
+		if ( ! ProductData::is_enabled( $product_id ) ) {
+			return;
+		}
+
+		$product = wc_get_product( $product_id );
+
+		if ( ! $product instanceof WC_Product ) {
+			return;
+		}
+
+		( new Repricer() )->reprice_product( $product );
+	}
+
+	/**
+	 * Reprice the parent when a variation is saved directly.
+	 *
+	 * @param int $variation_id Variation id.
+	 * @return void
+	 */
+	public function reprice_parent_after_variation_save( $variation_id ): void {
+		if ( Repricer::is_saving() ) {
+			return;
+		}
+
+		$variation = wc_get_product( (int) $variation_id );
+
+		if ( ! $variation instanceof WC_Product_Variation ) {
+			return;
+		}
+
+		$parent_id = (int) $variation->get_parent_id();
+		$parent    = $parent_id > 0 ? wc_get_product( $parent_id ) : null;
+
+		if ( $parent instanceof WC_Product && ProductData::is_enabled( $parent_id ) ) {
+			( new Repricer() )->reprice_product( $parent );
+		}
+	}
+
+	/**
+	 * Add the «ارز» column to the products list.
+	 *
+	 * @param array<string, string> $columns Existing columns.
+	 * @return array<string, string>
+	 */
+	public function add_column( $columns ): array {
+		if ( ! is_array( $columns ) ) {
+			return array();
+		}
+
+		$new = array();
+
+		foreach ( $columns as $key => $label ) {
+			$new[ $key ] = $label;
+
+			if ( 'price' === $key ) {
+				$new['rbw_currency'] = __( 'Currency', 'ratebridge-woo' );
+			}
+		}
+
+		if ( ! isset( $new['rbw_currency'] ) ) {
+			$new['rbw_currency'] = __( 'Currency', 'ratebridge-woo' );
+		}
+
+		return $new;
+	}
+
+	/**
+	 * Render the «ارز» column.
+	 *
+	 * @param string $column  Column key.
+	 * @param int    $post_id Product id.
+	 * @return void
+	 */
+	public function render_column( $column, $post_id ): void {
+		if ( 'rbw_currency' !== $column ) {
+			return;
+		}
+
+		$post_id = (int) $post_id;
+
+		// Two hooks are registered (modern + classic); render each row once.
+		static $rendered = array();
+
+		if ( isset( $rendered[ $post_id ] ) ) {
+			return;
+		}
+
+		$rendered[ $post_id ] = true;
+
+		if ( ! ProductData::is_enabled( $post_id ) ) {
+			// A variable product may still have managed variations.
+			$variation_code = $this->first_variation_currency( $post_id );
+
+			if ( '' === $variation_code ) {
+				echo '<span class="rbw-muted">—</span>';
+				return;
+			}
+
+			echo '<code>' . esc_html( $variation_code ) . '</code>';
+			return;
+		}
+
+		$code   = ProductData::currency_code( $post_id );
+		$last   = (int) get_post_meta( $post_id, ProductData::META_LAST_CALC, true );
+
+		echo '<code>' . esc_html( '' !== $code ? $code : '—' ) . '</code>';
+
+		if ( $last > 0 ) {
+			printf(
+				'<div class="rbw-muted">%s</div>',
+				esc_html(
+					sprintf(
+						/* translators: %s: formatted date and time */
+						__( 'Last calculation: %s', 'ratebridge-woo' ),
+						wp_date( 'Y-m-d H:i', $last )
+					)
+				)
+			);
+		}
+	}
+
+	/**
+	 * Currency code of the first managed variation of a variable product.
+	 *
+	 * @param int $product_id Parent product id.
+	 * @return string
+	 */
+	private function first_variation_currency( int $product_id ): string {
+		$product = wc_get_product( $product_id );
+
+		if ( ! $product instanceof WC_Product || ! $product->is_type( 'variable' ) ) {
+			return '';
+		}
+
+		$parent_code = ProductData::currency_code( $product_id );
+
+		if ( '' !== $parent_code ) {
+			return $parent_code;
+		}
+
+		foreach ( (array) $product->get_children() as $child_id ) {
+			$code = ProductData::currency_code( (int) $child_id );
+
+			if ( '' !== $code ) {
+				return $code;
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Enqueue the product editor assets.
+	 *
+	 * @param string $hook_suffix Current admin page.
+	 * @return void
+	 */
+	public function enqueue_assets( $hook_suffix ): void {
+		if ( ! in_array( (string) $hook_suffix, array( 'post.php', 'post-new.php' ), true ) ) {
+			return;
+		}
+
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+
+		if ( ! $screen instanceof \WP_Screen || 'product' !== $screen->post_type ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			self::HANDLE,
+			RBW_PLUGIN_URL . 'assets/admin/css/product.css',
+			array(),
+			RBW_VERSION
+		);
+
+		if ( is_rtl() ) {
+			wp_enqueue_style(
+				self::HANDLE . '-rtl',
+				RBW_PLUGIN_URL . 'assets/admin/css/product-rtl.css',
+				array( self::HANDLE ),
+				RBW_VERSION
+			);
+		}
+
+		wp_enqueue_script(
+			self::HANDLE,
+			RBW_PLUGIN_URL . 'assets/admin/js/product.js',
+			array(),
+			RBW_VERSION,
+			true
+		);
+
+		wp_localize_script(
+			self::HANDLE,
+			'rbwProduct',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( AjaxController::NONCE_ACTION ),
+				'action'  => AjaxController::PREVIEW_ACTION,
+				'unit'    => SettingsPage::unit_label(),
+				'storeUnit' => Settings::store_unit(),
+				'strings' => array(
+					'calcLabel'        => __( 'Calculated price', 'ratebridge-woo' ),
+					'baseValue'        => __( 'Base value (price × rate)', 'ratebridge-woo' ),
+					'profit'           => __( 'Profit', 'ratebridge-woo' ),
+					'commission'       => __( 'Commission', 'ratebridge-woo' ),
+					'extra'            => __( 'Extra amount', 'ratebridge-woo' ),
+					'beforeMin'        => __( 'Total before the minimum', 'ratebridge-woo' ),
+					'afterMin'         => __( 'After the minimum', 'ratebridge-woo' ),
+					'rounded'          => __( 'After rounding', 'ratebridge-woo' ),
+					'finalPrice'       => __( 'Final price', 'ratebridge-woo' ),
+					'saleFinal'        => __( 'Final sale price', 'ratebridge-woo' ),
+					'rate'             => __( 'Rate', 'ratebridge-woo' ),
+					'minApplied'       => __( 'The minimum price was applied.', 'ratebridge-woo' ),
+					'roundingApplied'  => __( 'The price was rounded.', 'ratebridge-woo' ),
+					'fluctuationKept'  => __( 'Inside the fluctuation margin: the previous price is kept.', 'ratebridge-woo' ),
+					'convertedProfit'  => __( 'The profit was converted from a percentage to an amount because the types differ.', 'ratebridge-woo' ),
+					'convertedCommission' => __( 'The commission was converted from a percentage to an amount because the types differ.', 'ratebridge-woo' ),
+					'working'          => __( 'Calculating…', 'ratebridge-woo' ),
+					'error'            => __( 'The price could not be calculated. Check the currency rate and the base price.', 'ratebridge-woo' ),
+					'readOnlyHint'     => __( 'Controlled by the currency', 'ratebridge-woo' ),
+					'noCurrency'       => __( 'Select a currency first.', 'ratebridge-woo' ),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Format a float for an input value ('' when zero).
+	 *
+	 * @param float $value Value.
+	 * @return string
+	 */
+	private function number_to_string( float $value ): string {
+		if ( $value <= 0 ) {
+			return '';
+		}
+
+		$formatted = rtrim( rtrim( number_format( $value, 4, '.', '' ), '0' ), '.' );
+
+		return '' === $formatted ? '' : $formatted;
+	}
+}

@@ -41,6 +41,8 @@ final class Settings {
 			'delete_data_on_uninstall'  => false,
 			// Default provider key for newly added currencies.
 			'default_provider'          => 'manual',
+			// Maximum age (hours) of a rate before products stop being repriced: 0 = disabled.
+			'max_rate_age_hours'        => 48,
 		);
 	}
 
@@ -109,6 +111,10 @@ final class Settings {
 			$clean['default_provider'] = sanitize_key( (string) $values['default_provider'] );
 		}
 
+		if ( array_key_exists( 'max_rate_age_hours', $values ) ) {
+			$clean['max_rate_age_hours'] = self::sanitize_max_rate_age( $values['max_rate_age_hours'] );
+		}
+
 		update_option( self::OPTION, $clean );
 
 		return $clean;
@@ -147,5 +153,69 @@ final class Settings {
 	 */
 	public static function store_unit(): string {
 		return (string) self::get( 'store_currency_unit', 'toman' );
+	}
+
+	/**
+	 * Maximum age of a rate (hours) before repricing stops. 0 disables the rule.
+	 *
+	 * @return int
+	 */
+	public static function max_rate_age_hours(): int {
+		return self::sanitize_max_rate_age( self::get( 'max_rate_age_hours', 48 ) );
+	}
+
+	/**
+	 * Clamp the stale-rate limit (0 = disabled, at most one year).
+	 *
+	 * @param mixed $value Raw hours.
+	 * @return int
+	 */
+	public static function sanitize_max_rate_age( mixed $value ): int {
+		if ( ! is_numeric( $value ) ) {
+			return 48;
+		}
+
+		$hours = (int) $value;
+
+		return max( 0, min( 24 * 365, $hours ) );
+	}
+
+	/**
+	 * Number of decimals the store currency uses.
+	 *
+	 * Toman and Rial stores are whole units, so this is 0 unless a site filters it.
+	 *
+	 * @return int
+	 */
+	public static function store_decimals(): int {
+		/**
+		 * Filter the number of decimals used for calculated prices.
+		 *
+		 * @param int    $decimals   Decimal places.
+		 * @param string $store_unit 'rial' or 'toman'.
+		 */
+		$decimals = (int) apply_filters( 'rbw_store_decimals', 0, self::store_unit() );
+
+		return max( 0, min( 6, $decimals ) );
+	}
+
+	/**
+	 * Rounding mode used by the calculator.
+	 *
+	 * @return string none|nearest|ceil|floor
+	 */
+	public static function rounding_mode(): string {
+		$mode = (string) self::get( 'rounding_mode', 'nearest' );
+
+		return in_array( $mode, array( 'none', 'nearest', 'ceil', 'floor' ), true ) ? $mode : 'nearest';
+	}
+
+	/**
+	 * Rounding step in the store unit.
+	 *
+	 * @return float
+	 */
+	public static function rounding_step(): float {
+		return max( 1.0, (float) self::get( 'rounding_step', 1000 ) );
 	}
 }

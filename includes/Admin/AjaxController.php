@@ -12,7 +12,11 @@ use RateBridge\Core\Logger;
 use RateBridge\Core\Settings;
 use RateBridge\Currency\Currency;
 use RateBridge\Currency\CurrencyRepository;
+use RateBridge\Core\UnitMigration;
+use RateBridge\Pricing\PriceCalculator;
 use RateBridge\Pricing\RateUpdater;
+use RateBridge\Pricing\Repricer;
+use RateBridge\Product\ProductData;
 use RateBridge\Providers\AbstractProvider;
 use RateBridge\Providers\ProviderInterface;
 use RateBridge\Providers\ProviderRegistry;
@@ -35,6 +39,14 @@ final class AjaxController
 	 * Nonce request field name.
 	 */
 	public const NONCE_NAME = 'nonce';
+
+	/**
+	 * Product editor live-preview action.
+	 *
+	 * The JS sends `action=rbw_preview_price`; it is registered as
+	 * `wp_ajax_rbw_preview_price` (see tests/ajax-actions.php).
+	 */
+	public const PREVIEW_ACTION = 'preview_price';
 
 	/**
 	 * The one and only list of dispatcher slugs.
@@ -62,6 +74,9 @@ final class AjaxController
 			'reset_budget',
 			'add_preset',
 			'get_symbols',
+			'preview_price',
+			'migrate_unit',
+			'dismiss_stale_notice',
 		);
 	}
 
@@ -91,6 +106,9 @@ final class AjaxController
 			'rbw_reset_budget'               => 'reset_budget',
 			'rbw_add_preset'                 => 'add_preset',
 			'rbw_get_symbols'                => 'get_symbols',
+			'rbw_preview_price'              => 'preview_price',
+			'rbw_migrate_unit'               => 'migrate_unit',
+			'rbw_dismiss_stale_notice'       => 'dismiss_stale_notice',
 		);
 	}
 
@@ -178,6 +196,15 @@ final class AjaxController
 				break;
 			case 'get_symbols':
 				$this->get_symbols();
+				break;
+			case 'preview_price':
+				$this->preview_price();
+				break;
+			case 'migrate_unit':
+				$this->migrate_unit();
+				break;
+			case 'dismiss_stale_notice':
+				$this->dismiss_stale_notice();
 				break;
 		}
 	}
@@ -303,6 +330,13 @@ final class AjaxController
 			);
 		}
 
+		// Pricing settings (percent 0–1000, fixed amounts never negative).
+		$pricing = $this->read_pricing_input();
+
+		if ( is_wp_error( $pricing ) ) {
+			wp_send_json_error( array( 'message' => $pricing->get_error_message() ), 400 );
+		}
+
 		$data = array(
 			'code'                    => $code,
 			'name'                    => $name,
@@ -313,10 +347,17 @@ final class AjaxController
 			'is_enabled'              => isset($_POST['is_enabled']) && '1' === sanitize_text_field(wp_unslash((string) $_POST['is_enabled'])) ? 1 : 0,
 			'update_interval_minutes' => isset($_POST['update_interval_minutes']) ? absint($_POST['update_interval_minutes']) : Settings::get('default_update_interval', 60),
 			'sort_order'              => isset($_POST['sort_order']) ? (int) $_POST['sort_order'] : 0,
+			'profit_type'             => $pricing['profit_type'],
+			'profit_value'            => $pricing['profit_value'],
+			'commission_type'         => $pricing['commission_type'],
+			'commission_value'        => $pricing['commission_value'],
+			'extra_amount'            => $pricing['extra_amount'],
 		);
 
+		$before = $id > 0 ? $repo->get($id) : null;
+
 		if ($id > 0) {
-			$existing = $repo->get($id);
+			$existing = $before;
 
 			if (null === $existing) {
 				wp_send_json_error(array('message' => __('Currency not found.', 'ratebridge-woo')), 404);
@@ -341,6 +382,20 @@ final class AjaxController
 		}
 
 		$currency = $repo->get($id);
+
+		/*
+		 * A rate typed by the admin must reprice the products too, exactly like a
+		 * fetched rate. The action only fires when the stored value really
+		 * changed (the repo keeps the old rate when the field is left empty).
+		 */
+		if ($currency instanceof Currency && null !== $before) {
+			$changed_rate = abs($currency->rate - $before->rate) > RateUpdater::RATE_EPSILON;
+
+			if ($changed_rate) {
+				/** This action is documented in includes/Pricing/RateUpdater.php */
+				do_action('rbw_rate_updated', $currency->code, (float) $before->rate, (float) $currency->rate, (int) $currency->id);
+			}
+		}
 
 		wp_send_json_success(
 			array(
@@ -458,20 +513,75 @@ final class AjaxController
 	 */
 	private function save_settings(): void
 	{
+		$old_unit = Settings::store_unit();
+
 		$values = array(
 			'store_currency_unit'      => isset($_POST['store_currency_unit']) ? sanitize_key(wp_unslash((string) $_POST['store_currency_unit'])) : '',
 			'rounding_mode'            => isset($_POST['rounding_mode']) ? sanitize_key(wp_unslash((string) $_POST['rounding_mode'])) : '',
 			'rounding_step'            => isset($_POST['rounding_step']) ? absint($_POST['rounding_step']) : 1,
 			'default_update_interval'  => isset($_POST['default_update_interval']) ? absint($_POST['default_update_interval']) : 60,
 			'delete_data_on_uninstall' => isset($_POST['delete_data_on_uninstall']) && '1' === sanitize_text_field(wp_unslash((string) $_POST['delete_data_on_uninstall'])),
+			'max_rate_age_hours'       => isset($_POST['max_rate_age_hours']) ? absint($_POST['max_rate_age_hours']) : 48,
 		);
 
-		$saved = Settings::update($values);
+		/*
+		 * Changing the store unit invalidates every stored rate and every fixed
+		 * amount by x10. The UI confirms this first (admin.js) and sends
+		 * `confirm_unit_change`, so an unexpected unit change is refused rather
+		 * than silently corrupting prices.
+		 */
+		$unit_changed = isset($values['store_currency_unit'])
+			&& in_array($values['store_currency_unit'], array('rial', 'toman'), true)
+			&& $values['store_currency_unit'] !== $old_unit;
+
+		$confirmed = isset($_POST['confirm_unit_change']) && '1' === sanitize_text_field(wp_unslash((string) $_POST['confirm_unit_change']));
+		$migration = null;
+
+		if ($unit_changed) {
+			if (! $confirmed) {
+				wp_send_json_error(
+					array(
+						'message' => __('Changing the store unit converts every rate and every fixed amount. Please confirm the change.', 'ratebridge-woo'),
+						'unit_changed' => true,
+						'old_unit' => $old_unit,
+						'new_unit' => $values['store_currency_unit'],
+					),
+					409
+				);
+			}
+
+			// 1. Persist the new unit so rounding/precision reads use it.
+			Settings::update($values);
+
+			// 2. Convert every stored store-unit amount (rates, fixed amounts,
+			//    product meta, rounding step) and queue one repricing job.
+			$migration = (new UnitMigration())->migrate($old_unit, (string) $values['store_currency_unit']);
+
+			if (! empty($migration['codes'])) {
+				UnitMigration::queue_reprice($migration['codes']);
+			}
+
+			$saved = Settings::all();
+		} else {
+			$saved = Settings::update($values);
+		}
+
+		$message = $migration && ! empty($migration['changed'])
+			? sprintf(
+				/* translators: 1: old unit, 2: new unit, 3: currencies, 4: products */
+				__('Settings saved. The store unit changed from %1$s to %2$s; %3$d currencies and %4$d products were converted and prices are being recalculated.', 'ratebridge-woo'),
+				$old_unit,
+				(string) $saved['store_currency_unit'],
+				(int) ($migration['currencies'] ?? 0),
+				(int) ($migration['products'] ?? 0)
+			)
+			: __('Settings saved.', 'ratebridge-woo');
 
 		wp_send_json_success(
 			array(
-				'message'  => __('Settings saved.', 'ratebridge-woo'),
-				'settings' => $saved,
+				'message'   => $message,
+				'settings'  => $saved,
+				'migration' => $migration,
 			)
 		);
 	}
@@ -738,6 +848,368 @@ final class AjaxController
 	}
 
 	/**
+	 * Live price preview for the product editor.
+	 *
+	 * Takes the *unsaved* form values, resolves the currency from the
+	 * repository and runs the same PriceCalculator path as the Repricer, so what
+	 * the admin sees is exactly what will be stored.
+	 *
+	 * @return void
+	 */
+	private function preview_price(): void
+	{
+		if (! current_user_can('edit_products')) {
+			wp_send_json_error(array('message' => __('You are not allowed to do this.', 'ratebridge-woo')), 403);
+		}
+
+		$code = isset($_POST['currency']) ? strtoupper(sanitize_text_field(wp_unslash((string) $_POST['currency']))) : '';
+		$repo = new CurrencyRepository();
+		$currency = '' !== $code ? $repo->get_by_code($code) : null;
+
+		if (null === $currency) {
+			wp_send_json_error(array('message' => __('Select a currency first.', 'ratebridge-woo')), 400);
+		}
+
+		if (! $currency->is_enabled) {
+			wp_send_json_error(array('message' => __('This currency is disabled.', 'ratebridge-woo')), 400);
+		}
+
+		if (! $currency->has_rate()) {
+			wp_send_json_error(array('message' => __('This currency has no rate yet.', 'ratebridge-woo')), 400);
+		}
+
+		$base = ProductData::to_decimal(isset($_POST['base_price']) ? wp_unslash((string) $_POST['base_price']) : 0);
+
+		if ($base <= 0) {
+			wp_send_json_error(array('message' => __('Enter the base price first.', 'ratebridge-woo')), 400);
+		}
+
+		// Preview-only overrides (never persisted here).
+		$mode = PriceCalculator::to_mode(isset($_POST['profit_mode']) ? sanitize_key(wp_unslash((string) $_POST['profit_mode'])) : 'none');
+
+		$profit = $this->preview_rule('profit');
+		$commission = $this->preview_rule('commission');
+		$extra = $this->preview_rule('extra');
+		$extra['type'] = 'fixed';
+
+		$min_price = ProductData::to_decimal(isset($_POST['min_price']) ? wp_unslash((string) $_POST['min_price']) : 0);
+		$fluctuation = ProductData::to_decimal(isset($_POST['fluctuation']) ? wp_unslash((string) $_POST['fluctuation']) : 0);
+
+		$post_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : 0;
+		$previous = 0.0;
+
+		if ($post_id > 0) {
+			$previous = ProductData::to_decimal(get_post_meta($post_id, ProductData::META_LAST_PRICE, true));
+		}
+
+		$base_value = $base * $currency->rate;
+
+		$resolved_profit = PriceCalculator::merge_rules($currency->profit_rule(), $profit, $mode, $base_value);
+		$profit_amount = PriceCalculator::rule_amount($resolved_profit, $base_value);
+
+		$resolved_commission = PriceCalculator::merge_rules($currency->commission_rule(), $commission, $mode, $base_value + $profit_amount);
+		$resolved_extra = PriceCalculator::merge_rules($currency->extra_rule(), $extra, $mode, $base_value + $profit_amount);
+
+		$settings = array(
+			'profit' => array('type' => $resolved_profit['type'], 'value' => $resolved_profit['value']),
+			'commission' => array('type' => $resolved_commission['type'], 'value' => $resolved_commission['value']),
+			'extra' => array('type' => $resolved_extra['type'], 'value' => $resolved_extra['value']),
+			'min_price' => $min_price,
+			'rounding_mode' => Settings::rounding_mode(),
+			'rounding_step' => Settings::rounding_step(),
+			'decimals' => Settings::store_decimals(),
+			'fluctuation' => $fluctuation,
+			'previous_price' => $previous,
+		);
+
+		$result = PriceCalculator::calculate($base, $currency->rate, $settings);
+
+		/**
+		 * Filter the price produced by the calculator.
+		 *
+		 * Applies to the live preview and to the stored price, so a filter that
+		 * changes the number changes the real price too.
+		 *
+		 * @param float                $price    Calculated price.
+		 * @param float                $base     Base price in the foreign unit.
+		 * @param Currency             $currency Currency used.
+		 * @param int                  $post_id  Product id (0 for an unsaved product).
+		 * @param array<string, mixed> $settings Calculator settings.
+		 */
+		if ($result['ok']) {
+			$filtered = (float) apply_filters('rbw_calculated_price', (float) $result['price'], $base, $currency, $post_id, $settings);
+
+			if (is_finite($filtered) && $filtered > 0) {
+				$result['price'] = $filtered;
+				$result['breakdown']['final'] = $filtered;
+			}
+		}
+
+		$sale_base = ProductData::to_decimal(isset($_POST['sale_base_price']) ? wp_unslash((string) $_POST['sale_base_price']) : 0);
+		$sale_result = null;
+
+		if ($sale_base > 0 && $result['ok']) {
+			$sale_value = $sale_base * $currency->rate;
+			$sale_profit = PriceCalculator::merge_rules($currency->profit_rule(), $profit, $mode, $sale_value);
+			$sale_profit_amount = PriceCalculator::rule_amount($sale_profit, $sale_value);
+			$sale_commission = PriceCalculator::merge_rules($currency->commission_rule(), $commission, $mode, $sale_value + $sale_profit_amount);
+			$sale_extra = PriceCalculator::merge_rules($currency->extra_rule(), $extra, $mode, $sale_value + $sale_profit_amount);
+
+			$sale_settings = array_merge(
+				$settings,
+				array(
+					'profit' => array('type' => $sale_profit['type'], 'value' => $sale_profit['value']),
+					'commission' => array('type' => $sale_commission['type'], 'value' => $sale_commission['value']),
+					'extra' => array('type' => $sale_extra['type'], 'value' => $sale_extra['value']),
+					'min_price' => 0.0,
+					'fluctuation' => 0.0,
+					'previous_price' => 0.0,
+				)
+			);
+
+			$sale_result = PriceCalculator::calculate($sale_base, $currency->rate, $sale_settings);
+
+			if (is_array($sale_result) && ! empty($sale_result['ok']) && $sale_result['price'] >= $result['price']) {
+				// A sale price above the regular price is meaningless.
+				$sale_result['warning'] = __('The sale price is not lower than the regular price, so it will not be stored.', 'ratebridge-woo');
+			}
+		}
+
+		$payload = array(
+			'ok' => (bool) $result['ok'],
+			'error' => (string) $result['error'],
+			'message' => $result['ok'] ? '' : $this->calculator_error_message((string) $result['error']),
+			'currency' => array(
+				'code' => $currency->code,
+				'name' => $currency->name,
+				'rate' => $currency->rate,
+				'rate_formatted' => SettingsPage::format_rate($currency),
+			),
+			'price' => $result['ok'] ? (float) $result['price'] : null,
+			'price_formatted' => $result['ok'] ? $this->format_money((float) $result['price']) : '',
+			'sale_price' => is_array($sale_result) && ! empty($sale_result['ok']) ? (float) $sale_result['price'] : null,
+			'sale_price_formatted' => is_array($sale_result) && ! empty($sale_result['ok']) ? $this->format_money((float) $sale_result['price']) : '',
+			'sale_warning' => is_array($sale_result) ? (string) ($sale_result['warning'] ?? '') : '',
+			'breakdown' => $this->format_breakdown($result),
+			'rules' => $result['rules'],
+			'converted' => array(
+				'profit' => (bool) $resolved_profit['converted'],
+				'commission' => (bool) $resolved_commission['converted'],
+				'extra' => (bool) $resolved_extra['converted'],
+			),
+			'unit' => SettingsPage::unit_label(),
+			'stale' => (new Repricer())->is_stale($currency),
+		);
+
+		if (! $result['ok']) {
+			wp_send_json_error($payload, 200);
+		}
+
+		wp_send_json_success($payload);
+	}
+
+	/**
+	 * Read one rule from the (unsaved) preview form.
+	 *
+	 * @param string $slot profit|commission|extra.
+	 * @return array{type:string,value:float}
+	 */
+	private function preview_rule(string $slot): array
+	{
+		$type = isset($_POST['rbw_' . $slot . '_type'])
+			? PriceCalculator::to_type(sanitize_key(wp_unslash((string) $_POST['rbw_' . $slot . '_type'])))
+			: 'percent';
+
+		$value = ProductData::to_decimal(isset($_POST[ $slot . '_value' ]) ? wp_unslash((string) $_POST[ $slot . '_value' ]) : 0);
+
+		$rule = PriceCalculator::sanitize_rule(array('type' => $type, 'value' => $value));
+
+		return is_array($rule) ? $rule : array('type' => 'percent', 'value' => 0.0);
+	}
+
+	/**
+	 * Convert stored amounts after a store-unit change.
+	 *
+	 * The General settings tab asks for confirmation, then calls this endpoint
+	 * once; UnitMigration converts every amount and queues a repricing job.
+	 *
+	 * @return void
+	 */
+	private function migrate_unit(): void
+	{
+		if (! current_user_can('manage_woocommerce')) {
+			wp_send_json_error(array('message' => __('You are not allowed to do this.', 'ratebridge-woo')), 403);
+		}
+
+		$old = sanitize_key(wp_unslash((string) ($_POST['old_unit'] ?? Settings::store_unit())));
+		$new = sanitize_key(wp_unslash((string) ($_POST['new_unit'] ?? Settings::store_unit())));
+
+		$result = (new UnitMigration())->migrate($old, $new);
+
+		if (empty($result['changed'])) {
+			wp_send_json_success(
+				array(
+					'message' => __('The store unit did not change, so nothing was converted.', 'ratebridge-woo'),
+					'result' => $result,
+				)
+			);
+		}
+
+		UnitMigration::queue_reprice($result['codes']);
+
+		wp_send_json_success(
+			array(
+				'message' => sprintf(
+					/* translators: 1: currency rows, 2: products */
+					__('Converted %1$d currencies and %2$d products. Prices are being recalculated in the background.', 'ratebridge-woo'),
+					(int) $result['currencies'],
+					(int) $result['products']
+				),
+				'result' => $result,
+			)
+		);
+	}
+
+	/**
+	 * Dismiss the stale-rate admin notice for the current user.
+	 *
+	 * Delegated to AdminNotices so the notice and the dismissal stay together.
+	 *
+	 * @return void
+	 */
+	private function dismiss_stale_notice(): void
+	{
+		AdminNotices::dismiss_stale_notice();
+	}
+
+	/**
+	 * Read and validate the pricing inputs of the currency dialog.
+	 *
+	 * Percent values must stay in 0–1000, fixed amounts are store-unit amounts
+	 * and may never be negative.
+	 *
+	 * @return array<string, mixed>|WP_Error
+	 */
+	private function read_pricing_input(): array|WP_Error
+	{
+		$profit_type = isset($_POST['profit_type']) ? CurrencyRepository::sanitize_type(wp_unslash((string) $_POST['profit_type'])) : 'percent';
+		$commission_type = isset($_POST['commission_type']) ? CurrencyRepository::sanitize_type(wp_unslash((string) $_POST['commission_type'])) : 'percent';
+
+		$raw = array(
+			'profit_value' => isset($_POST['profit_value']) ? wp_unslash((string) $_POST['profit_value']) : '0',
+			'commission_value' => isset($_POST['commission_value']) ? wp_unslash((string) $_POST['commission_value']) : '0',
+			'extra_amount' => isset($_POST['extra_amount']) ? wp_unslash((string) $_POST['extra_amount']) : '0',
+		);
+
+		foreach (array('profit_value', 'commission_value', 'extra_amount') as $key) {
+			$raw[ $key ] = str_replace(array(',', ' '), '', $raw[ $key ]);
+
+			if ('' !== $raw[ $key ] && (! is_numeric($raw[ $key ]) || (float) $raw[ $key ] < 0)) {
+				return new WP_Error('rbw_invalid_number', __('Profit, commission and extra amount must be zero or a positive number.', 'ratebridge-woo'));
+			}
+		}
+
+		foreach (array('profit_value' => $profit_type, 'commission_value' => $commission_type) as $key => $type) {
+			if ('percent' === $type && '' !== $raw[ $key ] && (float) $raw[ $key ] > PriceCalculator::MAX_PERCENT) {
+				return new WP_Error('rbw_invalid_percent', __('Percentages must be between 0 and 1000.', 'ratebridge-woo'));
+			}
+		}
+
+		return array(
+			'profit_type' => $profit_type,
+			'profit_value' => CurrencyRepository::sanitize_value($raw['profit_value'], $profit_type),
+			'commission_type' => $commission_type,
+			'commission_value' => CurrencyRepository::sanitize_value($raw['commission_value'], $commission_type),
+			'extra_amount' => CurrencyRepository::sanitize_value($raw['extra_amount'], 'fixed'),
+		);
+	}
+
+	/**
+	 * Persian label for a percent/fixed selector.
+	 *
+	 * @param string $type percent|fixed.
+	 * @return string
+	 */
+	private function type_label(string $type): string
+	{
+		return 'fixed' === $type ? __('Fixed amount', 'ratebridge-woo') : __('Percent', 'ratebridge-woo');
+	}
+
+	/**
+	 * Persian message for a calculator reason code.
+	 *
+	 * @param string $code Reason code.
+	 * @return string
+	 */
+	private function calculator_error_message(string $code): string
+	{
+		return match ($code) {
+			PriceCalculator::ERROR_INVALID_RATE => __('The currency rate is not valid.', 'ratebridge-woo'),
+			PriceCalculator::ERROR_INVALID_BASE => __('The base price is not valid.', 'ratebridge-woo'),
+			PriceCalculator::ERROR_INVALID_SETTING => __('A pricing setting is out of range.', 'ratebridge-woo'),
+			PriceCalculator::ERROR_NON_FINITE => __('The calculation produced a non-finite number.', 'ratebridge-woo'),
+			default => __('The calculation produced a price of zero or less.', 'ratebridge-woo'),
+		};
+	}
+
+	/**
+	 * Format a money amount for display.
+	 *
+	 * @param float $amount Amount.
+	 * @return string
+	 */
+	private function format_money(float $amount): string
+	{
+		return number_format_i18n($amount, Settings::store_decimals());
+	}
+
+	/**
+	 * Formatted breakdown rows for the preview panel.
+	 *
+	 * @param array<string, mixed> $result Calculator result.
+	 * @return array<int, array<string, string>>
+	 */
+	private function format_breakdown(array $result): array
+	{
+		$breakdown = is_array($result['breakdown'] ?? null) ? $result['breakdown'] : array();
+		$rows = array();
+
+		$map = array(
+			'base_value' => __('Base value (price × rate)', 'ratebridge-woo'),
+			'profit' => __('Profit', 'ratebridge-woo'),
+			'commission' => __('Commission', 'ratebridge-woo'),
+			'extra' => __('Extra amount', 'ratebridge-woo'),
+			'before_min' => __('Total before the minimum', 'ratebridge-woo'),
+			'after_min' => __('After the minimum', 'ratebridge-woo'),
+			'rounded' => __('After rounding', 'ratebridge-woo'),
+			'final' => __('Final price', 'ratebridge-woo'),
+		);
+
+		foreach ($map as $key => $label) {
+			if (! isset($breakdown[ $key ]) || ! is_numeric($breakdown[ $key ])) {
+				continue;
+			}
+
+			// Skip empty middle rows to keep the panel short.
+			if (in_array($key, array('profit', 'commission', 'extra'), true) && (float) $breakdown[ $key ] <= 0) {
+				continue;
+			}
+
+			if (in_array($key, array('after_min', 'rounded'), true) && (float) $breakdown[ $key ] === (float) ($breakdown['before_min'] ?? 0)) {
+				continue;
+			}
+
+			$rows[] = array(
+				'key' => $key,
+				'label' => $label,
+				'value' => $this->format_money((float) $breakdown[ $key ]),
+			);
+		}
+
+		return $rows;
+	}
+
+	/**
 	 * Serialisable currency payload for JS.
 	 *
 	 * @param Currency $currency Currency.
@@ -759,6 +1231,13 @@ final class AjaxController
 			'last_updated'            => SettingsPage::format_datetime($currency->last_updated),
 			'last_error'              => (string) $currency->last_error,
 			'sort_order'              => $currency->sort_order,
+			'profit_type'             => $currency->profit_type,
+			'profit_value'            => $currency->profit_value,
+			'commission_type'         => $currency->commission_type,
+			'commission_value'        => $currency->commission_value,
+			'extra_amount'            => $currency->extra_amount,
+			'profit_type_label'       => $this->type_label( $currency->profit_type ),
+			'commission_type_label'   => $this->type_label( $currency->commission_type ),
 		);
 	}
 }

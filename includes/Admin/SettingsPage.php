@@ -80,6 +80,42 @@ final class SettingsPage {
 	 * @return void
 	 */
 	public function enqueue_assets( string $hook_suffix ): void {
+		/*
+		 * The stale-rate notice also appears on the Products screen. admin.js
+		 * only needs the AJAX config there (to persist the dismissal), so it is
+		 * enqueued with a trimmed config instead of the whole page bundle.
+		 */
+		if ( 'edit.php' === $hook_suffix ) {
+			$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+
+			if ( ! $screen instanceof \WP_Screen || 'product' !== $screen->post_type ) {
+				return;
+			}
+
+			wp_enqueue_script(
+				'rbw-admin',
+				RBW_PLUGIN_URL . 'assets/admin/js/admin.js',
+				array(),
+				RBW_VERSION,
+				true
+			);
+
+			wp_localize_script(
+				'rbw-admin',
+				'rbwAdmin',
+				array(
+					'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+					'nonce'   => wp_create_nonce( AjaxController::NONCE_ACTION ),
+					'strings' => array(
+						'genericError'         => __( 'Something went wrong. Please try again.', 'ratebridge-woo' ),
+						'requestNotRecognised' => __( 'The server did not recognise this request (HTTP %d). Please refresh the page.', 'ratebridge-woo' ),
+					),
+				)
+			);
+
+			return;
+		}
+
 		if ( 'woocommerce_page_' . self::SLUG !== $hook_suffix ) {
 			return;
 		}
@@ -160,6 +196,10 @@ final class SettingsPage {
 					'parsedCount'   => __( 'Parsed: %d', 'ratebridge-woo' ),
 					'samplePrefix'  => __( 'Sample:', 'ratebridge-woo' ),
 					'intervalTooShort' => __( 'This interval (%1$d minutes) is shorter than the source allows (%2$d minutes). The row will only refresh when the source permits it.', 'ratebridge-woo' ),
+					'confirmUnitChange' => __( 'Changing the store unit multiplies or divides every stored rate and every fixed amount by 10, and all product prices will be recalculated. Continue?', 'ratebridge-woo' ),
+					'unitChangeWarning' => __( 'Attention: this converts every stored rate, every fixed profit/commission/extra amount, product minimum prices and fluctuation margins, then recalculates all product prices connected to currencies.', 'ratebridge-woo' ),
+					'percentLabel'      => __( 'Percent', 'ratebridge-woo' ),
+					'fixedLabel'        => __( 'Fixed amount', 'ratebridge-woo' ),
 				),
 			)
 		);

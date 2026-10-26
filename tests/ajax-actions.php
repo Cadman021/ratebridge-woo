@@ -101,10 +101,47 @@ function rbw_switch_cases( string $php ): array {
 	return $found;
 }
 
-$js   = rbw_test_read( $root . '/assets/admin/js/admin.js' );
-$php  = rbw_test_read( $root . '/includes/Admin/AjaxController.php' );
+$js         = rbw_test_read( $root . '/assets/admin/js/admin.js' );
+$product_js = rbw_test_read( $root . '/assets/admin/js/product.js' );
+$php        = rbw_test_read( $root . '/includes/Admin/AjaxController.php' );
 
-$js_actions    = rbw_js_actions( $js );
+/*
+ * Phase 3: the product editor builds its request body by hand
+ * (`body.append( 'action', 'rbw_' + config.action )`), where config.action is
+ * the value localised by ProductFields::PREVIEW_ACTION. Pick it up as well so a
+ * renamed preview action fails this test instead of returning a bare "0".
+ */
+$preview_action = '';
+
+$preview_pattern = '/PREVIEW_ACTION\s*=\s*["\x27]([a-z0-9_]+)["\x27]/';
+
+if ( preg_match( $preview_pattern, $php, $preview_match ) ) {
+	$preview_action = $preview_match[1];
+}
+
+$product_preview_action = '';
+
+$fields_php = rbw_test_read( $root . '/includes/Product/ProductFields.php' );
+
+if ( str_contains( $fields_php, "=> AjaxController::PREVIEW_ACTION" ) ) {
+	$product_preview_action = $preview_action;
+}
+
+$js_actions = rbw_js_actions( $js );
+
+// Every literal `request( 'x' )` in product.js counts too.
+foreach ( rbw_js_actions( $product_js ) as $extra ) {
+	if ( ! in_array( $extra, $js_actions, true ) ) {
+		$js_actions[] = $extra;
+	}
+}
+
+if ( '' !== $product_preview_action ) {
+	$js_actions[] = $product_preview_action;
+}
+
+$js_actions = array_values( array_unique( $js_actions ) );
+sort( $js_actions );
 $registered    = rbw_controller_actions( $php );
 $switch_cases  = rbw_switch_cases( $php );
 
@@ -221,6 +258,47 @@ check(
 check(
 	"request() also sends rbw_action",
 	(bool) preg_match( '/body\.append\(\s*[\'"]rbw_action[\'"]\s*,\s*action\s*\)/', $js )
+);
+
+echo "\n[7] Product editor preview endpoint (Phase 3)\n";
+
+check(
+	'ProductFields::PREVIEW_ACTION is readable',
+	'' !== $preview_action,
+	'constant not found in AjaxController.php'
+);
+
+check(
+	"'{$preview_action}' is registered as wp_ajax_rbw_{$preview_action}",
+	'' !== $preview_action && in_array( $preview_action, $registered, true ),
+	'not in AjaxController::actions()'
+);
+
+check(
+	"'{$preview_action}' has a dispatcher case",
+	'' !== $preview_action && in_array( $preview_action, $switch_cases, true ),
+	'no case in handle()'
+);
+
+check(
+	'product.js posts the preview with the rbw_ prefix',
+	(bool) preg_match( '/body\.append\(\s*[\'"]action[\'"]\s*,\s*[\'"]rbw_[\'"]\s*\+\s*config\.action\s*\)/', $product_js )
+);
+
+check(
+	'ProductFields localises the same action',
+	'' !== $product_preview_action,
+	"'action' => AjaxController::PREVIEW_ACTION missing in ProductFields.php"
+);
+
+check(
+	'the unit-migration action is registered',
+	in_array( 'migrate_unit', $registered, true )
+);
+
+check(
+	'the stale-notice dismissal action is registered',
+	in_array( 'dismiss_stale_notice', $registered, true )
 );
 
 echo "\n", str_repeat( '=', 60 ), "\n";

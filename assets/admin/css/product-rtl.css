@@ -1,0 +1,60 @@
+/**
+ * RateBridge Woo - product editor fields (RTL overrides).
+ *
+ * product.css uses logical properties, so only the numeric fragments and a few
+ * fallbacks for older browsers are handled here.
+ */
+
+.rbw-product-fields {
+	border-inline-start: 3px solid #2271b1;
+	border-inline-end: 0;
+}
+
+.rbw-product-note {
+	border-inline-start: 4px solid #2271b1;
+	border-inline-end: 0;
+}
+
+.rbw-product-note-warning {
+	border-inline-start-color: #dba617;
+}
+
+.rbw-managed-note {
+	border-inline-start-color: #00a32a;
+}
+
+.rbw-preview-output.is-error {
+	border-inline-start: 4px solid #d63638;
+}
+
+/*
+ * Latin/numeric fragments stay LTR: an amount like "60,000,000" must not be
+ * reordered and a trailing unit must not jump to the wrong side.
+ */
+.rbw-product-panel .rbw-number,
+.rbw-preview-table td,
+.rbw-modal-content .rbw-rule input,
+.column-rbw_currency code {
+	direction: ltr;
+	unicode-bidi: isolate;
+	text-align: left;
+}
+
+.rbw-preview-table th,
+.rbw-preview-table td {
+	text-align: right;
+}
+
+.rbw-preview-table td {
+	text-align: left;
+}
+
+.rbw-preview-notes {
+	padding-inline-start: 18px;
+	padding-inline-end: 0;
+}
+
+.rbw-rule-hint {
+	margin-inline-start: 6px;
+	margin-inline-end: 0;
+}

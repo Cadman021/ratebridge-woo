@@ -234,6 +234,47 @@ foreach ( $rbw_providers as $rbw_provider_key => $rbw_provider_label ) {
 				</label>
 			</p>
 
+			<h3 class="rbw-subsection-title"><?php esc_html_e( 'Pricing settings', 'ratebridge-woo' ); ?></h3>
+			<p class="description rbw-subsection-hint">
+				<?php esc_html_e( 'Applied to every product priced by this currency. Products can override or extend these values.', 'ratebridge-woo' ); ?>
+			</p>
+
+			<div class="rbw-rule">
+				<p>
+					<label for="rbw-field-profit-value"><?php esc_html_e( 'Profit', 'ratebridge-woo' ); ?></label>
+					<select id="rbw-field-profit-type" name="profit_type" class="rbw-type-select" data-slot="profit">
+						<option value="percent"><?php esc_html_e( 'Percent', 'ratebridge-woo' ); ?></option>
+						<option value="fixed"><?php esc_html_e( 'Fixed amount', 'ratebridge-woo' ); ?></option>
+					</select>
+					<input type="text" id="rbw-field-profit-value" name="profit_value" class="small-text rbw-number" dir="ltr" inputmode="decimal" value="0" />
+					<span class="rbw-rule-unit" data-slot="profit">%</span>
+				</p>
+			</div>
+
+			<div class="rbw-rule">
+				<p>
+					<label for="rbw-field-commission-value"><?php esc_html_e( 'Commission', 'ratebridge-woo' ); ?></label>
+					<select id="rbw-field-commission-type" name="commission_type" class="rbw-type-select" data-slot="commission">
+						<option value="percent"><?php esc_html_e( 'Percent', 'ratebridge-woo' ); ?></option>
+						<option value="fixed"><?php esc_html_e( 'Fixed amount', 'ratebridge-woo' ); ?></option>
+					</select>
+					<input type="text" id="rbw-field-commission-value" name="commission_value" class="small-text rbw-number" dir="ltr" inputmode="decimal" value="0" />
+					<span class="rbw-rule-unit" data-slot="commission">%</span>
+				</p>
+			</div>
+
+			<div class="rbw-rule">
+				<p>
+					<label for="rbw-field-extra-amount"><?php esc_html_e( 'Extra amount', 'ratebridge-woo' ); ?></label>
+					<input type="text" id="rbw-field-extra-amount" name="extra_amount" class="small-text rbw-number" dir="ltr" inputmode="decimal" value="0" />
+					<span class="rbw-rule-unit"><?php echo esc_html( $rbw_unit ); ?></span>
+				</p>
+			</div>
+
+			<p class="description rbw-percent-hint">
+				<?php esc_html_e( 'A percentage is applied to the converted base value (profit) and to value + profit (commission). Fixed amounts are in the store unit.', 'ratebridge-woo' ); ?>
+			</p>
+
 			<p class="rbw-modal-actions">
 				<button type="submit" class="button button-primary" id="rbw-save-currency"><?php esc_html_e( 'Save', 'ratebridge-woo' ); ?></button>
 				<button type="button" class="button" data-rbw-close="1"><?php esc_html_e( 'Cancel', 'ratebridge-woo' ); ?></button>

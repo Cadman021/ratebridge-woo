@@ -19,6 +19,7 @@ $rbw_rounding    = (string) ( $rbw_settings['rounding_mode'] ?? 'nearest' );
 $rbw_step        = (int) ( $rbw_settings['rounding_step'] ?? 1000 );
 $rbw_interval    = (int) ( $rbw_settings['default_update_interval'] ?? 60 );
 $rbw_delete_data = ! empty( $rbw_settings['delete_data_on_uninstall'] );
+$rbw_max_age     = (int) ( $rbw_settings['max_rate_age_hours'] ?? 48 );
 ?>
 <form id="rbw-general-form" onsubmit="return false;">
 	<table class="form-table rbw-form-table" role="presentation">
@@ -38,7 +39,8 @@ $rbw_delete_data = ! empty( $rbw_settings['delete_data_on_uninstall'] );
 							<input type="radio" name="store_currency_unit" value="rial" <?php checked( $rbw_unit, 'rial' ); ?> />
 							<?php esc_html_e( 'Rial', 'ratebridge-woo' ); ?>
 						</label>
-						<p class="description"><?php esc_html_e( 'Used when displaying calculated prices (product pricing arrives in a later version). Stored rates follow this unit.', 'ratebridge-woo' ); ?></p>
+						<p class="description"><?php esc_html_e( 'Rates and fixed amounts (profit, commission, extra amount, minimum price, fluctuation margin) are stored in this unit. Changing it converts every stored amount and recalculates product prices.', 'ratebridge-woo' ); ?></p>
+						<p class="rbw-warning rbw-unit-warning" id="rbw-unit-warning" hidden></p>
 					</fieldset>
 				</td>
 			</tr>
@@ -103,6 +105,26 @@ $rbw_delete_data = ! empty( $rbw_settings['delete_data_on_uninstall'] );
 							(int) $rbw_min
 						);
 						?>
+					</p>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row">
+					<label for="rbw-max-rate-age"><?php esc_html_e( 'Maximum rate age (hours)', 'ratebridge-woo' ); ?></label>
+				</th>
+				<td>
+					<input
+						type="number"
+						id="rbw-max-rate-age"
+						name="max_rate_age_hours"
+						class="small-text"
+						min="0"
+						step="1"
+						value="<?php echo esc_attr( (string) $rbw_max_age ); ?>"
+					/>
+					<p class="description">
+						<?php esc_html_e( 'If a rate is older than this, product prices are left unchanged and a warning is shown. Enter 0 to disable the limit. Manual currencies without a timestamp are never considered stale.', 'ratebridge-woo' ); ?>
 					</p>
 				</td>
 			</tr>

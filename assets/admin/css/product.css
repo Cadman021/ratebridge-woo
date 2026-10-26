@@ -1,0 +1,219 @@
+/**
+ * RateBridge Woo - product editor fields (classic editor).
+ *
+ * Logical properties only (`margin-block`, `padding-inline`...), so the same
+ * file works in LTR and RTL; product-rtl.css only adds RTL-specific tweaks.
+ */
+
+.rbw-product-panel {
+	border-block-start: 1px solid #e0e0e0;
+	padding-block-start: 8px;
+}
+
+.rbw-product-fields {
+	padding-inline-start: 12px;
+	border-inline-start: 3px solid #2271b1;
+	margin-block: 8px 12px;
+}
+
+.rbw-product-fields[hidden] {
+	display: none;
+}
+
+.rbw-product-panel .rbw-field label {
+	display: block;
+	font-weight: 600;
+	margin-block-end: 2px;
+}
+
+.rbw-product-panel .rbw-field .description {
+	display: block;
+	margin-block-start: 2px;
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.rbw-product-panel .rbw-number {
+	direction: ltr;
+	unicode-bidi: isolate;
+	text-align: start;
+}
+
+.rbw-rule-group {
+	border-block-start: 1px dashed #e0e0e0;
+	padding-block-start: 8px;
+	margin-block-start: 8px;
+}
+
+.rbw-rule .rbw-rule-type {
+	width: 130px;
+	margin-inline-end: 6px;
+}
+
+.rbw-rule input.short {
+	width: 140px;
+}
+
+.rbw-rule-hint {
+	margin-inline-start: 6px;
+	color: #646970;
+	font-size: 12px;
+}
+
+.rbw-product-note {
+	background: #f6f7f7;
+	border-inline-start: 4px solid #2271b1;
+	padding: 6px 10px;
+	margin-block: 8px;
+	font-size: 12px;
+	line-height: 1.6;
+}
+
+.rbw-product-note-warning {
+	border-inline-start-color: #dba617;
+	background: #fcf9e8;
+}
+
+.rbw-managed-note {
+	border-inline-start-color: #00a32a;
+	background: #edfaef;
+}
+
+.rbw-managed-note[hidden] {
+	display: none;
+}
+
+.rbw-preview-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-items: flex-start;
+}
+
+.rbw-preview-output {
+	flex: 1 1 320px;
+	font-size: 12px;
+	line-height: 1.7;
+}
+
+.rbw-preview-output.is-error {
+	color: #b32d2e;
+	background: #fcf0f1;
+	border-inline-start: 4px solid #d63638;
+	padding: 8px 10px;
+}
+
+.rbw-preview-output.is-stale {
+	border-inline-start: 4px solid #dba617;
+	padding-inline-start: 8px;
+}
+
+.rbw-preview-table {
+	border-collapse: collapse;
+	width: 100%;
+	max-width: 520px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+}
+
+.rbw-preview-table th,
+.rbw-preview-table td {
+	padding: 4px 8px;
+	text-align: start;
+	vertical-align: top;
+	font-weight: 400;
+	border-block-end: 1px solid #f0f0f1;
+}
+
+.rbw-preview-table th {
+	color: #50575e;
+	width: 60%;
+}
+
+.rbw-preview-table td {
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.rbw-preview-table tr.rbw-preview-final th,
+.rbw-preview-table tr.rbw-preview-final td {
+	background: #f0f6fc;
+	font-weight: 700;
+}
+
+.rbw-preview-notes {
+	margin-block: 6px 0;
+	padding-inline-start: 18px;
+	list-style: disc;
+	color: #50575e;
+}
+
+/* Native price inputs while the currency controls the price. */
+input.rbw-readonly {
+	background: #f0f0f1 !important;
+	color: #646970;
+	cursor: not-allowed;
+}
+
+/* Per-variation block */
+.rbw-variation-fields {
+	padding: 6px 8px;
+	margin-block: 6px;
+	background: #f6f7f7;
+	border-radius: 3px;
+}
+
+.rbw-variation-fields .form-row {
+	margin-block-end: 4px;
+}
+
+.rbw-variation-fields select {
+	width: 100%;
+}
+
+.rbw-variation-fields .rbw-product-note {
+	margin-block: 4px;
+}
+
+/* Products list column */
+.column-rbw_currency {
+	width: 130px;
+}
+
+.column-rbw_currency code {
+	font-size: 12px;
+}
+
+/* Currency dialog: pricing section */
+.rbw-subsection-title {
+	margin-block: 20px 4px;
+	padding-block-start: 12px;
+	border-block-start: 1px solid #dcdcde;
+	font-size: 14px;
+}
+
+.rbw-subsection-hint {
+	margin-block: 0 8px;
+}
+
+.rbw-modal-content .rbw-rule input.small-text {
+	width: 110px;
+	direction: ltr;
+}
+
+.rbw-modal-content .rbw-rule .rbw-type-select {
+	width: auto;
+	margin-inline-end: 6px;
+}
+
+.rbw-rule-unit {
+	display: inline-block;
+	min-width: 42px;
+	color: #646970;
+	font-size: 12px;
+}
+
+.rbw-percent-hint {
+	margin-block-end: 12px;
+}

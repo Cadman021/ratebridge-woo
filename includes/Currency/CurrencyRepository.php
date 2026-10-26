@@ -124,6 +124,11 @@ final class CurrencyRepository {
 				'provider'                => $data['provider'] ?? 'manual',
 				'provider_symbol'         => $data['provider_symbol'] ?? '',
 				'rate'                    => $data['rate'] ?? 0.0,
+				'profit_type'             => $data['profit_type'] ?? 'percent',
+				'profit_value'            => $data['profit_value'] ?? 0.0,
+				'commission_type'         => $data['commission_type'] ?? 'percent',
+				'commission_value'        => $data['commission_value'] ?? 0.0,
+				'extra_amount'            => $data['extra_amount'] ?? 0.0,
 				'is_enabled'              => $data['is_enabled'] ?? 0,
 				'update_interval_minutes' => $data['update_interval_minutes'] ?? Settings::sanitize_interval( Settings::get( 'default_update_interval', 60 ) ),
 				'last_updated'            => $data['last_updated'] ?? null,
@@ -132,7 +137,7 @@ final class CurrencyRepository {
 				'created_at'              => $now,
 				'updated_at'              => $now,
 			),
-			array( '%s', '%s', '%s', '%s', '%s', '%f', '%d', '%d', '%s', '%s', '%d', '%s', '%s' )
+			array( '%s', '%s', '%s', '%s', '%s', '%f', '%s', '%f', '%s', '%f', '%f', '%d', '%d', '%s', '%s', '%d', '%s', '%s' )
 		);
 
 		return $inserted ? (int) $wpdb->insert_id : 0;
@@ -167,6 +172,11 @@ final class CurrencyRepository {
 			'provider'                => '%s',
 			'provider_symbol'         => '%s',
 			'rate'                    => '%f',
+			'profit_type'             => '%s',
+			'profit_value'            => '%f',
+			'commission_type'         => '%s',
+			'commission_value'        => '%f',
+			'extra_amount'            => '%f',
 			'is_enabled'              => '%d',
 			'update_interval_minutes' => '%d',
 			'last_updated'            => '%s',
@@ -333,6 +343,34 @@ final class CurrencyRepository {
 			$clean['rate']  = is_finite( $rate ) && $rate > 0 ? $rate : 0.0;
 		}
 
+		if ( array_key_exists( 'profit_type', $data ) || $is_new ) {
+			$clean['profit_type'] = self::sanitize_type( $data['profit_type'] ?? 'percent' );
+		}
+
+		if ( array_key_exists( 'commission_type', $data ) || $is_new ) {
+			$clean['commission_type'] = self::sanitize_type( $data['commission_type'] ?? 'percent' );
+		}
+
+		/*
+		 * Percent values are capped at 1000%; fixed values are store-unit
+		 * amounts. Both are never negative. An out-of-range percent is clamped
+		 * rather than silently zeroed so the admin sees a sane number after
+		 * saving (the AJAX layer rejects it *before* saving, with a message).
+		 */
+		if ( array_key_exists( 'profit_value', $data ) || $is_new ) {
+			$clean['profit_value'] = self::sanitize_value( $data['profit_value'] ?? 0, $clean['profit_type'] ?? 'percent' );
+		} elseif ( isset( $clean['profit_type'] ) ) {
+			$clean['profit_value'] = self::sanitize_value( $data['profit_value'] ?? 0, $clean['profit_type'] );
+		}
+
+		if ( array_key_exists( 'commission_value', $data ) || $is_new ) {
+			$clean['commission_value'] = self::sanitize_value( $data['commission_value'] ?? 0, $clean['commission_type'] ?? 'percent' );
+		}
+
+		if ( array_key_exists( 'extra_amount', $data ) || $is_new ) {
+			$clean['extra_amount'] = self::sanitize_value( $data['extra_amount'] ?? 0, 'fixed' );
+		}
+
 		if ( array_key_exists( 'is_enabled', $data ) || $is_new ) {
 			$clean['is_enabled'] = ! empty( $data['is_enabled'] ) ? 1 : 0;
 		}
@@ -354,5 +392,87 @@ final class CurrencyRepository {
 		}
 
 		return $clean;
+	}
+
+	/**
+	 * Normalise a percent|fixed selector.
+	 *
+	 * @param mixed $type Raw value.
+	 * @return string
+	 */
+	public static function sanitize_type( mixed $type ): string {
+		$type = is_string( $type ) ? strtolower( trim( $type ) ) : '';
+
+		return 'fixed' === $type ? 'fixed' : 'percent';
+	}
+
+	/**
+	 * Normalise a profit/commission/extra amount.
+	 *
+	 * Percent: 0–1000, at most 4 decimals. Fixed: non-negative store amount.
+	 *
+	 * @param mixed  $value Raw value.
+	 * @param string $type  percent|fixed.
+	 * @return float
+	 */
+	public static function sanitize_value( mixed $value, string $type ): float {
+		if ( is_string( $value ) ) {
+			$value = str_replace( array( ',', ' ', "Â " ), '', trim( $value ) );
+		}
+
+		if ( ! is_numeric( $value ) ) {
+			return 0.0;
+		}
+
+		$value = (float) $value;
+
+		if ( ! is_finite( $value ) || $value < 0 ) {
+			return 0.0;
+		}
+
+		if ( 'percent' === self::sanitize_type( $type ) ) {
+			return min( 1000.0, round( $value, 4 ) );
+		}
+
+		return round( $value, 4 );
+	}
+
+	/**
+	 * Multiply the stored rate and the fixed pricing amounts of every row.
+	 *
+	 * Used by UnitMigration when the store unit changes (Toman <-> Rial). Rates
+	 * and fixed amounts are in the store unit, so all of them scale by the same
+	 * factor; percentages are unit-less and stay untouched.
+	 *
+	 * @param float $factor Multiplier (10 for Toman -> Rial, 0.1 for Rial -> Toman).
+	 * @return int Number of rows touched.
+	 */
+	public function scale_amounts( float $factor ): int {
+		global $wpdb;
+
+		if ( ! is_finite( $factor ) || $factor <= 0 || 1.0 === $factor ) {
+			return 0;
+		}
+
+		$table = $this->table();
+
+		// One statement for every row: rounds to 4 decimals to avoid float dust.
+		$updated = $wpdb->query( // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$wpdb->prepare(
+				"UPDATE {$table}
+				 SET rate = ROUND(rate * %f, 10),
+				     profit_value = CASE WHEN profit_type = 'fixed' THEN ROUND(profit_value * %f, 4) ELSE profit_value END,
+				     commission_value = CASE WHEN commission_type = 'fixed' THEN ROUND(commission_value * %f, 4) ELSE commission_value END,
+				     extra_amount = ROUND(extra_amount * %f, 4),
+				     updated_at = %s",
+				$factor,
+				$factor,
+				$factor,
+				$factor,
+				current_time( 'mysql', true )
+			)
+		);
+
+		return (int) $updated;
 	}
 }
