@@ -1,0 +1,58 @@
+/**
+ * RateBridge Woo - frontend styles (RTL overrides).
+ *
+ * frontend.css uses logical properties (`border-inline-start`, `text-align: start`)
+ * so the layout already mirrors. This file only adds the RTL-specific pieces:
+ * the ticker direction keyframes and the small fade direction.
+ */
+
+.rbw-rates th,
+.rbw-rates td {
+	text-align: right;
+}
+
+/* Latin/numeric fragments must stay LTR inside an RTL page. */
+.rbw-rates .rbw-code,
+.rbw-rates .rbw-value,
+.rbw-ticker-rate,
+.rbw-rate [dir="ltr"] {
+	direction: ltr;
+	unicode-bidi: isolate;
+	text-align: left;
+	display: inline-block;
+}
+
+.rbw-warning-note,
+.rbw-product-notice {
+	border-inline-start: 3px solid var(--rbw-accent, #2271b1);
+	border-inline-end: 0;
+	text-align: right;
+}
+
+/*
+ * Explicit RTL keyframes (in addition to the [dir="rtl"] rule in frontend.css)
+ * so the strip also scrolls correctly when the document direction is set on
+ * <html> without an explicit dir attribute match on the container.
+ */
+@keyframes rbw-ticker-scroll-rtl {
+	from {
+		transform: translateX(0);
+	}
+
+	to {
+		transform: translateX(50%);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.rbw-ticker-track {
+		animation: none !important;
+	}
+}
+
+.rbw-order-item-meta {
+	border-inline-start: 3px solid #2271b1;
+	border-inline-end: 0;
+	text-align: right;
+	direction: rtl;
+}

@@ -727,6 +727,32 @@
 	}
 
 	/**
+	 * Read a checkbox as '1'/'0' (missing checkbox = unchecked).
+	 *
+	 * @param {HTMLElement} form  Form element.
+	 * @param {string}      name  Field name.
+	 * @return {string} '1' or '0'.
+	 */
+	function checkboxValue( form, name ) {
+		var field = form.querySelector( '[name="' + name + '"]' );
+
+		return field && field.checked ? '1' : '0';
+	}
+
+	/**
+	 * Read a text/select field value ('' when missing).
+	 *
+	 * @param {HTMLElement} form Form element.
+	 * @param {string}      name Field name.
+	 * @return {string} Value.
+	 */
+	function fieldValue( form, name ) {
+		var field = form.querySelector( '[name="' + name + '"]' );
+
+		return field ? field.value : '';
+	}
+
+	/**
 	 * Explain the effect of a store-unit change, inline.
 	 */
 	function unitWarning() {
@@ -785,7 +811,14 @@
 				default_update_interval: qs( '#rbw-default-interval' ).value,
 				max_rate_age_hours: ageField ? ageField.value : '48',
 				delete_data_on_uninstall: form.querySelector( '[name="delete_data_on_uninstall"]' ).checked ? '1' : '0',
-				confirm_unit_change: unitChanged ? '1' : '0'
+				confirm_unit_change: unitChanged ? '1' : '0',
+				// Phase 4: order display + product page block.
+				show_rate_in_orders: checkboxValue( form, 'show_rate_in_orders' ),
+				product_block_enabled: checkboxValue( form, 'product_block_enabled' ),
+				product_block_position: fieldValue( form, 'product_block_position' ),
+				product_block_template: fieldValue( form, 'product_block_template' ),
+				date_format: fieldValue( form, 'date_format' ),
+				use_persian_digits: checkboxValue( form, 'use_persian_digits' )
 			};
 
 			// The unit change rewrites every stored rate: ask explicitly.

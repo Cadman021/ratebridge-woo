@@ -301,6 +301,48 @@ check(
 	in_array( 'dismiss_stale_notice', $registered, true )
 );
 
+echo "
+[8] Phase 4 settings travel with save_settings
+";
+
+// The General tab's Phase-4 fields must be part of the settings payload, both in
+// the JS and in the controller, otherwise they are silently dropped on save.
+$admin_js = rbw_test_read( $root . '/assets/admin/js/admin.js' );
+$ajax_php = rbw_test_read( $root . '/includes/Admin/AjaxController.php' );
+
+foreach (
+	array(
+		'show_rate_in_orders'    => 'the customer order notice toggle',
+		'product_block_enabled'  => 'the product page block toggle',
+		'product_block_position' => 'the product page block position',
+		'product_block_template' => 'the product page block template',
+		'date_format'            => 'the date format',
+		'use_persian_digits'     => 'the Persian digits toggle',
+	) as $field => $description
+) {
+	check(
+		"admin.js sends {$field} ({$description})",
+		str_contains( $admin_js, $field ),
+		'not found in assets/admin/js/admin.js'
+	);
+
+	check(
+		"save_settings reads {$field}",
+		str_contains( $ajax_php, "'{$field}'" ),
+		'not handled in AjaxController::save_settings()'
+	);
+}
+
+$settings_php = rbw_test_read( $root . '/includes/Core/Settings.php' );
+
+foreach ( array( 'show_rate_in_orders', 'product_block_enabled', 'product_block_position', 'product_block_template', 'date_format', 'use_persian_digits' ) as $field ) {
+	check(
+		"Settings::defaults() declares {$field}",
+		(bool) preg_match( "/'" . preg_quote( $field, '/' ) . "'\s*=>/", $settings_php ),
+		'missing from Settings::defaults()'
+	);
+}
+
 echo "\n", str_repeat( '=', 60 ), "\n";
 printf( "RESULT: %d passed, %d failed\n", $passed, $failed );
 

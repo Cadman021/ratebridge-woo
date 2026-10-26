@@ -1100,3 +1100,107 @@ msgstr "تعیین نشده"
 
 msgid "Last calculation:"
 msgstr "آخرین محاسبه:"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 4 — order rate records, shortcodes, ticker, product block
+# ─────────────────────────────────────────────────────────────────────────────
+
+msgid "%s minute ago"
+msgid_plural "%s minutes ago"
+msgstr[0] "%s دقیقه پیش"
+msgstr[1] "%s دقیقه پیش"
+
+msgid "%s hour ago"
+msgid_plural "%s hours ago"
+msgstr[0] "%s ساعت پیش"
+msgstr[1] "%s ساعت پیش"
+
+msgid "%s day ago"
+msgid_plural "%s days ago"
+msgstr[0] "%s روز پیش"
+msgstr[1] "%s روز پیش"
+
+msgid "%s month ago"
+msgid_plural "%s months ago"
+msgstr[0] "%s ماه پیش"
+msgstr[1] "%s ماه پیش"
+
+msgid "%s year ago"
+msgid_plural "%s years ago"
+msgstr[0] "%s سال پیش"
+msgstr[1] "%s سال پیش"
+
+msgid "just now"
+msgstr "همین حالا"
+
+msgid "unknown"
+msgstr "نامشخص"
+
+msgid "Source"
+msgstr "منبع قیمت"
+
+msgid "Template"
+msgstr "قالب"
+
+msgid "Position"
+msgstr "موقعیت"
+
+msgid "Date format"
+msgstr "قالب تاریخ"
+
+msgid "Order display"
+msgstr "نمایش در سفارش"
+
+msgid "Display on the site"
+msgstr "نمایش در سایت"
+
+msgid "After the price"
+msgstr "بعد از قیمت"
+
+msgid "After the short description"
+msgstr "بعد از توضیح کوتاه"
+
+msgid "After the add-to-cart button"
+msgstr "بعد از دکمه افزودن به سبد خرید"
+
+msgid "Show the exchange rate to the customer in orders"
+msgstr "نمایش نرخ ارز به مشتری در سفارش"
+
+msgid "The rate line is always visible to shop managers on the order screen. Turn this on to also show it on the order-received page, in emails and in My Account."
+msgstr "خط نرخ ارز همیشه برای مدیران فروشگاه در صفحه سفارش دیده می‌شود. با فعال کردن این گزینه، در صفحه تشکر از خرید، ایمیل‌ها و حساب کاربری مشتری هم نمایش داده می‌شود."
+
+msgid "Show a currency info block on product pages"
+msgstr "نمایش کادر اطلاعات ارز در صفحه محصول"
+
+msgid "Leave empty for the default template. Placeholders: %s"
+msgstr "برای استفاده از قالب پیش‌فرض خالی بگذارید. جای‌نگهدارها: %s"
+
+msgid "Only products priced by a currency show the block. When the variations of a variable product use different currencies the block is hidden, because one rate would be misleading."
+msgstr "فقط محصولاتی که با ارز قیمت‌گذاری شده‌اند این کادر را نشان می‌دهند. اگر تنوع‌های یک محصول متغیر از ارزهای متفاوت استفاده کنند، کادر پنهان می‌شود چون نمایش یک نرخ گمراه‌کننده است."
+
+msgid "Persian digits in the plugin output"
+msgstr "ارقام فارسی در خروجی افزونه"
+
+msgid "Applies to the plugin shortcodes and the product block only. WooCommerce prices keep their own formatting."
+msgstr "فقط روی شورت‌کدهای افزونه و کادر محصول اعمال می‌شود. قیمت‌های ووکامرس قالب‌بندی خودشان را حفظ می‌کنند."
+
+msgid "Used for absolute dates in the plugin output and in %updated_date%. Letters: Y (year), m (month), d (day), j (day without leading zero), H (hour), i (minute), s (second). Example: Y-m-d H:i"
+msgstr "برای تاریخ‌های مطلق در خروجی افزونه و در %updated_date% استفاده می‌شود. حروف: Y (سال)، m (ماه)، d (روز)، j (روز بدون صفر ابتدایی)، H (ساعت)، i (دقیقه)، s (ثانیه). مثال: Y-m-d H:i"
+
+msgid "The [rbw_rate] shortcode needs a currency attribute, for example currency=\"USD\"."
+msgstr "شورت‌کد [rbw_rate] به ویژگی currency نیاز دارد، مثلاً currency=\"USD\"."
+
+msgid "The currency %s does not exist, is disabled, or has no rate yet."
+msgstr "ارز %s وجود ندارد، غیرفعال است یا هنوز نرخ ندارد."
+
+msgid "No enabled currency with a rate is available for the currencies table."
+msgstr "هیچ ارز فعالی با نرخ موجود، برای جدول ارزها در دسترس نیست."
+
+msgid "No enabled currency with a rate is available for the ticker."
+msgstr "هیچ ارز فعالی با نرخ موجود، برای نوار متحرک در دسترس نیست."
+
+msgid "Purchased with %1$s at a rate of %2$s %3$s (base price: %4$s)"
+msgstr "خریداری شده با %1$s با نرخ %2$s %3$s (قیمت پایه: %4$s)"
+
+msgid "rate updated: %s"
+msgstr "نرخ به‌روزشده: %s"

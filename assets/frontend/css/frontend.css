@@ -1,0 +1,313 @@
+/**
+ * RateBridge Woo - frontend styles.
+ *
+ * Theme-friendly by design: no fonts, no resets, no frameworks. Everything
+ * inherits the theme's typography and only adds the minimum layout needed.
+ * Colours come from CSS variables with neutral defaults, so a theme can
+ * override them with a single rule:
+ *
+ *     :root { --rbw-accent: #0f766e; --rbw-border: #e5e7eb; }
+ */
+
+.rbw-rate,
+.rbw-product-rate,
+.rbw-product-updated {
+	font-variant-numeric: tabular-nums;
+}
+
+.rbw-warning-note {
+	display: inline-block;
+	padding: 4px 8px;
+	border-inline-start: 3px solid #dba617;
+	background: #fcf9e8;
+	color: #614a00;
+	font-size: 0.85em;
+	line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------- Table */
+
+.rbw-rates-wrap {
+	margin-block: 1em;
+}
+
+.rbw-rates-title {
+	font-weight: 600;
+	margin-block-end: 0.5em;
+}
+
+/* Horizontal scroll container on small screens. */
+.rbw-rates-scroll {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	max-width: 100%;
+}
+
+.rbw-rates {
+	width: 100%;
+	min-width: 420px;
+	border-collapse: collapse;
+	background: transparent;
+	font-size: inherit;
+}
+
+.rbw-rates th,
+.rbw-rates td {
+	padding: 0.5em 0.65em;
+	text-align: start;
+	border-block-end: 1px solid var(--rbw-border, #e5e7eb);
+	vertical-align: middle;
+}
+
+.rbw-rates thead th {
+	font-weight: 700;
+	font-size: 0.9em;
+	color: var(--rbw-muted, #555);
+	white-space: nowrap;
+	background: var(--rbw-head-bg, transparent);
+}
+
+.rbw-rates tbody tr:last-child th,
+.rbw-rates tbody tr:last-child td {
+	border-block-end: 0;
+}
+
+.rbw-rates .rbw-code,
+.rbw-rates .rbw-value {
+	direction: ltr;
+	unicode-bidi: isolate;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.rbw-rates .rbw-value {
+	font-weight: 600;
+	color: var(--rbw-accent, inherit);
+}
+
+.rbw-rates .rbw-symbol {
+	white-space: nowrap;
+}
+
+.rbw-rates .rbw-updated {
+	font-size: 0.9em;
+	color: var(--rbw-muted, #555);
+	white-space: nowrap;
+}
+
+.rbw-rates .rbw-muted {
+	color: var(--rbw-muted, #777);
+}
+
+/* Narrow screens: stack the cells as label/value pairs. */
+@media screen and (max-width: 600px) {
+	.rbw-rates {
+		min-width: 0;
+	}
+
+	.rbw-rates thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+
+	.rbw-rates tr {
+		display: block;
+		padding-block: 0.5em;
+		border-block-end: 1px solid var(--rbw-border, #e5e7eb);
+	}
+
+	.rbw-rates td {
+		display: flex;
+		justify-content: space-between;
+		gap: 1em;
+		border: 0;
+		padding: 0.2em 0;
+	}
+
+	.rbw-rates td::before {
+		content: attr(data-label);
+		font-weight: 600;
+		font-size: 0.9em;
+		color: var(--rbw-muted, #555);
+	}
+}
+
+/* ---------------------------------------------------------------- Ticker */
+
+.rbw-ticker {
+	--rbw-ticker-duration: 30s;
+	position: relative;
+	overflow: hidden;
+	max-width: 100%;
+	padding-block: 0.4em;
+	border-block: 1px solid var(--rbw-border, #e5e7eb);
+	background: var(--rbw-ticker-bg, transparent);
+	/* Fade the edges so text does not hard-cut at the border. */
+	-webkit-mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+	mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+}
+
+.rbw-ticker-track {
+	display: flex;
+	width: max-content;
+	animation: rbw-ticker-scroll var(--rbw-ticker-duration, 30s) linear infinite;
+	will-change: transform;
+}
+
+.rbw-ticker-group {
+	display: flex;
+	align-items: center;
+	flex: 0 0 auto;
+	gap: 1.25em;
+	padding-inline-end: 1.25em;
+}
+
+.rbw-ticker-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35em;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.rbw-ticker-rate {
+	font-weight: 700;
+	color: var(--rbw-accent, inherit);
+	direction: ltr;
+	unicode-bidi: isolate;
+}
+
+.rbw-ticker-sep {
+	display: inline-block;
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: currentColor;
+	opacity: 0.35;
+	flex: 0 0 auto;
+}
+
+.rbw-ticker-pause:hover .rbw-ticker-track,
+.rbw-ticker-pause:focus-within .rbw-ticker-track {
+	animation-play-state: paused;
+}
+
+/* The track holds two identical groups: -50% is one full loop. */
+@keyframes rbw-ticker-scroll {
+	from {
+		transform: translateX(0);
+	}
+
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+/* RTL: the strip travels the other way. */
+[dir="rtl"] .rbw-ticker-track {
+	animation-name: rbw-ticker-scroll-rtl;
+}
+
+@keyframes rbw-ticker-scroll-rtl {
+	from {
+		transform: translateX(0);
+	}
+
+	to {
+		transform: translateX(50%);
+	}
+}
+
+/*
+ * Reduced motion: no animation at all. The single group wraps into a normal
+ * list and the duplicate (aria-hidden) group is hidden.
+ */
+@media (prefers-reduced-motion: reduce) {
+	.rbw-ticker-track {
+		animation: none !important;
+		width: 100%;
+		flex-wrap: wrap;
+	}
+
+	.rbw-ticker-group {
+		flex-wrap: wrap;
+		white-space: normal;
+	}
+
+	.rbw-ticker-group[aria-hidden="true"] {
+		display: none;
+	}
+
+	.rbw-ticker {
+		-webkit-mask-image: none;
+		mask-image: none;
+	}
+}
+
+/* -------------------------------------------------------- Product block */
+
+.rbw-product-notice {
+	margin-block: 0.75em;
+	padding: 0.6em 0.8em;
+	border-inline-start: 3px solid var(--rbw-accent, #2271b1);
+	background: var(--rbw-block-bg, rgba(34, 113, 177, 0.06));
+	font-size: 0.95em;
+	line-height: 1.7;
+	font-variant-numeric: tabular-nums;
+}
+
+.rbw-product-notice strong {
+	font-weight: 700;
+}
+
+/* ------------------------------------------------ Order item rate line */
+
+/*
+ * Read-only line under an order line item. Rendered in:
+ *  - the admin order screen (always, for shop managers),
+ *  - the order-received page / My Account / emails (only when the
+ *    «show the exchange rate to the customer» setting is on).
+ * Kept visually quiet: it is secondary information, never a price.
+ */
+.rbw-order-item-meta {
+	display: block;
+	margin-block-start: 0.35em;
+	font-size: 0.85em;
+	line-height: 1.6;
+	color: var(--rbw-muted, #646970);
+	font-variant-numeric: tabular-nums;
+}
+
+.order_details .rbw-order-item-meta,
+.woocommerce-orders-table .rbw-order-item-meta {
+	color: var(--rbw-muted, #646970);
+}
+
+.woocommerce-orders-table .rbw-order-item-meta {
+	font-size: 0.8em;
+}
+
+.woocommerce-email .rbw-order-item-meta,
+table.td .rbw-order-item-meta {
+	color: #646970;
+}
+
+/* Admin order screen: same line, slightly tighter. */
+#woocommerce-order-items .rbw-order-item-meta,
+.wc-order-item-meta .rbw-order-item-meta {
+	margin-block-start: 4px;
+	padding: 2px 6px;
+	border-inline-start: 3px solid #2271b1;
+	background: #f6f7f7;
+	font-size: 11px;
+	line-height: 1.5;
+	color: #50575e;
+}
+
+.wc-order-item-meta .rbw-order-item-meta code {
+	font-size: 11px;
+}

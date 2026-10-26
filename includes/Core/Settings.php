@@ -43,6 +43,16 @@ final class Settings {
 			'default_provider'          => 'manual',
 			// Maximum age (hours) of a rate before products stop being repriced: 0 = disabled.
 			'max_rate_age_hours'        => 48,
+			// Show the rate line to customers on orders (emails, My Account…). Off by default.
+			'show_rate_in_orders'       => false,
+			// Product page info block.
+			'product_block_enabled'     => false,
+			'product_block_position'    => 'after_price',
+			'product_block_template'    => '',
+			// Date format (token pattern) for absolute dates in the frontend output.
+			'date_format'               => 'Y-m-d H:i',
+			// Persian digits in the plugin's own output.
+			'use_persian_digits'        => false,
 		);
 	}
 
@@ -113,6 +123,30 @@ final class Settings {
 
 		if ( array_key_exists( 'max_rate_age_hours', $values ) ) {
 			$clean['max_rate_age_hours'] = self::sanitize_max_rate_age( $values['max_rate_age_hours'] );
+		}
+
+		if ( array_key_exists( 'show_rate_in_orders', $values ) ) {
+			$clean['show_rate_in_orders'] = self::to_bool( $values['show_rate_in_orders'] );
+		}
+
+		if ( array_key_exists( 'product_block_enabled', $values ) ) {
+			$clean['product_block_enabled'] = self::to_bool( $values['product_block_enabled'] );
+		}
+
+		if ( isset( $values['product_block_position'] ) ) {
+			$clean['product_block_position'] = self::sanitize_position( $values['product_block_position'] );
+		}
+
+		if ( array_key_exists( 'product_block_template', $values ) ) {
+			$clean['product_block_template'] = self::sanitize_template( $values['product_block_template'] );
+		}
+
+		if ( isset( $values['date_format'] ) ) {
+			$clean['date_format'] = self::sanitize_date_format( $values['date_format'] );
+		}
+
+		if ( array_key_exists( 'use_persian_digits', $values ) ) {
+			$clean['use_persian_digits'] = self::to_bool( $values['use_persian_digits'] );
 		}
 
 		update_option( self::OPTION, $clean );
@@ -197,6 +231,117 @@ final class Settings {
 		$decimals = (int) apply_filters( 'rbw_store_decimals', 0, self::store_unit() );
 
 		return max( 0, min( 6, $decimals ) );
+	}
+
+	/**
+	 * Interpret a boolean-ish submitted value.
+	 *
+	 * Accepts real booleans, 1/0 ints and the '1'/'0'/'yes'/'true' strings the
+	 * admin JS sends.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return bool
+	 */
+	public static function to_bool( mixed $value ): bool {
+		if ( is_bool( $value ) ) {
+			return $value;
+		}
+
+		if ( is_int( $value ) || is_float( $value ) ) {
+			return 0 !== (int) $value;
+		}
+
+		if ( ! is_string( $value ) ) {
+			return false;
+		}
+
+		return in_array( strtolower( trim( $value ) ), array( '1', 'yes', 'true', 'on' ), true );
+	}
+
+	/**
+	 * Validate the product-block position.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public static function sanitize_position( mixed $value ): string {
+		$position = sanitize_key( is_string( $value ) ? $value : '' );
+
+		return array_key_exists( $position, \RateBridge\Frontend\ProductNotice::positions() )
+			? $position
+			: 'after_price';
+	}
+
+	/**
+	 * Validate the product-block template.
+	 *
+	 * Kept as a kses-limited safe subset; an empty value means "use the default".
+	 *
+	 * @param mixed $value Raw template.
+	 * @return string
+	 */
+	public static function sanitize_template( mixed $value ): string {
+		if ( ! is_string( $value ) ) {
+			return '';
+		}
+
+		$template = trim( $value );
+
+		if ( '' === $template ) {
+			return '';
+		}
+
+		if ( function_exists( 'wp_kses' ) ) {
+			$template = wp_kses(
+				$template,
+				array(
+					'strong' => array(),
+					'em'     => array(),
+					'b'      => array(),
+					'i'      => array(),
+					'br'     => array(),
+					'span'   => array( 'class' => true ),
+				)
+			);
+		}
+
+		return mb_substr( $template, 0, 500 );
+	}
+
+	/**
+	 * Validate the date format token pattern.
+	 *
+	 * Only the documented tokens and a few literal separators survive, so a
+	 * stored value can never inject arbitrary `date()` characters.
+	 *
+	 * @param mixed $value Raw format.
+	 * @return string
+	 */
+	public static function sanitize_date_format( mixed $value ): string {
+		if ( ! is_string( $value ) ) {
+			return 'Y-m-d H:i';
+		}
+
+		$value = trim( $value );
+
+		if ( '' === $value ) {
+			return 'Y-m-d H:i';
+		}
+
+		$clean = preg_replace( '/[^YmdjHis\-\/: .]/', '', $value ) ?? '';
+
+		return '' === $clean ? 'Y-m-d H:i' : mb_substr( $clean, 0, 32 );
+	}
+
+	/**
+	 * Product page block template with the default applied.
+	 *
+	 * @return string
+	 */
+	public static function product_block_template(): string {
+		$template = (string) self::get( 'product_block_template', '' );
+
+		return '' === $template ? \RateBridge\Frontend\ProductNotice::DEFAULT_TEMPLATE : $template;
 	}
 
 	/**

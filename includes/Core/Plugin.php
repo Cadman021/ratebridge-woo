@@ -11,6 +11,10 @@ use RateBridge\Admin\AdminNotices;
 use RateBridge\Admin\AjaxController;
 use RateBridge\Admin\SettingsPage;
 use RateBridge\Cron\Scheduler;
+use RateBridge\Frontend\Frontend;
+use RateBridge\Frontend\ProductNotice;
+use RateBridge\Frontend\Shortcodes;
+use RateBridge\Orders\OrderRates;
 use RateBridge\Pricing\RepriceJob;
 use RateBridge\Product\ProductFields;
 
@@ -96,6 +100,37 @@ final class Plugin {
 		$fields->register();
 
 		AdminNotices::register();
+
+		// Phase 4: order rate records + frontend output.
+		$orders = new OrderRates();
+		$orders->register();
+
+		$shortcodes = new Shortcodes();
+		$shortcodes->register();
+
+		$notice = new ProductNotice();
+		$notice->register();
+
+		// Rendered fragments embed rates: drop them when a rate or a currency changes.
+		add_action( 'rbw_rate_updated', array( Frontend::class, 'flush_cache' ), 5 );
+		add_action( 'rbw_currency_changed', array( Frontend::class, 'flush_cache' ), 5 );
+		add_action( 'updated_option', array( $this, 'on_settings_saved' ), 10, 3 );
+	}
+
+	/**
+	 * Flush the frontend fragment cache when the plugin settings change.
+	 *
+	 * @param string $option    Option name.
+	 * @param mixed  $old_value Previous value.
+	 * @param mixed  $value     New value.
+	 * @return void
+	 */
+	public function on_settings_saved( $option, $old_value, $value ): void {
+		unset( $old_value, $value );
+
+		if ( Settings::OPTION === $option ) {
+			Frontend::flush_cache();
+		}
 	}
 
 	/**

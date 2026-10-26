@@ -1,0 +1,516 @@
+<?php
+/**
+ * Shared frontend rendering (shortcodes and the product-page block).
+ *
+ * Everything here is WordPress-aware but presentation-only: it reads stored
+ * rates from the currency repository, never calls a provider API, and returns
+ * escaped HTML. Elementor widgets in a later phase can reuse these methods.
+ *
+ * @package RateBridge
+ */
+
+namespace RateBridge\Frontend;
+
+use RateBridge\Core\Settings;
+use RateBridge\Currency\Currency;
+use RateBridge\Currency\CurrencyRepository;
+use RateBridge\Product\ProductData;
+use WC_Product;
+
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * Builds the HTML for rates, tables, tickers and product info.
+ */
+final class Frontend {
+
+	/**
+	 * Style handle.
+	 */
+	public const STYLE = 'rbw-frontend';
+
+	/**
+	 * Transient prefix for rendered fragments.
+	 */
+	public const CACHE_PREFIX = 'rbw_html_';
+
+	/**
+	 * Cache lifetime in seconds.
+	 */
+	public const CACHE_TTL = 60;
+
+	/**
+	 * Allowed HTML in a user-supplied template.
+	 *
+	 * Deliberately tiny: strong, em, span with class, br.
+	 *
+	 * @return array<string, array<string, bool>>
+	 */
+	public static function allowed_html(): array {
+		return array(
+			'strong' => array(),
+			'em'     => array(),
+			'b'      => array(),
+			'i'      => array(),
+			'br'     => array(),
+			'span'   => array( 'class' => true ),
+		);
+	}
+
+	/**
+	 * Whether output should use Persian digits.
+	 *
+	 * @return bool
+	 */
+	public static function use_persian_digits(): bool {
+		/**
+		 * Filter whether the plugin's own output uses Persian digits.
+		 *
+		 * @param bool $enabled Whether Persian digits are enabled.
+		 */
+		return (bool) apply_filters( 'rbw_use_persian_digits', (bool) Settings::get( 'use_persian_digits', false ) );
+	}
+
+	/**
+	 * Unit label for the current store unit.
+	 *
+	 * @return string
+	 */
+	public static function unit_label(): string {
+		return RateFormatter::unit_label(
+			Settings::store_unit(),
+			__( 'Toman', 'ratebridge-woo' ),
+			__( 'Rial', 'ratebridge-woo' )
+		);
+	}
+
+	/**
+	 * Format a rate for display (digits + decimals + Persian digits).
+	 *
+	 * @param float $rate Rate.
+	 * @return string Plain text, escaped by the caller if needed.
+	 */
+	public static function format_rate( float $rate ): string {
+		$decimals = $rate >= 1000 ? 0 : 4;
+		$text     = RateFormatter::number( $rate, $decimals );
+
+		return RateFormatter::maybe_persian( $text, self::use_persian_digits() );
+	}
+
+	/**
+	 * Format any number for display.
+	 *
+	 * @param float $value    Value.
+	 * @param int   $decimals Decimals.
+	 * @return string
+	 */
+	public static function format_number( float $value, int $decimals = 0 ): string {
+		return RateFormatter::maybe_persian( RateFormatter::number( $value, $decimals ), self::use_persian_digits() );
+	}
+
+	/**
+	 * Localised relative time.
+	 *
+	 * @param int $timestamp Past timestamp.
+	 * @return string
+	 */
+	public static function time_ago( int $timestamp ): string {
+		$parts = RateFormatter::time_ago_parts( $timestamp );
+
+		switch ( $parts['unit'] ) {
+			case 'unknown':
+				return __( 'unknown', 'ratebridge-woo' );
+
+			case 'now':
+				return __( 'just now', 'ratebridge-woo' );
+
+			case 'minute':
+				return sprintf(
+					/* translators: %s: number of minutes */
+					_n( '%s minute ago', '%s minutes ago', $parts['value'], 'ratebridge-woo' ),
+					self::format_number( (float) $parts['value'] )
+				);
+
+			case 'hour':
+				return sprintf(
+					/* translators: %s: number of hours */
+					_n( '%s hour ago', '%s hours ago', $parts['value'], 'ratebridge-woo' ),
+					self::format_number( (float) $parts['value'] )
+				);
+
+			case 'day':
+				return sprintf(
+					/* translators: %s: number of days */
+					_n( '%s day ago', '%s days ago', $parts['value'], 'ratebridge-woo' ),
+					self::format_number( (float) $parts['value'] )
+				);
+
+			case 'month':
+				return sprintf(
+					/* translators: %s: number of months */
+					_n( '%s month ago', '%s months ago', $parts['value'], 'ratebridge-woo' ),
+					self::format_number( (float) $parts['value'] )
+				);
+
+			case 'year':
+				return sprintf(
+					/* translators: %s: number of years */
+					_n( '%s year ago', '%s years ago', $parts['value'], 'ratebridge-woo' ),
+					self::format_number( (float) $parts['value'] )
+				);
+		}
+
+		return '';
+	}
+
+	/**
+	 * Timestamp of a currency's last successful update.
+	 *
+	 * @param Currency $currency Currency.
+	 * @return int 0 when unknown.
+	 */
+	public static function currency_timestamp( Currency $currency ): int {
+		if ( null === $currency->last_updated || '' === $currency->last_updated ) {
+			return 0;
+		}
+
+		$timestamp = strtotime( $currency->last_updated . ' UTC' );
+
+		return false === $timestamp ? 0 : $timestamp;
+	}
+
+	/**
+	 * Source (provider) label for a currency.
+	 *
+	 * @param Currency $currency Currency.
+	 * @return string
+	 */
+	public static function source_label( Currency $currency ): string {
+		$sources = \RateBridge\Providers\ProviderRegistry::instance()->choices();
+
+		return isset( $sources[ $currency->provider ] )
+			? (string) $sources[ $currency->provider ]
+			: (string) $currency->provider;
+	}
+
+	/**
+	 * Template values for one currency.
+	 *
+	 * @param Currency $currency Currency.
+	 * @param string   $template Template (used to decide which values to build).
+	 * @return array<string, string>
+	 */
+	public function template_values( Currency $currency, string $template ): array {
+		$values = array();
+
+		if ( str_contains( $template, '%name%' ) ) {
+			$values['name'] = $currency->name;
+		}
+
+		if ( str_contains( $template, '%code%' ) ) {
+			$values['code'] = $currency->code;
+		}
+
+		if ( str_contains( $template, '%symbol%' ) ) {
+			$values['symbol'] = $currency->symbol;
+		}
+
+		if ( str_contains( $template, '%rate%' ) ) {
+			$values['rate'] = self::format_rate( $currency->rate );
+		}
+
+		if ( str_contains( $template, '%unit%' ) ) {
+			$values['unit'] = self::unit_label();
+		}
+
+		if ( str_contains( $template, '%updated%' ) ) {
+			$values['updated'] = self::time_ago( self::currency_timestamp( $currency ) );
+		}
+
+		if ( str_contains( $template, '%updated_date%' ) ) {
+			$values['updated_date'] = self::format_date(
+				self::currency_timestamp( $currency ),
+				(string) Settings::get( 'date_format', 'Y-m-d H:i' )
+			);
+		}
+
+		if ( str_contains( $template, '%source%' ) ) {
+			$values['source'] = self::source_label( $currency );
+		}
+
+		return $values;
+	}
+
+	/**
+	 * Format a timestamp using the configured date format.
+	 *
+	 * @param int    $timestamp Timestamp.
+	 * @param string $format    Token format.
+	 * @return string
+	 */
+	public static function format_date( int $timestamp, string $format ): string {
+		if ( $timestamp <= 0 ) {
+			return __( 'unknown', 'ratebridge-woo' );
+		}
+
+		// wp_date() honours the site timezone; RateFormatter::format_date() is the
+		// testable fallback when WordPress is unavailable (CLI tests).
+		if ( function_exists( 'wp_date' ) ) {
+			$php_format = self::tokens_to_php( $format );
+			$formatted  = wp_date( $php_format, $timestamp );
+		} else {
+			$formatted = RateFormatter::format_date( $timestamp, $format );
+		}
+
+		return RateFormatter::maybe_persian( (string) $formatted, self::use_persian_digits() );
+	}
+
+	/**
+	 * Translate the documented token set to a PHP date() format.
+	 *
+	 * Only the tokens the plugin documents are translated, so a site admin cannot
+	 * inject arbitrary PHP format characters.
+	 *
+	 * @param string $format Token format.
+	 * @return string
+	 */
+	private static function tokens_to_php( string $format ): string {
+		$map = array(
+			'Y' => 'Y',
+			'm' => 'm',
+			'd' => 'd',
+			'j' => 'j',
+			'H' => 'H',
+			'i' => 'i',
+			's' => 's',
+		);
+
+		$out    = '';
+		$length = strlen( $format );
+
+		for ( $i = 0; $i < $length; $i++ ) {
+			$char = $format[ $i ];
+
+			if ( '\\' === $char && $i + 1 < $length ) {
+				$out .= '\\' . $format[ ++$i ];
+				continue;
+			}
+
+			$out .= $map[ $char ] ?? '\\' . $char;
+		}
+
+		return '' === $out ? 'Y-m-d H:i' : $out;
+	}
+
+	/**
+	 * Render a template for one currency.
+	 *
+	 * The template itself survives as the kses-approved subset; every placeholder
+	 * value is escaped before substitution, so currency names (admin input) can
+	 * never inject markup.
+	 *
+	 * @param Currency $currency Currency.
+	 * @param string   $template Template.
+	 * @return string
+	 */
+	public function render( Currency $currency, string $template ): string {
+		$template = RateFormatter::sanitize_template(
+			$template,
+			static fn ( string $html ): string => wp_kses( $html, self::allowed_html() )
+		);
+
+		if ( '' === $template ) {
+			return '';
+		}
+
+		$values = $this->template_values( $currency, $template );
+		$values = array_map( 'esc_html', $values );
+
+		return wp_kses( RateFormatter::render_template( $template, $values ), self::allowed_html() );
+	}
+
+	/**
+	 * Resolve a list of currency codes to enabled currencies with a rate.
+	 *
+	 * @param string[] $codes Currency codes (empty = all enabled).
+	 * @return Currency[]
+	 */
+	public static function resolve_currencies( array $codes = array() ): array {
+		$repository = new CurrencyRepository();
+		$codes      = array_values( array_filter( array_map( 'strtoupper', array_map( 'trim', $codes ) ) ) );
+
+		$all = $repository->get_enabled();
+
+		if ( empty( $codes ) ) {
+			return array_values( array_filter( $all, static fn ( Currency $c ): bool => $c->has_rate() ) );
+		}
+
+		$indexed = array();
+
+		foreach ( $all as $currency ) {
+			$indexed[ $currency->code ] = $currency;
+		}
+
+		$out = array();
+
+		foreach ( $codes as $code ) {
+			if ( isset( $indexed[ $code ] ) && $indexed[ $code ]->has_rate() ) {
+				$out[] = $indexed[ $code ];
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Enqueue the frontend stylesheet (only from a rendering callback).
+	 *
+	 * @return void
+	 */
+	public static function enqueue_styles(): void {
+		if ( wp_style_is( self::STYLE, 'enqueued' ) ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			self::STYLE,
+			RBW_PLUGIN_URL . 'assets/frontend/css/frontend.css',
+			array(),
+			RBW_VERSION
+		);
+
+		if ( is_rtl() ) {
+			wp_enqueue_style(
+				self::STYLE . '-rtl',
+				RBW_PLUGIN_URL . 'assets/frontend/css/frontend-rtl.css',
+				array( self::STYLE ),
+				RBW_VERSION
+			);
+		}
+	}
+
+	/**
+	 * Render + cache an HTML fragment.
+	 *
+	 * @param string   $key     Cache key components (already sanitised).
+	 * @param callable $builder Builder returning HTML.
+	 * @return string
+	 */
+	public static function cached( string $key, callable $builder ): string {
+		$transient = self::CACHE_PREFIX . md5( $key );
+		$cached    = get_transient( $transient );
+
+		if ( is_string( $cached ) && '' !== $cached ) {
+			self::enqueue_styles();
+
+			return $cached;
+		}
+
+		$html = (string) call_user_func( $builder );
+
+		if ( '' !== $html ) {
+			set_transient( $transient, $html, self::CACHE_TTL );
+		}
+
+		self::enqueue_styles();
+
+		return $html;
+	}
+
+	/**
+	 * Drop every cached fragment (called when rates/currencies change).
+	 *
+	 * @return void
+	 */
+	public static function flush_cache(): void {
+		global $wpdb;
+
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+				$wpdb->esc_like( '_transient_' . self::CACHE_PREFIX ) . '%',
+				$wpdb->esc_like( '_transient_timeout_' . self::CACHE_PREFIX ) . '%'
+			)
+		);
+	}
+
+	/**
+	 * Whether the current visitor may see diagnostics (admin only).
+	 *
+	 * @return bool
+	 */
+	public static function can_see_warnings(): bool {
+		return current_user_can( 'manage_woocommerce' );
+	}
+
+	/**
+	 * Small visible warning, shown to shop managers only.
+	 *
+	 * @param string $message Message text.
+	 * @return string
+	 */
+	public static function warning( string $message ): string {
+		if ( ! self::can_see_warnings() ) {
+			return '';
+		}
+
+		return sprintf(
+			'<span class="rbw-warning-note" role="status">%s</span>',
+			esc_html( $message )
+		);
+	}
+
+	/**
+	 * The product currently being viewed (for the product shortcodes/block).
+	 *
+	 * @param int $post_id Explicit product id (0 = current product).
+	 * @return WC_Product|null
+	 */
+	public static function current_product( int $post_id = 0 ): ?WC_Product {
+		if ( $post_id > 0 ) {
+			$product = wc_get_product( $post_id );
+
+			return $product instanceof WC_Product ? $product : null;
+		}
+
+		if ( ! function_exists( 'is_product' ) || ! is_product() ) {
+			return null;
+		}
+
+		$product = wc_get_product( get_queried_object_id() );
+
+		return $product instanceof WC_Product ? $product : null;
+	}
+
+	/**
+	 * The currency that prices a product (variation override aware).
+	 *
+	 * @param WC_Product $product Product.
+	 * @return Currency|null Null when the product is not managed.
+	 */
+	public static function product_currency( WC_Product $product ): ?Currency {
+		$product_id = (int) $product->get_id();
+		$parent_id  = $product->is_type( 'variation' ) ? (int) $product->get_parent_id() : 0;
+
+		$managed = ProductData::is_enabled( $product_id )
+			|| ( $parent_id > 0 && ProductData::is_enabled( $parent_id ) );
+
+		if ( ! $managed ) {
+			return null;
+		}
+
+		$code = ProductData::currency_code( $product_id );
+
+		if ( '' === $code && $parent_id > 0 ) {
+			$code = ProductData::currency_code( $parent_id );
+		}
+
+		if ( '' === $code ) {
+			return null;
+		}
+
+		$currency = ( new CurrencyRepository() )->get_by_code( $code );
+
+		return $currency instanceof Currency ? $currency : null;
+	}
+}

@@ -9,14 +9,17 @@ the plugin recalculate the store-currency price (Iranian Toman or Rial) from liv
 - **Namespace / prefix:** `RateBridge\` / `rbw_`
 - **Requirements:** PHP 8.1+, WordPress 6.4+, WooCommerce 8+ (HPOS compatible)
 
-> **Status – Phase 3.** Currency management, real price sources (Navasan + AlanChand),
+> **Status – Phase 4.** Currency management, real price sources (Navasan + AlanChand),
 > per-provider settings, request-quota protection, **product pricing by currency**
 > (simple + variable products, classic editor), **automatic repricing when a rate
-> changes**, store-unit migration and full Persian UI.
+> changes**, store-unit migration, **order rate records on every line item**,
+> **shortcodes** (single rate, currencies table, ticker, product info), an optional
+> **product page info block** and full Persian UI.
 >
-> Still out of scope: order/cart meta and showing the rate on orders, Elementor widgets,
-> shortcodes, the formula builder, bulk/quick edit integration, import/export,
-> new providers, Persian-digit price display and the block-editor product form.
+> Still out of scope: Elementor widgets/dynamic tags, the formula builder, import/export,
+> bulk/quick edit integration, new providers, Gutenberg blocks, modifying WooCommerce's
+> price HTML, Persian digits inside WooCommerce's own price output, and emails other than
+> the optional order item rate line.
 
 ---
 
@@ -34,6 +37,7 @@ ratebridge-woo/
 ├── tests/
 │   ├── parse-fixtures.php      CLI parser test against docs/api-samples/ (no WordPress)
 │   ├── price-calculator.php    CLI test for the calculation engine (no WordPress)
+│   ├── rate-formatter.php      CLI test for the frontend formatter (no WordPress)
 │   ├── ajax-actions.php        JS request() slugs vs registered wp_ajax hooks
 │   └── scrub-secrets.php       Credentials never leak into messages
 ├── docs/
@@ -72,6 +76,13 @@ ratebridge-woo/
 │   ├── Product/
 │   │   ├── ProductData.php     `_rbw_*` meta keys, sanitisation, rule resolution
 │   │   └── ProductFields.php   Classic editor fields (simple + variations), column, AJAX
+│   ├── Orders/
+│   │   └── OrderRates.php      `_rbw_*` order item meta, admin/customer rate line, backfill
+│   ├── Frontend/
+│   │   ├── RateFormatter.php   Pure PHP: numbers, digits, relative time, templates (CLI-tested)
+│   │   ├── Frontend.php        Shared renderer: templates, tables, caching, product currency
+│   │   ├── Shortcodes.php      [rbw_rate] [rbw_rates] [rbw_ticker] [rbw_product_*]
+│   │   └── ProductNotice.php   Optional currency info block on product pages
 │   ├── Cron/
 │   │   └── Scheduler.php       `rbw_every_five_minutes` schedule + `rbw_update_rates` event
 │   └── Admin/
@@ -90,7 +101,8 @@ ratebridge-woo/
 │   ├── css/product.css         Product editor fields (product panel, preview, variations)
 │   ├── css/product-rtl.css     RTL overrides for the product editor
 │   ├── js/admin.js             Vanilla JS: tabs, dialog, symbol picker, presets, AJAX
-│   └── js/product.js           Vanilla JS: panel toggle, read-only prices, live preview
+│   ├── js/product.js           Vanilla JS: panel toggle, read-only prices, live preview
+│   └── frontend/css/           frontend.css + frontend-rtl.css (shortcodes, ticker, block)
 └── languages/
     ├── ratebridge-woo-fa_IR.po Complete Persian translation (330 strings)
     ├── ratebridge-woo-fa_IR.mo Compiled translation
@@ -367,7 +379,8 @@ be tested from the CLI against the real fixtures:
 ```bash
 php tests/parse-fixtures.php    # parsing + cross-source consistency (79 assertions)
 php tests/price-calculator.php  # calculation engine, no WordPress (63 assertions)
-php tests/ajax-actions.php      # JS request() slugs vs registered wp_ajax hooks (87)
+php tests/rate-formatter.php    # frontend formatter + templates, no WordPress (85)
+php tests/ajax-actions.php      # JS request() slugs vs registered wp_ajax hooks (105)
 php tests/scrub-secrets.php     # credentials never leak into messages (11)
 ```
 
@@ -583,6 +596,161 @@ Related invariants the repricer enforces on variable products:
 
 ---
 
+## Order rate records (Phase 4)
+
+Every line item of a product priced by the plugin stores a hidden snapshot of the rate that
+produced its price. This is **information only** — order totals are never modified or
+recalculated.
+
+### Item meta keys
+
+| Key | Holds |
+| --- | --- |
+| `_rbw_currency` | currency **code** used (`USD`) |
+| `_rbw_rate` | rate used, in store units per 1 foreign unit |
+| `_rbw_base_price` | price in the foreign unit used for that line (sale base price when the sale was active) |
+| `_rbw_rate_time` | Unix timestamp of the rate's last successful update (`0` when unknown) |
+| `_rbw_unit` | store unit at that moment (`toman` or `rial`) |
+| `_rbw_is_sale` | `yes` when the sale base price produced the line price |
+
+All keys start with `_`, so WooCommerce hides them from the customer's formatted meta list;
+`OrderRates::hide_internal_meta()` also filters them explicitly for themes that render every
+meta row anyway. Keys are written **once**: `apply_snapshot()` refuses to overwrite an existing
+`_rbw_currency`, which makes every code path below idempotent.
+
+### Where it is captured
+
+| Path | Hook | Notes |
+| --- | --- | --- |
+| Classic checkout | `woocommerce_checkout_create_order_line_item` | primary path; the charged price comes from `$values['line_total'] / quantity` |
+| Admin order editor | `woocommerce_new_order_item` | covers "Add product(s)" in the order screen |
+| Block checkout / Store API | `woocommerce_store_api_checkout_order_processed` | **backfills** the whole order once it exists |
+| Classic checkout (safety net) | `woocommerce_checkout_order_processed` | backfills in case another plugin built the items itself |
+| Any other path | `OrderRates::backfill_order()` | public, idempotent, safe to call repeatedly |
+
+The block checkout does **not** fire `woocommerce_checkout_create_order_line_item`. The Store API
+validates the cart and then creates the order server-side, so line-item meta is not available at
+cart→order time. That is why the Store API hook backfills the finished order: it walks the line
+items, resolves each product's currency through `ProductData`, and writes only the missing
+`_rbw_*` keys. Because `apply_snapshot()` never overwrites, running a classic request and a block
+request through the same code cannot corrupt a snapshot.
+
+### Display
+
+- **Shop managers** always see a read-only line under each managed item on the order screen
+  (`woocommerce_after_order_itemmeta`, `manage_woocommerce` capability, WC_Order_Item API only —
+  HPOS compatible):
+  «خریداری شده با دلار آمریکا با نرخ 272,400 تومان (قیمت پایه: 510) — نرخ به‌روزشده: …»
+- **Customers** see the same line only when **تنظیمات عمومی → نمایش در سفارش → «نمایش نرخ ارز به
+  مشتری در سفارش»** is enabled (default **off**). It then renders through
+  `woocommerce_order_item_meta_end`, which WooCommerce calls on the order-received page, in
+  **emails** (`$plain_text` is respected) and in My Account.
+
+---
+
+## Frontend output (Phase 4)
+
+### Rate formatter (`includes/Frontend/RateFormatter.php`)
+
+Pure PHP, no WordPress dependency, unit tested by `tests/rate-formatter.php`:
+
+- `number( $value, $decimals )` — ASCII thousand separators, fixed decimals.
+- `to_persian_digits()` / `maybe_persian()` — ASCII → ۰۱۲۳۴۵۶۷۸۹, separators untouched.
+- `unit_label( $unit )` — تومان / ریال.
+- `time_ago_parts( $timestamp, $now )` — testable relative time; returns
+  `array( unit, value, direction )` with units `now|minute|hour|day|month|year|unknown`.
+- `format_date( $timestamp, $format, $timezone )` — token-based dates (`Y m d j H i s`).
+- `render_template()` — `%placeholder%` substitution in a **single `strtr()` pass**, so a value
+  containing `%code%` is never re-expanded (no injection through data).
+- `sanitize_template()` — caps the length and applies a kses callback.
+
+### Placeholders
+
+| Placeholder | Value |
+| --- | --- |
+| `%name%` | currency name (دلار آمریکا) |
+| `%code%` | currency code (USD) |
+| `%symbol%` | symbol ($, g) |
+| `%rate%` | current rate, formatted with the store decimals |
+| `%unit%` | تومان or ریال |
+| `%updated%` | relative time («۴۷ دقیقه پیش») |
+| `%updated_date%` | absolute date using the «قالب تاریخ» setting |
+| `%source%` | provider label (آلان‌چند, Navasan…) |
+
+Unknown placeholders are **left untouched** (`%bogus%` stays visible) so a typo is obvious.
+Values are escaped individually and the template is limited to `<strong> <em> <b> <i> <span
+class> <br>` via `wp_kses()`.
+
+### Shortcodes
+
+```text
+[rbw_rate currency="USD" template="%name%: %rate% %unit%" show_updated="no"]
+[rbw_rates currencies="USD,EUR" columns="name,code,symbol,rate,updated,source" title="نرخ ارزها"]
+[rbw_ticker currencies="USD,EUR,GOLD18" speed="30" pause_on_hover="yes"]
+[rbw_product_rate id="" template="%rate% %unit%"]
+[rbw_product_updated id="" format="relative|absolute"]
+```
+
+- `[rbw_rate]` — one currency. `show_updated="yes"` appends `— %updated%` when the template does
+  not already use it. Missing/disabled/rate-less currencies render **nothing** for visitors and a
+  small visible warning for users with `manage_woocommerce`.
+- `[rbw_rates]` — responsive table of enabled currencies (all enabled when `currencies` is
+  empty). Columns: `name, code, symbol, rate, updated, source`; Persian headers; wrapped in a
+  horizontally scrollable container (`tabindex="0"`, `role="region"`); cells become label/value
+  pairs under 600 px.
+- `[rbw_ticker]` — CSS-only scrolling strip. `speed` is clamped to 5–600 s, the track is
+  duplicated for a seamless loop (the copy is `aria-hidden`), `pause_on_hover` defaults to yes,
+  and `prefers-reduced-motion: reduce` disables the animation and shows a wrapped list. No JS.
+- `[rbw_product_rate]` / `[rbw_product_updated]` — current rate / last calculation time of the
+  product's currency. Work on a single product page or with `id=""`. Render nothing for products
+  that are not managed by a currency.
+
+Every shortcode sanitises its attributes (`sanitize_text_field`, `sanitize_key`,
+`sanitize_html_class`, whitelisted column names, `absint`), reads **only stored data** (never a
+provider API) and caches its HTML in a 60-second transient keyed by the attribute set.
+
+### Caching
+
+`Frontend::cached()` stores the rendered fragment in `_transient_rbw_html_*` (60 s) and enqueues
+the stylesheet from inside the rendering callback, so pages without a shortcode load no extra
+CSS. The cache is flushed by `Frontend::flush_cache()` on:
+
+- `rbw_rate_updated` (a rate really changed),
+- `rbw_currency_changed` (a currency row was created/updated/deleted),
+- any update of the `rbw_settings` option,
+- saving the General tab (the AJAX handler flushes explicitly).
+
+### Product page block
+
+**تنظیمات عمومی → نمایش در سایت**:
+
+| Setting | Default | Notes |
+| --- | --- | --- |
+| «نمایش کادر اطلاعات ارز در صفحه محصول» | off | `product_block_enabled` |
+| موقعیت | بعد از قیمت | `after_price` (prio 15) / `after_excerpt` (25) / `after_add_to_cart` (35) on `woocommerce_single_product_summary` |
+| قالب | `نرخ %name%: %rate% %unit% — آخرین بروزرسانی: %updated%` | `product_block_template`, empty = default |
+| قالب تاریخ | `Y-m-d H:i` | `date_format` |
+| ارقام فارسی در خروجی افزونه | off | `use_persian_digits` |
+
+**Limitation (documented):** for a variable product whose variations use **different**
+currencies the block renders nothing — a single rate would be misleading.
+
+### Hooks added in Phase 4
+
+| Hook | Type | Purpose |
+| --- | --- | --- |
+| `rbw_currency_changed` | action | `( string $code, string $what )` – `created`/`updated`/`deleted`; flushes the fragment cache |
+| `rbw_use_persian_digits` | filter | `( bool $enabled )` – force Persian digits on/off in code |
+
+### Frontend styles
+
+`assets/frontend/css/frontend.css` (+ `frontend-rtl.css`) has no framework, no fonts and no
+resets: it inherits the theme's typography and exposes CSS variables —
+`--rbw-accent`, `--rbw-border`, `--rbw-muted`, `--rbw-ticker-bg`, `--rbw-block-bg`,
+`--rbw-ticker-duration`. Numeric fragments use `dir="ltr"` + `unicode-bidi: isolate` so amounts
+never reorder inside an RTL page.
+
+---
 ## Adding a new provider
 
 1. Create `includes/Providers/MyApiProvider.php`:
@@ -749,6 +917,11 @@ Rules for provider implementations:
 - deletes **every `_rbw_*` post meta** row with one prepared `DELETE` (the 15 keys listed in
   `ProductData::all_meta_keys()`);
 - deletes the per-user `rbw_dismiss_stale_notice` meta.
+
+Order item meta (`_rbw_currency`, `_rbw_rate`, …) is **deliberately kept**: an order is
+financial history and must stay auditable after the plugin is gone. The Phase-4 settings
+(order notice, product block, date format, Persian digits) live inside `rbw_settings`, so they
+are removed with it.
 
 The final WooCommerce prices (`_regular_price`, `_sale_price`, `_price`) are **left as they
 are**, so the shop keeps selling at the last calculated price instead of showing empty prices.

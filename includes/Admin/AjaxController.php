@@ -522,6 +522,12 @@ final class AjaxController
 			'default_update_interval'  => isset($_POST['default_update_interval']) ? absint($_POST['default_update_interval']) : 60,
 			'delete_data_on_uninstall' => isset($_POST['delete_data_on_uninstall']) && '1' === sanitize_text_field(wp_unslash((string) $_POST['delete_data_on_uninstall'])),
 			'max_rate_age_hours'       => isset($_POST['max_rate_age_hours']) ? absint($_POST['max_rate_age_hours']) : 48,
+			'show_rate_in_orders'      => isset($_POST['show_rate_in_orders']) && '1' === sanitize_text_field(wp_unslash((string) $_POST['show_rate_in_orders'])),
+			'product_block_enabled'    => isset($_POST['product_block_enabled']) && '1' === sanitize_text_field(wp_unslash((string) $_POST['product_block_enabled'])),
+			'product_block_position'   => isset($_POST['product_block_position']) ? sanitize_key(wp_unslash((string) $_POST['product_block_position'])) : 'after_price',
+			'product_block_template'   => isset($_POST['product_block_template']) ? wp_unslash((string) $_POST['product_block_template']) : '',
+			'date_format'              => isset($_POST['date_format']) ? wp_unslash((string) $_POST['date_format']) : 'Y-m-d H:i',
+			'use_persian_digits'       => isset($_POST['use_persian_digits']) && '1' === sanitize_text_field(wp_unslash((string) $_POST['use_persian_digits'])),
 		);
 
 		/*
@@ -565,6 +571,9 @@ final class AjaxController
 		} else {
 			$saved = Settings::update($values);
 		}
+
+		// Rendered fragments depend on the unit/date/digits settings.
+		\RateBridge\Frontend\Frontend::flush_cache();
 
 		$message = $migration && ! empty($migration['changed'])
 			? sprintf(

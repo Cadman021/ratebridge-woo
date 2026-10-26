@@ -140,7 +140,19 @@ final class CurrencyRepository {
 			array( '%s', '%s', '%s', '%s', '%s', '%f', '%s', '%f', '%s', '%f', '%f', '%d', '%d', '%s', '%s', '%d', '%s', '%s' )
 		);
 
-		return $inserted ? (int) $wpdb->insert_id : 0;
+		if ( ! $inserted ) {
+			return 0;
+		}
+
+		/**
+		 * A currency row was created, updated or deleted.
+		 *
+		 * @param string $code Currency code.
+		 * @param string $what created|updated|deleted|toggled.
+		 */
+		do_action( 'rbw_currency_changed', (string) ( $data['code'] ?? '' ), 'created' );
+
+		return (int) $wpdb->insert_id;
 	}
 
 	/**
@@ -192,6 +204,11 @@ final class CurrencyRepository {
 		}
 
 		$result = $wpdb->update( $this->table(), $clean, array( 'id' => $id ), $formats_list, array( '%d' ) );
+
+		if ( false !== $result ) {
+			/** This action is documented in includes/Currency/CurrencyRepository.php */
+			do_action( 'rbw_currency_changed', (string) ( $clean['code'] ?? '' ), 'updated' );
+		}
 
 		return false !== $result;
 	}
@@ -282,7 +299,13 @@ final class CurrencyRepository {
 			return false;
 		}
 
-		$deleted = $wpdb->delete( $this->table(), array( 'id' => $id ), array( '%d' ) );
+		$existing = $this->get( $id );
+		$deleted  = $wpdb->delete( $this->table(), array( 'id' => $id ), array( '%d' ) );
+
+		if ( $deleted ) {
+			/** This action is documented in includes/Currency/CurrencyRepository.php */
+			do_action( 'rbw_currency_changed', $existing instanceof Currency ? $existing->code : '', 'deleted' );
+		}
 
 		return (bool) $deleted;
 	}

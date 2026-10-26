@@ -34,7 +34,14 @@ delete_option( 'rbw_request_budget' );
 delete_option( 'rbw_reprice_queue' );
 delete_option( 'rbw_unit_migration' );
 
-// Remove transients created by providers (rate cache).
+// Remove transients created by providers (rate cache) and the Phase-4
+// rendered frontend fragments (prefix `rbw_html_`).
+//
+// The new settings (order notice, product block, date format, Persian digits)
+// live inside the `rbw_settings` option, which is deleted above.
+//
+// Order item meta (`_rbw_*` on order items) is intentionally NOT removed: an
+// order is financial history and must stay auditable after the plugin is gone.
 $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching
 	$wpdb->prepare(
 		"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",

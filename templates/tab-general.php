@@ -8,6 +8,7 @@
  */
 
 use RateBridge\Admin\SettingsPage;
+use RateBridge\Frontend\ProductNotice;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -20,6 +21,21 @@ $rbw_step        = (int) ( $rbw_settings['rounding_step'] ?? 1000 );
 $rbw_interval    = (int) ( $rbw_settings['default_update_interval'] ?? 60 );
 $rbw_delete_data = ! empty( $rbw_settings['delete_data_on_uninstall'] );
 $rbw_max_age     = (int) ( $rbw_settings['max_rate_age_hours'] ?? 48 );
+$rbw_show_orders = ! empty( $rbw_settings['show_rate_in_orders'] );
+$rbw_block_on    = ! empty( $rbw_settings['product_block_enabled'] );
+$rbw_block_pos   = (string) ( $rbw_settings['product_block_position'] ?? 'after_price' );
+$rbw_block_tpl   = (string) ( $rbw_settings['product_block_template'] ?? '' );
+$rbw_date_format = (string) ( $rbw_settings['date_format'] ?? 'Y-m-d H:i' );
+$rbw_persian     = ! empty( $rbw_settings['use_persian_digits'] );
+
+$rbw_block_positions = array(
+	'after_price'       => __( 'After the price', 'ratebridge-woo' ),
+	'after_excerpt'     => __( 'After the short description', 'ratebridge-woo' ),
+	'after_add_to_cart' => __( 'After the add-to-cart button', 'ratebridge-woo' ),
+);
+
+$rbw_placeholders = array( '%name%', '%code%', '%symbol%', '%rate%', '%unit%', '%updated%', '%updated_date%', '%source%' );
+$rbw_default_tpl  = ProductNotice::DEFAULT_TEMPLATE;
 ?>
 <form id="rbw-general-form" onsubmit="return false;">
 	<table class="form-table rbw-form-table" role="presentation">
@@ -126,6 +142,88 @@ $rbw_max_age     = (int) ( $rbw_settings['max_rate_age_hours'] ?? 48 );
 					<p class="description">
 						<?php esc_html_e( 'If a rate is older than this, product prices are left unchanged and a warning is shown. Enter 0 to disable the limit. Manual currencies without a timestamp are never considered stale.', 'ratebridge-woo' ); ?>
 					</p>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row">
+					<label for="rbw-date-format"><?php esc_html_e( 'Date format', 'ratebridge-woo' ); ?></label>
+				</th>
+				<td>
+					<input
+						type="text"
+						id="rbw-date-format"
+						name="date_format"
+						class="regular-text"
+						dir="ltr"
+						value="<?php echo esc_attr( $rbw_date_format ); ?>"
+					/>
+					<p class="description">
+						<?php esc_html_e( 'Used for absolute dates in the plugin output and in %updated_date%. Letters: Y (year), m (month), d (day), j (day without leading zero), H (hour), i (minute), s (second). Example: Y-m-d H:i', 'ratebridge-woo' ); ?>
+					</p>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Order display', 'ratebridge-woo' ); ?></th>
+				<td>
+					<label class="rbw-inline">
+						<input type="checkbox" name="show_rate_in_orders" value="1" <?php checked( $rbw_show_orders ); ?> />
+						<?php esc_html_e( 'Show the exchange rate to the customer in orders', 'ratebridge-woo' ); ?>
+					</label>
+					<p class="description"><?php esc_html_e( 'The rate line is always visible to shop managers on the order screen. Turn this on to also show it on the order-received page, in emails and in My Account.', 'ratebridge-woo' ); ?></p>
+				</td>
+			</tr>
+
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Display on the site', 'ratebridge-woo' ); ?></th>
+				<td>
+					<label class="rbw-inline">
+						<input type="checkbox" name="product_block_enabled" value="1" <?php checked( $rbw_block_on ); ?> />
+						<?php esc_html_e( 'Show a currency info block on product pages', 'ratebridge-woo' ); ?>
+					</label>
+
+					<p>
+						<label for="rbw-block-position"><?php esc_html_e( 'Position', 'ratebridge-woo' ); ?></label>
+						<select id="rbw-block-position" name="product_block_position">
+							<?php foreach ( $rbw_block_positions as $rbw_pos_key => $rbw_pos_label ) : ?>
+								<option value="<?php echo esc_attr( $rbw_pos_key ); ?>" <?php selected( $rbw_block_pos, $rbw_pos_key ); ?>>
+									<?php echo esc_html( $rbw_pos_label ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</p>
+
+					<p>
+						<label for="rbw-block-template"><?php esc_html_e( 'Template', 'ratebridge-woo' ); ?></label>
+						<input
+							type="text"
+							id="rbw-block-template"
+							name="product_block_template"
+							class="large-text"
+							value="<?php echo esc_attr( $rbw_block_tpl ); ?>"
+							placeholder="<?php echo esc_attr( $rbw_default_tpl ); ?>"
+						/>
+						<span class="description">
+							<?php
+							printf(
+								/* translators: %s: comma separated placeholder list */
+								esc_html__( 'Leave empty for the default template. Placeholders: %s', 'ratebridge-woo' ),
+								esc_html( implode( ' ', $rbw_placeholders ) )
+							);
+							?>
+						</span>
+					</p>
+
+					<p class="description">
+						<?php esc_html_e( 'Only products priced by a currency show the block. When the variations of a variable product use different currencies the block is hidden, because one rate would be misleading.', 'ratebridge-woo' ); ?>
+					</p>
+
+					<label class="rbw-inline">
+						<input type="checkbox" name="use_persian_digits" value="1" <?php checked( $rbw_persian ); ?> />
+						<?php esc_html_e( 'Persian digits in the plugin output', 'ratebridge-woo' ); ?>
+					</label>
+					<p class="description"><?php esc_html_e( 'Applies to the plugin shortcodes and the product block only. WooCommerce prices keep their own formatting.', 'ratebridge-woo' ); ?></p>
 				</td>
 			</tr>
 
