@@ -343,6 +343,52 @@ foreach ( array( 'show_rate_in_orders', 'product_block_enabled', 'product_block_
 	);
 }
 
+echo "\n[9] Products list column: no double render, no bleed into price\n";
+
+$fields_php = rbw_test_read( $root . '/includes/Product/ProductFields.php' );
+
+/*
+ * Phase 7.1 regression: the «ارز» column was rendered through TWO actions
+ * (`manage_product_posts_custom_column` + `manage_posts_custom_column`) with a
+ * per-post "already rendered" static. Depending on hook order the cell appeared
+ * inside the Price column and the currency column stayed empty, shifting both.
+ */
+check(
+	'column adds itself on manage_product_posts_columns',
+	(bool) preg_match( "/add_filter\(\\s*'manage_product_posts_columns'/s", $fields_php )
+);
+
+check(
+	'cell renders through manage_product_posts_custom_column once',
+	1 === preg_match_all( "/add_action\(\\s*'manage_product_posts_custom_column'/s", $fields_php ),
+	'multiple registrations duplicate the cell'
+);
+
+check(
+	'classic hook uses a separate guarded callback',
+	(bool) preg_match( "/add_action\(\\s*'manage_posts_custom_column'\\s*,\\s*array\\(\\s*\\\$this,\\s*'render_column_classic'/s", $fields_php )
+);
+
+check(
+	'no per-post static "already rendered" cache',
+	! str_contains( $fields_php, 'static $rendered' ),
+	'a static cache swallows the cell on the second pass'
+);
+
+$classic_start = strpos( $fields_php, 'function render_column_classic' );
+$classic_body  = false === $classic_start ? '' : substr( $fields_php, $classic_start, 600 );
+
+check(
+	'classic callback skips products',
+	str_contains( $classic_body, "'product' === " . chr( 36 ) . 'post_type' ),
+	'products are rendered by the WooCommerce list table only'
+);
+
+check(
+	'cell printer is private and stateless',
+	(bool) preg_match( '/private function print_column\\( int \\$post_id \\): void/', $fields_php )
+);
+
 echo "\n", str_repeat( '=', 60 ), "\n";
 printf( "RESULT: %d passed, %d failed\n", $passed, $failed );
 

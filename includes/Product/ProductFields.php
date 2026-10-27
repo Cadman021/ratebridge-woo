@@ -56,15 +56,26 @@ final class ProductFields {
 		/*
 		 * Products list column.
 		 *
-		 * WooCommerce 8+ (including HPOS) uses `manage_product_posts_columns`
-		 * through its own list table; the classic post-type hook is kept as a
-		 * fallback for older/edge setups. Registering both is harmless: the
-		 * callback is idempotent and only adds a missing key.
+		 * WooCommerce 8+ uses `manage_product_posts_columns` and renders cells
+		 * through its own list table, which dispatches
+		 * `manage_product_posts_custom_column` to BOTH its handler and ours. When
+		 * we also registered `manage_posts_custom_column`, our cell could be
+		 * rendered twice (or, with a per-post "already rendered" guard, not at
+		 * all while WooCommerce's `price` handler still consumed the row) — which
+		 * shifted the price and currency cells into each other.
+		 *
+		 * The rule: add the column on the *same* filter WooCommerce uses, and
+		 * render through exactly ONE action, with no per-post static state.
 		 */
 		add_filter( 'manage_product_posts_columns', array( $this, 'add_column' ), 20 );
 		add_filter( 'manage_edit-product_columns', array( $this, 'add_column' ), 20 );
-		add_action( 'manage_product_posts_custom_column', array( $this, 'render_column' ), 10, 2 );
-		add_action( 'manage_posts_custom_column', array( $this, 'render_column' ), 10, 2 );
+
+		// Modern WooCommerce list table (priority 11 so it runs after WC's own
+		// handler prepared the row data; the callback only echoes our column).
+		add_action( 'manage_product_posts_custom_column', array( $this, 'render_column' ), 11, 2 );
+
+		// Classic fallback for post types that still use the generic hook.
+		add_action( 'manage_posts_custom_column', array( $this, 'render_column_classic' ), 11, 2 );
 
 		// Bulk action: recalculate the selected products right now.
 		add_filter( 'bulk_actions-edit-product', array( $this, 'add_bulk_action' ) );
@@ -1177,17 +1188,45 @@ final class ProductFields {
 			return;
 		}
 
-		$post_id = (int) $post_id;
+		$this->print_column( (int) $post_id );
+	}
 
-		// Two hooks are registered (modern + classic); render each row once.
-		static $rendered = array();
-
-		if ( isset( $rendered[ $post_id ] ) ) {
+	/**
+	 * Classic fallback: the generic `manage_posts_custom_column` action.
+	 *
+	 * `manage_product_posts_columns` already rendered the cell for products, so
+	 * this only acts on the legacy hook for a non-product post type.
+	 *
+	 * @param string $column  Column key.
+	 * @param int    $post_id Post id.
+	 * @return void
+	 */
+	public function render_column_classic( $column, $post_id ): void {
+		if ( 'rbw_currency' !== $column ) {
 			return;
 		}
 
-		$rendered[ $post_id ] = true;
+		$post_type = get_post_type( (int) $post_id );
 
+		if ( 'product' === $post_type ) {
+			// Handled by render_column() through the WooCommerce list table.
+			return;
+		}
+
+		$this->print_column( (int) $post_id );
+	}
+
+	/**
+	 * Print the «ارز» cell for one post.
+	 *
+	 * Stateless on purpose: WordPress and WooCommerce may call a column renderer
+	 * more than once per row, and any "already rendered" cache either duplicates
+	 * or swallows the cell (which shifted the neighbouring price column).
+	 *
+	 * @param int $post_id Product id.
+	 * @return void
+	 */
+	private function print_column( int $post_id ): void {
 		echo '<div class="rbw-col-currency">';
 
 		if ( ! ProductData::is_enabled( $post_id ) ) {
