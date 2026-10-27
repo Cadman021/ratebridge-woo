@@ -147,6 +147,37 @@ final class Currency {
 	}
 
 	/**
+	 * Human-readable `last_error`, with the internal sentinels translated.
+	 *
+	 * `last_error` stores a stable machine value for states that are not real
+	 * provider failures (see CurrencyRepository::PENDING_MESSAGE) so the text can
+	 * be localised and changed without a DB migration.
+	 *
+	 * @return string Empty string when there is no error.
+	 */
+	public function error_message(): string {
+		if ( null === $this->last_error || '' === $this->last_error ) {
+			return '';
+		}
+
+		if ( \RateBridge\Currency\CurrencyRepository::PENDING_MESSAGE === $this->last_error ) {
+			return __( 'Waiting for the first update from the new source.', 'ratebridge-woo' );
+		}
+
+		return $this->last_error;
+	}
+
+	/**
+	 * Whether the currency is waiting for its first rate from a new source.
+	 *
+	 * @return bool
+	 */
+	public function is_pending_first_update(): bool {
+		return \RateBridge\Currency\CurrencyRepository::PENDING_MESSAGE === (string) $this->last_error
+			&& ! $this->has_rate();
+	}
+
+	/**
 	 * Whether the currency has a usable (non-zero) rate.
 	 *
 	 * @return bool

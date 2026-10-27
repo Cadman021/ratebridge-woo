@@ -164,6 +164,21 @@ final class Frontend {
 	}
 
 	/**
+	 * Display symbol, falling back to the currency code.
+	 *
+	 * An empty symbol must never produce an empty table cell or a blank
+	 * `%symbol%` in a template: the code (e.g. USD) is the sensible stand-in.
+	 *
+	 * @param Currency $currency Currency.
+	 * @return string
+	 */
+	public static function symbol_or_code( Currency $currency ): string {
+		$symbol = trim( $currency->symbol );
+
+		return '' !== $symbol ? $symbol : $currency->code;
+	}
+
+	/**
 	 * Timestamp of a currency's last successful update.
 	 *
 	 * @param Currency $currency Currency.
@@ -212,7 +227,7 @@ final class Frontend {
 		}
 
 		if ( str_contains( $template, '%symbol%' ) ) {
-			$values['symbol'] = $currency->symbol;
+			$values['symbol'] = self::symbol_or_code( $currency );
 		}
 
 		if ( str_contains( $template, '%rate%' ) ) {
@@ -363,29 +378,64 @@ final class Frontend {
 	}
 
 	/**
+	 * Register (not enqueue) the frontend stylesheets.
+	 *
+	 * Registering is what makes `get_style_depends()` work for the Elementor
+	 * widgets: Elementor enqueues the handles itself, both on the front end and
+	 * in the editor preview.
+	 *
+	 * @return void
+	 */
+	public static function register_styles(): void {
+		if ( ! wp_style_is( self::STYLE, 'registered' ) ) {
+			wp_register_style(
+				self::STYLE,
+				RBW_PLUGIN_URL . 'assets/frontend/css/frontend.css',
+				array(),
+				RBW_VERSION
+			);
+		}
+
+		$rtl = self::STYLE . '-rtl';
+
+		if ( ! wp_style_is( $rtl, 'registered' ) ) {
+			wp_register_style(
+				$rtl,
+				RBW_PLUGIN_URL . 'assets/frontend/css/frontend-rtl.css',
+				array( self::STYLE ),
+				RBW_VERSION
+			);
+		}
+	}
+
+	/**
+	 * Every enabled currency, including those still waiting for a rate.
+	 *
+	 * Used by the admin-side widget controls so an editor can pick a currency
+	 * that has no rate yet; the render path filters those out.
+	 *
+	 * @return Currency[]
+	 */
+	public static function resolve_currencies_all(): array {
+		return ( new CurrencyRepository() )->get_enabled();
+	}
+
+	/**
 	 * Enqueue the frontend stylesheet (only from a rendering callback).
 	 *
 	 * @return void
 	 */
 	public static function enqueue_styles(): void {
+		self::register_styles();
+
 		if ( wp_style_is( self::STYLE, 'enqueued' ) ) {
 			return;
 		}
 
-		wp_enqueue_style(
-			self::STYLE,
-			RBW_PLUGIN_URL . 'assets/frontend/css/frontend.css',
-			array(),
-			RBW_VERSION
-		);
+		wp_enqueue_style( self::STYLE );
 
 		if ( is_rtl() ) {
-			wp_enqueue_style(
-				self::STYLE . '-rtl',
-				RBW_PLUGIN_URL . 'assets/frontend/css/frontend-rtl.css',
-				array( self::STYLE ),
-				RBW_VERSION
-			);
+			wp_enqueue_style( self::STYLE . '-rtl' );
 		}
 	}
 
@@ -483,7 +533,95 @@ final class Frontend {
 	}
 
 	/**
-	 * The currency that prices a product (variation override aware).
+	 * Wrap a rendered fragment with an optional pre/post label and an icon.
+	 *
+	 * Shared by the Elementor widgets so the label/icon markup is identical for
+	 * every widget type.
+	 *
+	 * @param string $inner    Already-escaped inner HTML.
+	 * @param string $before   Plain-text label before the value.
+	 * @param string $after    Plain-text label after the value.
+	 * @param string $icon     Already-escaped icon markup ('' = none).
+	 * @param string $base     Base CSS class.
+	 * @param string $align    ''|left|center|right → adds `is-align-<x>`.
+	 * @return string
+	 */
+	public static function wrap( string $inner, string $before = '', string $after = '', string $icon = '', string $base = 'rbw-widget', string $align = '' ): string {
+		if ( '' === $inner ) {
+			return '';
+		}
+
+		$classes = $base;
+		$align   = strtolower( trim( $align ) );
+
+		if ( in_array( $align, array( 'left', 'center', 'right' ), true ) ) {
+			$classes .= ' is-align-' . $align;
+		}
+
+		$html = sprintf( '<span class="%s">', esc_attr( $classes ) );
+
+		if ( '' !== $icon ) {
+			$html .= sprintf( '<span class="rbw-widget-icon" aria-hidden="true">%s</span>', $icon );
+		}
+
+		if ( '' !== trim( $before ) ) {
+			$html .= sprintf( '<span class="rbw-widget-before">%s</span>', esc_html( $before ) );
+		}
+
+		$html .= sprintf( '<span class="rbw-widget-value">%s</span>', $inner );
+
+		if ( '' !== trim( $after ) ) {
+			$html .= sprintf( '<span class="rbw-widget-after">%s</span>', esc_html( $after ) );
+		}
+
+		return $html . '</span>';
+	}
+
+	/**
+	 * Timestamp of the most recent successful rate update among enabled currencies.
+	 *
+	 * Powers the "site rates update date" widget.
+	 *
+	 * @return int 0 when no enabled currency has a rate yet.
+	 */
+	public static function latest_rate_timestamp(): int {
+		$latest = 0;
+
+		foreach ( ( new CurrencyRepository() )->get_enabled() as $currency ) {
+			if ( ! $currency->has_rate() ) {
+				continue;
+			}
+
+			$timestamp = self::currency_timestamp( $currency );
+
+			if ( $timestamp > $latest ) {
+				$latest = $timestamp;
+			}
+		}
+
+		return $latest;
+	}
+
+	/**
+	 * Last price-calculation timestamp of a product (variation aware).
+	 *
+	 * @param WC_Product $product Product.
+	 * @return int 0 when the product was never calculated.
+	 */
+	public static function product_calc_timestamp( WC_Product $product ): int {
+		$product_id = (int) $product->get_id();
+		$timestamp  = (int) ProductData::to_decimal( get_post_meta( $product_id, ProductData::META_LAST_CALC, true ) );
+
+		if ( $timestamp <= 0 && $product->is_type( 'variation' ) ) {
+			$parent_id = (int) $product->get_parent_id();
+			$timestamp = (int) ProductData::to_decimal( get_post_meta( $parent_id, ProductData::META_LAST_CALC, true ) );
+		}
+
+		return max( 0, $timestamp );
+	}
+
+	/**
+	 * Currency that prices a product (variation override aware).
 	 *
 	 * @param WC_Product $product Product.
 	 * @return Currency|null Null when the product is not managed.

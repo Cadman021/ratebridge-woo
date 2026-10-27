@@ -1204,3 +1204,235 @@ msgstr "خریداری شده با %1$s با نرخ %2$s %3$s (قیمت پایه
 
 msgid "rate updated: %s"
 msgstr "نرخ به‌روزشده: %s"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 5 — Elementor widgets + pending rate state
+# ─────────────────────────────────────────────────────────────────────────────
+
+msgid "Waiting for the first update from the new source."
+msgstr "در انتظار اولین بروزرسانی از منبع قیمت جدید."
+
+msgid "RateBridge"
+msgstr "نرخ ساز"
+
+msgid "Accent colour (values)"
+msgstr "رنگ تأکید (مقادیر)"
+
+msgid "Alignment"
+msgstr "چینش"
+
+msgid "Also show the currency of the newest rate"
+msgstr "نمایش ارز جدیدترین نرخ هم"
+
+msgid "Appends the relative update time when the template does not use %updated%."
+msgstr "زمان نسبی بروزرسانی را اضافه می‌کند، اگر قالب از %updated% استفاده نکرده باشد."
+
+msgid "Background"
+msgstr "پس‌زمینه"
+
+msgid "Border"
+msgstr "حاشیه"
+
+msgid "Box shadow"
+msgstr "سایه جعبه"
+
+msgid "Cell padding"
+msgstr "فاصله درونی خانه‌ها"
+
+msgid "Center"
+msgstr "وسط"
+
+msgid "Left"
+msgstr "چپ"
+
+msgid "Right"
+msgstr "راست"
+
+msgid "Choose a currency that is enabled and has a rate."
+msgstr "ارزی را انتخاب کنید که فعال است و نرخ دارد."
+
+msgid "Choose a product, or place this widget on a product page or inside a product loop."
+msgstr "یک محصول انتخاب کنید، یا این ویجت را در صفحه محصول یا داخل حلقه محصولات قرار دهید."
+
+msgid "Columns"
+msgstr "ستون‌ها"
+
+msgid "Content"
+msgstr "محتوا"
+
+msgid "Currency code"
+msgstr "کد ارز"
+
+msgid "Currency name"
+msgstr "نام ارز"
+
+msgid "Currency rate"
+msgstr "قیمت ارز"
+
+msgid "Currency table"
+msgstr "جدول ارزها"
+
+msgid "Date"
+msgstr "تاریخ"
+
+msgid "Duration (seconds)"
+msgstr "مدت زمان (ثانیه)"
+
+msgid "Format"
+msgstr "قالب نمایش"
+
+msgid "Header background"
+msgstr "پس‌زمینه سرستون"
+
+msgid "Header text colour"
+msgstr "رنگ متن سرستون"
+
+msgid "How long one full pass takes."
+msgstr "مدت یک دور کامل حرکت."
+
+msgid "Icon"
+msgstr "آیکون"
+
+msgid "Item gap"
+msgstr "فاصله بین آیتم‌ها"
+
+msgid "Item template"
+msgstr "قالب آیتم"
+
+msgid "Label: %s"
+msgstr "برچسب: %s"
+
+msgid "Leave empty to show every enabled currency."
+msgstr "برای نمایش همه ارزهای فعال، خالی بگذارید."
+
+msgid "Leave empty to use the product of the current page (or the current item in a loop template)."
+msgstr "برای استفاده از محصول همین صفحه (یا آیتم جاری در قالب حلقه) خالی بگذارید."
+
+msgid "Letters: Y m d j H i s — for example Y-m-d H:i"
+msgstr "حروف: Y m d j H i s — مثلاً Y-m-d H:i"
+
+msgid "Name and code"
+msgstr "نام و کد"
+
+msgid "No"
+msgstr "خیر"
+
+msgid "Yes"
+msgstr "بله"
+
+msgid "No enabled currency has a rate yet, so there is no update date to show."
+msgstr "هنوز هیچ ارز فعالی نرخ ندارد، بنابراین تاریخ بروزرسانی‌ای برای نمایش نیست."
+
+msgid "No enabled currency with a rate is available yet. Enable a currency and give it a rate in the plugin settings."
+msgstr "هنوز هیچ ارز فعالی با نرخ موجود نیست. در تنظیمات افزونه یک ارز را فعال کنید و به آن نرخ بدهید."
+
+msgid "Odd row background"
+msgstr "پس‌زمینه ردیف‌های فرد"
+
+msgid "Padding"
+msgstr "فاصله درونی"
+
+msgid "Pause on hover"
+msgstr "توقف با نگه‌داشتن ماوس"
+
+msgid "Placeholders: %s"
+msgstr "جای‌نگهدارها: %s"
+
+msgid "Prefix"
+msgstr "پیشوند"
+
+msgid "Suffix"
+msgstr "پسوند"
+
+msgid "Product"
+msgstr "محصول"
+
+msgid "Product currency"
+msgstr "ارز محصول"
+
+msgid "Product price at current rate"
+msgstr "قیمت محصول با نرخ روز"
+
+msgid "Product price update date"
+msgstr "تاریخ آخرین بروزرسانی قیمت محصول"
+
+msgid "Rates ticker"
+msgstr "نوار متحرک نرخ‌ها"
+
+msgid "Relative time"
+msgstr "زمان نسبی"
+
+msgid "Row background"
+msgstr "پس‌زمینه ردیف‌ها"
+
+msgid "Row line colour"
+msgstr "رنگ خط ردیف‌ها"
+
+msgid "Row text colour"
+msgstr "رنگ متن ردیف‌ها"
+
+msgid "Separator colour"
+msgstr "رنگ جداکننده"
+
+msgid "Show the current rate too"
+msgstr "نمایش نرخ روز هم"
+
+msgid "Show update time"
+msgstr "نمایش زمان بروزرسانی"
+
+msgid "Site rates update date"
+msgstr "تاریخ آخرین بروزرسانی نرخ‌های سایت"
+
+msgid "Strip background"
+msgstr "پس‌زمینه نوار"
+
+msgid "Table"
+msgstr "جدول"
+
+msgid "Table typography"
+msgstr "تایپوگرافی جدول"
+
+msgid "Text after"
+msgstr "متن بعد"
+
+msgid "Text before"
+msgstr "متن قبل"
+
+msgid "Text colour"
+msgstr "رنگ متن"
+
+msgid "The Elementor widgets need Elementor %1$s or newer. The installed version is %2$s, so the widgets are not available. Shortcodes keep working."
+msgstr "ویجت‌های المنتور به المنتور %1$s یا جدیدتر نیاز دارند. نسخه نصب‌شده %2$s است، بنابراین ویجت‌ها در دسترس نیستند. شورت‌کدها همچنان کار می‌کنند."
+
+msgid "The order of this list is the order of the columns."
+msgstr "ترتیب این فهرست، ترتیب ستون‌هاست."
+
+msgid "The price of this product has not been calculated yet."
+msgstr "قیمت این محصول هنوز محاسبه نشده است."
+
+msgid "The template is empty."
+msgstr "قالب خالی است."
+
+msgid "The ticker has nothing to show: enable a currency and give it a rate first."
+msgstr "نوار متحرک چیزی برای نمایش ندارد: ابتدا یک ارز را فعال کنید و به آن نرخ بدهید."
+
+msgid "This product is not priced by a currency, or its currency has no rate yet."
+msgstr "این محصول با ارز قیمت‌گذاری نشده، یا ارز آن هنوز نرخ ندارد."
+
+msgid "This widget only shows a value on a product page or inside a product loop."
+msgstr "این ویجت فقط در صفحه محصول یا داخل حلقه محصولات مقدار نشان می‌دهد."
+
+msgid "Ticker"
+msgstr "نوار متحرک"
+
+msgid "Title"
+msgstr "عنوان"
+
+msgid "Typography"
+msgstr "تایپوگرافی"
+
+msgid "Visible columns"
+msgstr "ستون‌های نمایش‌داده‌شده"
+
+msgid "Widget style"
+msgstr "استایل ویجت"

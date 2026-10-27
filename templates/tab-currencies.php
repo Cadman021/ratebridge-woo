@@ -100,8 +100,8 @@ foreach ( $rbw_providers as $rbw_provider_key => $rbw_provider_label ) {
 						<?php if ( $rbw_currency->symbol ) : ?>
 							<span class="rbw-muted">(<?php echo esc_html( $rbw_currency->symbol ); ?>)</span>
 						<?php endif; ?>
-						<?php if ( $rbw_currency->last_error ) : ?>
-							<div class="rbw-error-text"><?php echo esc_html( $rbw_currency->last_error ); ?></div>
+						<?php if ( '' !== $rbw_currency->error_message() ) : ?>
+							<div class="rbw-error-text"><?php echo esc_html( $rbw_currency->error_message() ); ?></div>
 						<?php endif; ?>
 					</td>
 					<td><code><?php echo esc_html( $rbw_currency->code ); ?></code></td>

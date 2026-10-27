@@ -117,14 +117,30 @@ final class ProductNotice {
 			return '';
 		}
 
+		// An empty stored template means "use the default" (see Settings).
+		return $this->html_for( $product, Settings::product_block_template() );
+	}
+
+	/**
+	 * Notice markup for an explicit product and template.
+	 *
+	 * Shared by the product-page block and the Elementor "product price" widget,
+	 * so both use the same template engine, escaping and cache key shape.
+	 *
+	 * @param WC_Product $product  Product.
+	 * @param string     $template Template ('' = default).
+	 * @param string     $class    Extra CSS class on the wrapper.
+	 * @return string Empty when the product is not showable.
+	 */
+	public function html_for( WC_Product $product, string $template = '', string $class = '' ): string {
 		$currency = $this->resolve_currency( $product );
 
 		if ( ! $currency instanceof Currency || ! $currency->has_rate() ) {
 			return '';
 		}
 
-		// An empty stored template means "use the default" (see Settings).
-		$template = Settings::product_block_template();
+		$template = '' === trim( $template ) ? self::DEFAULT_TEMPLATE : $template;
+
 		$cache_key = wp_json_encode(
 			array(
 				'product-block',
@@ -133,6 +149,7 @@ final class ProductNotice {
 				$currency->rate,
 				$currency->last_updated,
 				$template,
+				$class,
 				Frontend::use_persian_digits(),
 				Settings::store_unit(),
 			)
@@ -140,7 +157,7 @@ final class ProductNotice {
 
 		return Frontend::cached(
 			(string) $cache_key,
-			function () use ( $currency, $template ): string {
+			function () use ( $currency, $template, $class ): string {
 				$inner = ( new Frontend() )->render( $currency, $template );
 
 				if ( '' === $inner ) {
@@ -148,8 +165,9 @@ final class ProductNotice {
 				}
 
 				return sprintf(
-					'<div class="rbw-product-notice" role="status">%s</div>',
-					$inner
+					'<div class="rbw-product-notice%2$s" role="status">%1$s</div>',
+					$inner,
+					'' !== $class ? ' ' . esc_attr( $class ) : ''
 				);
 			}
 		);

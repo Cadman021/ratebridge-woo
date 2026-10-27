@@ -18,6 +18,62 @@ defined( 'ABSPATH' ) || exit;
 final class CurrencyRepository {
 
 	/**
+	 * Neutral `last_error` text used while a currency waits for its first rate.
+	 */
+	public const PENDING_MESSAGE = 'pending_first_update';
+
+	/**
+	 * Whether the source (provider or provider symbol) of a row really changes.
+	 *
+	 * @param int                  $id    Currency id.
+	 * @param array<string, mixed> $clean Sanitised fields about to be written.
+	 * @return bool
+	 */
+	private function reset_rate_if_source_changed( int $id, array $clean ): bool {
+		$has_provider = array_key_exists( 'provider', $clean );
+		$has_symbol   = array_key_exists( 'provider_symbol', $clean );
+
+		if ( ! $has_provider && ! $has_symbol ) {
+			return false;
+		}
+
+		$current = $this->get( $id );
+
+		if ( null === $current ) {
+			return false;
+		}
+
+		$provider_changed = $has_provider && (string) $clean['provider'] !== $current->provider;
+
+		$symbol_changed = $has_symbol
+			&& (string) $clean['provider_symbol'] !== $current->provider_symbol
+			// A symbol only matters for providers that actually fetch.
+			&& 'manual' !== (string) ( $clean['provider'] ?? $current->provider );
+
+		return $provider_changed || $symbol_changed;
+	}
+
+	/**
+	 * Normalise a raw rate value (0 = invalid/absent).
+	 *
+	 * @param mixed $value Raw rate.
+	 * @return float
+	 */
+	private function sanitize_rate( mixed $value ): float {
+		if ( is_string( $value ) ) {
+			$value = str_replace( array( ',', ' ' ), '', trim( $value ) );
+		}
+
+		if ( ! is_numeric( $value ) ) {
+			return 0.0;
+		}
+
+		$value = (float) $value;
+
+		return is_finite( $value ) && $value > 0 ? $value : 0.0;
+	}
+
+	/**
 	 * Table name (with prefix).
 	 *
 	 * @return string
@@ -175,6 +231,30 @@ final class CurrencyRepository {
 			return false;
 		}
 
+		/*
+		 * Switching the source (or the symbol inside a source) invalidates the
+		 * stored rate: it belongs to the old provider. Keeping it would show a
+		 * Mock value under an AlanChand label (e.g. seeded GOLD18 4.5M vs the
+		 * real 26M). The row is reset to a "pending first update" state instead.
+		 */
+		$pending = $this->reset_rate_if_source_changed( $id, $clean );
+
+		if ( $pending ) {
+			$clean['rate']         = 0.0;
+			$clean['last_updated'] = null;
+
+			// A manual provider may supply the rate in the same request.
+			$supplied = array_key_exists( 'rate', $data ) ? $this->sanitize_rate( $data['rate'] ) : 0.0;
+
+			if ( 'manual' === ( $clean['provider'] ?? '' ) && $supplied > 0 ) {
+				$clean['rate']         = $supplied;
+				$clean['last_updated'] = current_time( 'mysql', true );
+				$pending               = false;
+			} else {
+				$clean['last_error'] = self::PENDING_MESSAGE;
+			}
+		}
+
 		$clean['updated_at'] = current_time( 'mysql', true );
 
 		$formats = array(
@@ -208,6 +288,19 @@ final class CurrencyRepository {
 		if ( false !== $result ) {
 			/** This action is documented in includes/Currency/CurrencyRepository.php */
 			do_action( 'rbw_currency_changed', (string) ( $clean['code'] ?? '' ), 'updated' );
+
+			if ( $pending ) {
+				/**
+				 * A currency lost its rate because its source changed.
+				 *
+				 * Listeners (RateUpdater / Cron) use this to attempt one
+				 * immediate, budget-respecting fetch.
+				 *
+				 * @param int    $id       Currency id.
+				 * @param string $code     Currency code.
+				 */
+				do_action( 'rbw_currency_rate_pending', (int) $id, (string) ( $clean['code'] ?? '' ) );
+			}
 		}
 
 		return false !== $result;

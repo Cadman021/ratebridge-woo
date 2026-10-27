@@ -94,7 +94,41 @@ final class Plugin {
 		$job = new RepriceJob();
 		$job->register();
 
+		/*
+		 * A currency that lost its rate because its source changed gets ONE
+		 * immediate, budget-respecting fetch attempt.
+		 */
+		add_action(
+			'rbw_currency_rate_pending',
+			static function ( $currency_id ) {
+				( new \RateBridge\Pricing\RateUpdater() )->on_rate_pending( $currency_id );
+			},
+			10,
+			1
+		);
+
 		add_action( 'rbw_rate_updated', array( $this, 'on_rate_updated' ), 10, 3 );
+
+		/*
+		 * Elementor widgets.
+		 *
+		 * `elementor/loaded` fires on `plugins_loaded` priority 0, so by the time
+		 * this runs Elementor is either present (hook already fired → register now)
+		 * or absent. Registering through the integration class keeps every
+		 * Elementor class reference out of this file, so nothing fatals when the
+		 * plugin is deactivated.
+		 */
+		if ( did_action( 'elementor/loaded' ) ) {
+			( new \RateBridge\Elementor\ElementorIntegration() )->register();
+		} else {
+			add_action(
+				'elementor/loaded',
+				static function () {
+					( new \RateBridge\Elementor\ElementorIntegration() )->register();
+				},
+				20
+			);
+		}
 
 		$fields = new ProductFields();
 		$fields->register();

@@ -9,17 +9,18 @@ the plugin recalculate the store-currency price (Iranian Toman or Rial) from liv
 - **Namespace / prefix:** `RateBridge\` / `rbw_`
 - **Requirements:** PHP 8.1+, WordPress 6.4+, WooCommerce 8+ (HPOS compatible)
 
-> **Status – Phase 4.** Currency management, real price sources (Navasan + AlanChand),
+> **Status – Phase 5.** Currency management, real price sources (Navasan + AlanChand),
 > per-provider settings, request-quota protection, **product pricing by currency**
 > (simple + variable products, classic editor), **automatic repricing when a rate
 > changes**, store-unit migration, **order rate records on every line item**,
 > **shortcodes** (single rate, currencies table, ticker, product info), an optional
-> **product page info block** and full Persian UI.
+> **product page info block**, **7 Elementor widgets** in a dedicated category, and full
+> Persian UI.
 >
-> Still out of scope: Elementor widgets/dynamic tags, the formula builder, import/export,
-> bulk/quick edit integration, new providers, Gutenberg blocks, modifying WooCommerce's
-> price HTML, Persian digits inside WooCommerce's own price output, and emails other than
-> the optional order item rate line.
+> Still out of scope: Elementor dynamic tags and Pro features, the formula builder,
+> import/export, bulk/quick edit integration, new providers, Gutenberg blocks, modifying
+> WooCommerce's price HTML, Persian digits inside WooCommerce's own price output, and
+> emails other than the optional order item rate line.
 
 ---
 
@@ -38,6 +39,7 @@ ratebridge-woo/
 │   ├── parse-fixtures.php      CLI parser test against docs/api-samples/ (no WordPress)
 │   ├── price-calculator.php    CLI test for the calculation engine (no WordPress)
 │   ├── rate-formatter.php      CLI test for the frontend formatter (no WordPress)
+│   ├── elementor-contracts.php Static contract test for the Elementor widgets
 │   ├── ajax-actions.php        JS request() slugs vs registered wp_ajax hooks
 │   └── scrub-secrets.php       Credentials never leak into messages
 ├── docs/
@@ -83,6 +85,10 @@ ratebridge-woo/
 │   │   ├── Frontend.php        Shared renderer: templates, tables, caching, product currency
 │   │   ├── Shortcodes.php      [rbw_rate] [rbw_rates] [rbw_ticker] [rbw_product_*]
 │   │   └── ProductNotice.php   Optional currency info block on product pages
+│   ├── Elementor/
+│   │   ├── ElementorIntegration.php  Bootstrap, «نرخ ساز» category, version guard
+│   │   ├── CacheInvalidator.php      Flushes Elementor's document cache on rate changes
+│   │   └── Widgets/                  7 widgets + AbstractWidget (shared controls/helpers)
 │   ├── Cron/
 │   │   └── Scheduler.php       `rbw_every_five_minutes` schedule + `rbw_update_rates` event
 │   └── Admin/
@@ -377,9 +383,10 @@ Pure parsers live in `includes/Providers/Parsing/` with **no WordPress dependenc
 be tested from the CLI against the real fixtures:
 
 ```bash
-php tests/parse-fixtures.php    # parsing + cross-source consistency (79 assertions)
+php tests/parse-fixtures.php    # parsing + cross-source consistency (82 assertions)
 php tests/price-calculator.php  # calculation engine, no WordPress (63 assertions)
 php tests/rate-formatter.php    # frontend formatter + templates, no WordPress (85)
+php tests/elementor-contracts.php # widget structure/delegation rules, no WordPress (107)
 php tests/ajax-actions.php      # JS request() slugs vs registered wp_ajax hooks (105)
 php tests/scrub-secrets.php     # credentials never leak into messages (11)
 ```
@@ -740,6 +747,8 @@ currencies the block renders nothing — a single rate would be misleading.
 | Hook | Type | Purpose |
 | --- | --- | --- |
 | `rbw_currency_changed` | action | `( string $code, string $what )` – `created`/`updated`/`deleted`; flushes the fragment cache |
+| `rbw_currency_rate_pending` | action | `( int $id, string $code )` – the source changed and the rate was reset; triggers one budget-respecting fetch |
+| `rbw_elementor_cache_flushed` | action | `( int $deleted )` – Elementor's document cache was invalidated |
 | `rbw_use_persian_digits` | filter | `( bool $enabled )` – force Persian digits on/off in code |
 
 ### Frontend styles
@@ -751,6 +760,143 @@ resets: it inherits the theme's typography and exposes CSS variables —
 never reorder inside an RTL page.
 
 ---
+## Elementor (Phase 5)
+
+Elementor widgets that render through the **same** code as the shortcodes. Nothing is
+re-implemented: each widget is a thin control layer over `Frontend`, `Shortcodes`,
+`ProductNotice` and `RateFormatter`.
+
+### Requirements
+
+- **Elementor ≥ 3.5** (the `elementor/widgets/register` API). Checked with
+  `ElementorIntegration::is_supported()`.
+- When Elementor is **inactive** the plugin registers nothing and references no Elementor class.
+- When Elementor is **too old**, the widgets are not registered and a dismissible notice is shown
+  on the plugin page only. Shortcodes keep working.
+- PHP 8.1+, WooCommerce 8+; no Elementor Pro feature is used.
+
+### Category
+
+A dedicated panel category «نرخ ساز» (slug `ratebridge-woo`) with Elementor's own icon font.
+Registered through `elementor/elements/categories_registered`.
+
+### Widgets
+
+| Widget | `get_name()` | Purpose | Main controls |
+| --- | --- | --- | --- |
+| جدول ارزها | `rbw_rates_table` | Currencies table | title, currencies (multi, empty = all), visible columns + order, custom label per column |
+| نوار متحرک نرخ‌ها | `rbw_ticker` | CSS-only scrolling ticker | currencies, item template, duration slider (5–120 s), pause on hover |
+| قیمت ارز | `rbw_currency_rate` | One currency's rate | currency, template (`%name%: %rate% %unit%`), show update time, icon, text before/after |
+| ارز محصول | `rbw_product_currency` | The product's currency | format (name / code / name+code / symbol), prefix, suffix, show current rate, icon |
+| قیمت محصول با نرخ روز | `rbw_product_price` | Currency info block of a product | product selector, template, icon |
+| تاریخ آخرین بروزرسانی قیمت محصول | `rbw_product_updated` | Last calculation time | product selector, relative/date format, text before/after, icon |
+| تاریخ آخرین بروزرسانی نرخ‌های سایت | `rbw_site_updated` | Newest rate update across enabled currencies | relative/date format, show the currency code, text before/after, icon |
+
+Every widget also has a **Style** tab: alignment (responsive), typography, text colour, accent
+colour (writes `--rbw-accent`), border, padding, background, box shadow. Extra per widget:
+
+- **جدول ارزها** — header text/background, row text/background, odd-row background, row line
+  colour, cell padding (responsive), table typography.
+- **نوار متحرک** — item gap (responsive), separator colour, strip background.
+
+All selectors target the existing `.rbw-*` classes, so the shortcode output and the widget output
+share one stylesheet. RTL works because the base CSS is written with logical properties
+(`border-inline-start`, `text-align: start`) and `frontend-rtl.css` only adds direction fixes.
+
+### How widgets share rendering with the shortcodes
+
+| Widget | Calls |
+| --- | --- |
+| جدول ارزها | `Shortcodes::render_table( $currencies, $columns, $title, 'rbw-elementor-table' )` |
+| نوار متحرک | `Shortcodes::render_ticker( $currencies, $template, $speed, $pause, 'rbw-elementor-ticker' )` |
+| قیمت ارز | `Shortcodes::render_rate_item( $currency, $template )` + `Frontend::wrap()` |
+| ارز محصول | `Frontend::product_currency()` + `Frontend::wrap()` |
+| قیمت محصول | `ProductNotice::html_for( $product, $template )` |
+| تاریخ محصول | `Frontend::product_calc_timestamp()` + `Frontend::format_date()` / `Frontend::time_ago()` |
+| تاریخ سایت | `Frontend::latest_rate_timestamp()` + the same formatters |
+
+`render_table()`, `render_ticker()` and `render_rate_item()` are **public** so both callers share
+one implementation; the shortcode callbacks still produce byte-identical markup (their tests stay
+green). `tests/elementor-contracts.php` asserts that no widget formats numbers itself.
+
+### Empty states
+
+- **Visitors**: a widget with nothing to show (no enabled currency with a rate, non-managed
+  product, no calculation yet) renders an **empty string** — exactly like the shortcodes. A
+  currency with `rate = 0` is never displayed anywhere.
+- **Editors**: inside the Elementor edit mode (`Plugin::$instance->editor->is_edit_mode()`) the
+  same situation shows a Persian dashed placeholder explaining what to fix.
+
+### Caching (and why rates stay fresh)
+
+Elementor caches the **rendered HTML of a whole document** (`_elementor_element_cache`, the
+"Element Caching" feature) and there is no per-widget opt-out. The plugin therefore does two
+things:
+
+1. **Widgets stay dynamic.** `render()` runs on the server on every cache miss and stores no
+   markup of its own; the only cache is the plugin's 60-second fragment cache
+   (`Frontend::cached()`), which is flushed on `rbw_rate_updated`, `rbw_currency_changed` and any
+   settings save.
+2. **`Elementor\CacheInvalidator`** deletes Elementor's document cache whenever a rate or a
+   currency changes (`rbw_rate_updated`, `rbw_currency_changed`), and calls Elementor's own
+   `files_manager->clear_cache()` when that API is available. So a rate change can never be
+   hidden behind a stale Elementor document for the whole TTL.
+
+`CacheInvalidator::element_cache_active()` reports whether Elementor's element cache is on, so the
+behaviour can be verified from the admin.
+
+### Styles in the editor
+
+`get_style_depends()` returns `rbw-frontend`, and the integration calls
+`Frontend::register_styles()` while registering widgets, so Elementor enqueues the plugin CSS both
+on the front end **and** in the editor preview (registered, then enqueued by Elementor itself).
+
+### Files
+
+```
+includes/Elementor/
+├── ElementorIntegration.php   bootstrap, category, widget list, version notice
+├── CacheInvalidator.php       flushes Elementor's document cache on rate changes
+└── Widgets/
+    ├── AbstractWidget.php     shared controls, placeholders, settings access, product resolution
+    ├── RatesTable.php
+    ├── Ticker.php
+    ├── CurrencyRate.php
+    ├── ProductCurrency.php
+    ├── ProductPrice.php
+    ├── ProductUpdated.php
+    └── SiteUpdated.php
+```
+
+---
+
+## Provider/symbol changes reset the rate (Phase 5)
+
+Editing a currency's **provider** or **provider_symbol** invalidates its stored rate: the old
+number belongs to the old source. Before this fix a seeded `GOLD18` row kept the Mock value
+(4,526,811) after its provider was switched to AlanChand, so the site showed a mock number under a
+real source's label (the real 18K gold rate is ≈ 26,051,530 Toman).
+
+`CurrencyRepository::update()` now:
+
+1. sets `rate = 0` and `last_updated = NULL`,
+2. sets `last_error` to the stable sentinel `pending_first_update`
+   (`Currency::error_message()` translates it to «در انتظار اولین بروزرسانی از منبع قیمت جدید.»),
+3. **keeps the rate** when the new provider is `manual` and the form supplied a rate,
+4. fires `rbw_currency_rate_pending`, which `RateUpdater::on_rate_pending()` turns into **one**
+   immediate fetch through the normal `RequestBudget` path (a rate-limited source leaves the row
+   pending and the next cron run picks it up; manual providers are never fetched).
+
+Consequences, all verified:
+
+- a currency with `rate = 0` renders **nothing** in shortcodes, ticker, table and widgets and is
+  filtered out by `Frontend::resolve_currencies()`;
+- `Repricer` skips it with `no_rate` and leaves existing prices untouched;
+- an empty `symbol` now falls back to the currency **code** (`Frontend::symbol_or_code()`), so
+  `%symbol%` and the table cell are never blank.
+
+---
+
 ## Adding a new provider
 
 1. Create `includes/Providers/MyApiProvider.php`:

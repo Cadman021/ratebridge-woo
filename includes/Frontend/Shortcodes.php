@@ -150,6 +150,8 @@ final class Shortcodes {
 	/**
 	 * Render one currency through a template (already escaped).
 	 *
+	 * Public API shared with the Elementor widgets.
+	 *
 	 * @param Currency $currency Currency.
 	 * @param string   $template Template.
 	 * @return string
@@ -158,6 +160,55 @@ final class Shortcodes {
 		$frontend = new Frontend();
 
 		return $frontend->render( $currency, $template );
+	}
+
+	/**
+	 * Build the ticker markup from resolved currencies.
+	 *
+	 * Shared by `[rbw_ticker]` and the Elementor ticker widget — one
+	 * implementation, one CSS contract.
+	 *
+	 * @param Currency[] $currencies Currencies to show.
+	 * @param string     $template   Item template.
+	 * @param int        $speed      Duration in seconds (5–600).
+	 * @param bool       $pause      Pause on hover.
+	 * @param string     $class      Extra CSS classes.
+	 * @return string
+	 */
+	public function render_ticker( array $currencies, string $template, int $speed = 30, bool $pause = true, string $class = '' ): string {
+		if ( empty( $currencies ) ) {
+			return '';
+		}
+
+		$speed = min( 600, max( 5, $speed ) );
+		$items = array();
+
+		foreach ( $currencies as $currency ) {
+			$items[] = sprintf(
+				'<span class="rbw-ticker-item">%s</span>',
+				$this->render_rate_item( $currency, $template )
+			);
+		}
+
+		$items_html = implode( '<span class="rbw-ticker-sep" aria-hidden="true"></span>', $items );
+
+		$classes = trim(
+			'rbw-ticker' .
+			( $pause ? ' rbw-ticker-pause' : '' ) .
+			( '' !== $class ? ' ' . $this->sanitize_class( $class ) : '' )
+		);
+
+		/*
+		 * The track is duplicated so the CSS translate loop is seamless.
+		 * aria-hidden on the copy keeps screen readers from reading the rates
+		 * twice.
+		 */
+		return sprintf(
+			'<div class="%1$s" style="%2$s"><div class="rbw-ticker-track"><div class="rbw-ticker-group">%3$s</div><div class="rbw-ticker-group" aria-hidden="true">%3$s</div></div></div>',
+			esc_attr( $classes ),
+			esc_attr( sprintf( '--rbw-ticker-duration:%ds;', $speed ) ),
+			$items_html
+		);
 	}
 
 	/**
@@ -335,7 +386,7 @@ final class Shortcodes {
 				return sprintf( '<code class="rbw-code">%s</code>', esc_html( $currency->code ) );
 
 			case 'symbol':
-				return sprintf( '<span class="rbw-symbol">%s</span>', esc_html( $currency->symbol ) );
+				return sprintf( '<span class="rbw-symbol">%s</span>', esc_html( Frontend::symbol_or_code( $currency ) ) );
 
 			case 'rate':
 				return sprintf(
@@ -400,35 +451,7 @@ final class Shortcodes {
 					return Frontend::warning( __( 'No enabled currency with a rate is available for the ticker.', 'ratebridge-woo' ) );
 				}
 
-				$items = array();
-
-				foreach ( $currencies as $currency ) {
-					$items[] = sprintf(
-						'<span class="rbw-ticker-item">%s</span>',
-						( new Frontend() )->render( $currency, $template )
-					);
-				}
-
-				$items_html = implode( '<span class="rbw-ticker-sep" aria-hidden="true"></span>', $items );
-
-				$style = sprintf( '--rbw-ticker-duration:%ds;', $speed );
-				$class = trim(
-					'rbw-ticker' .
-					( $pause ? ' rbw-ticker-pause' : '' ) .
-					( '' !== (string) $atts['class'] ? ' ' . $this->sanitize_class( (string) $atts['class'] ) : '' )
-				);
-
-				/*
-				 * The track is duplicated so the CSS translate loop is seamless.
-				 * aria-hidden on the copy keeps screen readers from reading the
-				 * rates twice.
-				 */
-				return sprintf(
-					'<div class="%1$s" style="%2$s"><div class="rbw-ticker-track"><div class="rbw-ticker-group">%3$s</div><div class="rbw-ticker-group" aria-hidden="true">%3$s</div></div></div>',
-					esc_attr( $class ),
-					esc_attr( $style ),
-					$items_html
-				);
+				return $this->render_ticker( $currencies, $template, $speed, $pause, (string) $atts['class'] );
 			}
 		);
 	}

@@ -295,6 +295,41 @@ final class RateUpdater {
 	}
 
 	/**
+	 * Attempt one immediate update after a currency lost its rate.
+	 *
+	 * Fired by the repository (`rbw_currency_rate_pending`) when the provider or
+	 * provider symbol changed. It goes through the normal update path, so
+	 * `RequestBudget` still applies: if the source is rate-limited the currency
+	 * stays in the «waiting for the first update» state and the next cron run
+	 * picks it up. Nothing is fetched for manual currencies.
+	 *
+	 * @param int    $currency_id Currency id.
+	 * @param string $code        Currency code (unused, kept for the action).
+	 * @return void
+	 */
+	public function on_rate_pending( $currency_id, $code = '' ): void {
+		unset( $code );
+
+		$currency = $this->repository->get( (int) $currency_id );
+
+		if ( null === $currency ) {
+			return;
+		}
+
+		// Manual rates are typed by the admin; nothing to fetch.
+		if ( 'manual' === $currency->provider ) {
+			return;
+		}
+
+		// Only react to the pending state, so a plain save does not cost quota.
+		if ( ! $currency->is_pending_first_update() ) {
+			return;
+		}
+
+		$this->update_one( $currency->id, 'manual' );
+	}
+
+	/**
 	 * Convert a WP_Error to a plain message (helper for UI).
 	 *
 	 * @param WP_Error $error Error object.

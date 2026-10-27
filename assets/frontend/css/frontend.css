@@ -311,3 +311,75 @@ table.td .rbw-order-item-meta {
 .wc-order-item-meta .rbw-order-item-meta code {
 	font-size: 11px;
 }
+
+/* ------------------------------------------------- Elementor widgets */
+
+/*
+ * Widget wrappers: label / icon / value. Everything inherits the theme, and the
+ * accent colour is the same variable the rest of the plugin uses, so the
+ * Elementor style controls only need to override `--rbw-accent`.
+ */
+.rbw-widget {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.35em;
+	line-height: 1.7;
+	vertical-align: middle;
+}
+
+.rbw-widget-icon {
+	display: inline-flex;
+	align-items: center;
+	flex: 0 0 auto;
+	line-height: 1;
+}
+
+.rbw-widget-icon svg {
+	width: 1em;
+	height: 1em;
+	fill: currentColor;
+}
+
+.rbw-widget-before,
+.rbw-widget-after {
+	white-space: pre-wrap;
+}
+
+.rbw-widget-value {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.25em;
+	font-variant-numeric: tabular-nums;
+}
+
+.rbw-widget-source {
+	opacity: 0.75;
+	font-size: 0.9em;
+}
+
+/* Elementor table/ticker wrappers reuse the shortcode classes. */
+.rbw-elementor-table .rbw-rates {
+	margin: 0;
+}
+
+.rbw-elementor-ticker {
+	margin: 0;
+}
+
+/*
+ * Editor-only placeholder. Visitors never see it: the render methods return an
+ * empty string outside the Elementor edit mode.
+ */
+.rbw-elementor-placeholder {
+	display: block;
+	padding: 0.75em 1em;
+	border: 1px dashed var(--rbw-border, #c3c4c7);
+	border-inline-start: 4px solid var(--rbw-accent, #2271b1);
+	background: #f6f7f7;
+	color: #50575e;
+	font-size: 0.9em;
+	line-height: 1.7;
+	text-align: start;
+}

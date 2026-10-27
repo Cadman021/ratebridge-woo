@@ -353,6 +353,37 @@ if ( '' !== $navasan_body && '' !== $alan_currency && '' !== $alan_gold ) {
 
 
 /* ------------------------------------------------------------------------- */
+echo "\n[7] Provider symbol mapping (Phase 5 regression guard)\n";
+/* ------------------------------------------------------------------------- */
+/*
+ * The seeded GOLD18 row once kept a Mock rate (4,526,811) after its provider was
+ * switched to AlanChand, so the site showed a mock value under a real source's
+ * label. The mapping itself is correct: `gold:18ayar` must resolve to the gold
+ * catalogue and to the real ~26M Toman price, never to the small mock number.
+ */
+if ( '' !== $alan_gold ) {
+	$gold_map = AlanChandParser::parse_to_toman( $alan_gold, AlanChandParser::TYPE_GOLD );
+
+	$gold = $gold_map['18ayar'] ?? null;
+
+	Assert::rate( '18ayar resolves through the gold catalogue', $gold, 26051530.0 );
+
+	Assert::check(
+		'18K gold is above 20M Toman (not a mock-scale number)',
+		is_float( $gold ) && $gold > 20000000.0,
+		'got ' . var_export( $gold, true )
+	);
+
+	$mock_scale = 4526811.0;
+
+	Assert::check(
+		'18K gold differs from the mock-scale value',
+		is_float( $gold ) && abs( $gold - $mock_scale ) > 1000000.0,
+		'gold=' . var_export( $gold, true ) . ' mock=' . number_format( $mock_scale )
+	);
+}
+
+/* ------------------------------------------------------------------------- */
 echo "\n", str_repeat( '=', 60 ), "\n";
 printf( "RESULT: %d passed, %d failed\n", Assert::$passed, Assert::$failed );
 
