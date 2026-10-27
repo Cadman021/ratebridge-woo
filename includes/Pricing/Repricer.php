@@ -11,6 +11,7 @@ use RateBridge\Core\Logger;
 use RateBridge\Core\Settings;
 use RateBridge\Currency\Currency;
 use RateBridge\Currency\CurrencyRepository;
+use RateBridge\Formula\FormulaModel;
 use RateBridge\Product\ProductData;
 use WC_Product;
 use WC_Product_Variable;
@@ -110,6 +111,16 @@ final class Repricer {
 
 		if ( ! ProductData::is_enabled( $product_id ) ) {
 			return $this->result( 'skipped', 'not_managed', __( 'This product is not priced by a currency.', 'ratebridge-woo' ) );
+		}
+
+		/*
+		 * Formula mode is a separate pricing pipeline: the expression produces the
+		 * price directly (then min price / rounding / fluctuation, the same steps
+		 * as the currency mode). The currency, base price, profit, commission and
+		 * extra rules are ignored on purpose.
+		 */
+		if ( ProductData::is_formula_mode( $product_id ) ) {
+			return $this->do_reprice_formula( $product );
 		}
 
 		$code     = ProductData::currency_code( $product_id );
@@ -547,6 +558,227 @@ final class Repricer {
 	}
 
 	/**
+	 * Reprice a product priced by a formula (simple, or parent of variations).
+	 *
+	 * @param WC_Product $product Product.
+	 * @return array<string, mixed>
+	 */
+	private function do_reprice_formula( WC_Product $product ): array {
+		$product_id = (int) $product->get_id();
+		$pricer     = new FormulaPricer();
+		$formula    = $pricer->formula_for( $product_id );
+
+		if ( ! $formula instanceof FormulaModel ) {
+			$message = __( 'No formula is assigned to this product.', 'ratebridge-woo' );
+			$this->store_error( $product_id, $message );
+
+			return $this->result( 'skipped', FormulaPricer::ERROR_FORMULA_MISSING, $message );
+		}
+
+		if ( $product->is_type( 'variable' ) ) {
+			return $this->reprice_variable_formula( $product, $formula, $pricer );
+		}
+
+		$previous = $this->previous_price( $product_id, $product );
+		$calc     = $pricer->calculate( $product, $formula, $previous, true );
+
+		if ( ! $calc['ok'] ) {
+			$message = $this->formula_error_message( (string) $calc['code'], $formula );
+
+			// Never write a price on failure: keep the previous one, record why.
+			$this->store_error( $product_id, $message );
+
+			return $this->result( 'skipped', (string) $calc['code'], $message );
+		}
+
+		$this->clear_error( $product_id );
+
+		$result = array(
+			'ok'        => true,
+			'price'     => (float) $calc['price'],
+			'breakdown' => $calc['breaks'],
+			'rules'     => array( 'fluctuation_kept_previous' => (bool) $calc['kept'] ),
+		);
+
+		return $this->apply_to_product(
+			$product,
+			(float) $calc['price'],
+			null, // formula products have no automatic sale price
+			null,
+			$result,
+			(bool) $calc['kept'],
+			true
+		);
+	}
+
+	/**
+	 * Reprice the variations of a variable product in formula mode.
+	 *
+	 * @param WC_Product_Variable $product Variable product.
+	 * @param FormulaModel        $formula Formula (assigned to the parent).
+	 * @param FormulaPricer       $pricer  Pricer.
+	 * @return array<string, mixed>
+	 */
+	private function reprice_variable_formula( WC_Product_Variable $product, FormulaModel $formula, FormulaPricer $pricer ): array {
+		$parent_id  = (int) $product->get_id();
+		$variations = $this->get_children( $product );
+		$summary    = array(
+			'repriced' => 0,
+			'skipped'  => 0,
+			'failed'   => 0,
+		);
+		$details    = array();
+		$changed    = false;
+
+		foreach ( $variations as $variation ) {
+			$variation_id = (int) $variation->get_id();
+			$previous     = $this->previous_price( $variation_id, $variation );
+			$calc         = $pricer->calculate( $variation, $formula, $previous, true );
+
+			if ( ! $calc['ok'] ) {
+				$message = $this->formula_error_message( (string) $calc['code'], $formula );
+
+				++$summary['skipped'];
+				$details[ $variation_id ] = $this->result( 'skipped', (string) $calc['code'], $message );
+				$this->store_error( $variation_id, $message );
+				continue;
+			}
+
+			$this->clear_error( $variation_id );
+
+			$result = array(
+				'ok'        => true,
+				'price'     => (float) $calc['price'],
+				'breakdown' => $calc['breaks'],
+				'rules'     => array( 'fluctuation_kept_previous' => (bool) $calc['kept'] ),
+			);
+
+			$applied = $this->apply_to_product(
+				$variation,
+				(float) $calc['price'],
+				null,
+				null,
+				$result,
+				(bool) $calc['kept'],
+				true
+			);
+
+			$details[ $variation_id ] = $applied;
+
+			if ( 'repriced' === $applied['status'] ) {
+				++$summary['repriced'];
+				$changed = true;
+			} else {
+				++$summary['skipped'];
+			}
+		}
+
+		// A variable product never carries a price of its own.
+		$parent_regular = (string) $product->get_regular_price( 'edit' );
+
+		if ( '' !== $parent_regular ) {
+			$product->set_regular_price( '' );
+			$product->set_sale_price( '' );
+			$product->save();
+		}
+
+		WC_Product_Variable::sync( $product, true );
+
+		if ( function_exists( 'wc_delete_product_transients' ) ) {
+			wc_delete_product_transients( $parent_id );
+		}
+
+		unset( $changed );
+
+		return $this->result(
+			$summary['repriced'] > 0 ? 'repriced' : 'skipped',
+			$summary['repriced'] > 0 ? '' : 'formula_variations_skipped',
+			$this->summarise_variations( $summary ),
+			null,
+			null,
+			array(),
+			$details
+		);
+	}
+
+	/**
+	 * Persian message for a formula pricing error code.
+	 *
+	 * @param string       $code    Error code.
+	 * @param FormulaModel $formula Formula.
+	 * @return string
+	 */
+	public function formula_error_message( string $code, FormulaModel $formula ): string {
+		switch ( $code ) {
+			case FormulaPricer::ERROR_FORMULA_MISSING:
+				return __( 'The assigned formula no longer exists.', 'ratebridge-woo' );
+
+			case FormulaPricer::ERROR_FORMULA_DISABLED:
+				return __( 'The assigned formula is disabled.', 'ratebridge-woo' );
+
+			case FormulaPricer::ERROR_FORMULA_INVALID:
+				return __( 'The formula expression is invalid, so the price was left unchanged.', 'ratebridge-woo' );
+
+			case FormulaPricer::ERROR_RATE:
+				return __( 'A currency used by the formula has no usable rate.', 'ratebridge-woo' );
+
+			case FormulaPricer::ERROR_RATE_STALE:
+				return __( 'A currency used by the formula has a stale rate.', 'ratebridge-woo' );
+
+			case FormulaPricer::ERROR_MISSING_PRODUCT_VALUE:
+				return __( 'The product is missing a value the formula needs (for example its weight).', 'ratebridge-woo' );
+
+			case FormulaPricer::ERROR_MISSING_CUSTOM:
+				return __( 'A formula variable has no value.', 'ratebridge-woo' );
+
+			case FormulaPricer::ERROR_OUT_OF_RANGE:
+				return __( 'A formula variable is outside its allowed range.', 'ratebridge-woo' );
+
+			case 'division_by_zero':
+				return __( 'The formula divides by zero.', 'ratebridge-woo' );
+
+			case 'negative_sqrt':
+				return __( 'The formula takes the square root of a negative number.', 'ratebridge-woo' );
+
+			case 'not_finite':
+			case 'non_positive_result':
+				return __( 'The formula produced a price that is not a positive number.', 'ratebridge-woo' );
+
+			case 'unknown_variable':
+				return __( 'The formula uses a variable that has no value.', 'ratebridge-woo' );
+		}
+
+		return sprintf(
+			/* translators: %s: formula name */
+			__( 'The price could not be calculated with the formula “%s”.', 'ratebridge-woo' ),
+			$formula->name
+		);
+	}
+
+	/**
+	 * Record a failure reason on the product.
+	 *
+	 * @param int    $post_id Product id.
+	 * @param string $message Human-readable reason.
+	 * @return void
+	 */
+	private function store_error( int $post_id, string $message ): void {
+		update_post_meta( $post_id, ProductData::META_LAST_ERROR, mb_substr( $message, 0, 500 ) );
+	}
+
+	/**
+	 * Clear a previous failure reason.
+	 *
+	 * @param int $post_id Product id.
+	 * @return void
+	 */
+	private function clear_error( int $post_id ): void {
+		if ( '' !== ProductData::last_error( $post_id ) ) {
+			delete_post_meta( $post_id, ProductData::META_LAST_ERROR );
+		}
+	}
+
+	/**
 	 * Write the calculated prices to a product through the CRUD API.
 	 *
 	 * @param WC_Product          $product   Product or variation.
@@ -557,7 +789,7 @@ final class Repricer {
 	 * @param bool                $kept_previous Whether the fluctuation rule kept the old price.
 	 * @return array<string, mixed>
 	 */
-	private function apply_to_product( WC_Product $product, float $regular, ?float $sale, Currency $currency, array $result, bool $kept_previous ): array {
+	private function apply_to_product( WC_Product $product, float $regular, ?float $sale, ?Currency $currency, array $result, bool $kept_previous, bool $formula_mode = false ): array {
 		$id = (int) $product->get_id();
 
 		// Never write a price lower than the minimum even if a rule changed it.
@@ -640,10 +872,14 @@ final class Repricer {
 	 * @param Currency $currency Currency used.
 	 * @return void
 	 */
-	private function write_audit_meta( int $post_id, float $price, Currency $currency ): void {
+	private function write_audit_meta( int $post_id, float $price, ?Currency $currency = null ): void {
 		update_post_meta( $post_id, ProductData::META_LAST_PRICE, wc_format_decimal( $price, wc_get_price_decimals() ) );
 		update_post_meta( $post_id, ProductData::META_LAST_CALC, time() );
-		update_post_meta( $post_id, ProductData::META_LAST_RATE, $currency->rate );
+
+		// Formula products have no single rate; keep the previous audit value.
+		if ( $currency instanceof Currency ) {
+			update_post_meta( $post_id, ProductData::META_LAST_RATE, $currency->rate );
+		}
 	}
 
 	/**

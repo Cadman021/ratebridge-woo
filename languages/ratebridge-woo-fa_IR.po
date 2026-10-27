@@ -1446,3 +1446,410 @@ msgstr "اندازه آیکون"
 
 msgid "Icon colour"
 msgstr "رنگ آیکون"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 6 — formula engine, builder UI, formula pricing
+# ─────────────────────────────────────────────────────────────────────────────
+
+msgid "%d product uses this formula. Confirm detaching them to delete it."
+msgid_plural "%d products use this formula. Confirm detaching them to delete it."
+msgstr[0] "%d محصول از این فرمول استفاده می‌کند. برای حذف، جدا کردن آن‌ها را تأیید کنید."
+msgstr[1] "%d محصول از این فرمول استفاده می‌کنند. برای حذف، جدا کردن آن‌ها را تأیید کنید."
+
+msgid "%d sample formula created (disabled)."
+msgid_plural "%d sample formulas created (disabled)."
+msgstr[0] "%d فرمول نمونه ساخته شد (غیرفعال)."
+msgstr[1] "%d فرمول نمونه ساخته شد (غیرفعال)."
+
+msgid "%s (copy)"
+msgstr "%s (کپی)"
+
+msgid "0 = use the global step."
+msgstr "۰ = استفاده از گام جهانی."
+
+msgid "18K gold (gram)"
+msgstr "طلای ۱۸ عیار (گرم)"
+
+msgid "A closing parenthesis is missing."
+msgstr "یک پرانتز بسته جا افتاده است."
+
+msgid "A currency used by the formula has a stale rate."
+msgstr "ارزی که در فرمول استفاده شده نرخ کهنه دارد."
+
+msgid "A currency used by the formula has no usable rate."
+msgstr "ارزی که در فرمول استفاده شده نرخ قابل استفاده ندارد."
+
+msgid "A formula computes the price from variables such as weight, rates and custom values."
+msgstr "فرمول قیمت را از متغیرهایی مثل وزن، نرخ‌ها و مقادیر دلخواه محاسبه می‌کند."
+
+msgid "A formula computes the product price from variables (currency rates, product weight/dimensions, custom values). Formulas are safe: they contain no code and cannot call anything outside the built-in function list."
+msgstr "فرمول قیمت محصول را از متغیرها (نرخ ارزها، وزن/ابعاد محصول، مقادیر دلخواه) محاسبه می‌کند. فرمول‌ها امن هستند: هیچ کدی در آن‌ها اجرا نمی‌شود و خارج از فهرست توابع داخلی چیزی قابل فراخوانی نیست."
+
+msgid "A formula variable has no value."
+msgstr "یکی از متغیرهای فرمول مقدار ندارد."
+
+msgid "A formula variable is outside its allowed range."
+msgstr "یکی از متغیرهای فرمول خارج از محدوده مجاز است."
+
+msgid "A function always needs parentheses, for example min(1, 2)."
+msgstr "هر تابع همیشه به پرانتز نیاز دارد، مثلاً min(1, 2)."
+
+msgid "A number is out of range."
+msgstr "یک عدد خارج از محدوده است."
+
+msgid "A number is too long."
+msgstr "یک عدد بیش از حد طولانی است."
+
+msgid "A number is written incorrectly."
+msgstr "یک عدد نادرست نوشته شده است."
+
+msgid "A variable name is too long (max 40 characters)."
+msgstr "نام یک متغیر بیش از حد طولانی است (حداکثر ۴۰ کاراکتر)."
+
+msgid "Add formula"
+msgstr "افزودن فرمول"
+
+msgid "Add samples"
+msgstr "افزودن نمونه"
+
+msgid "Add variable"
+msgstr "افزودن متغیر"
+
+msgid "Allowed: numbers, variables, + - * / % ^, comparisons, and/or/not, and the functions min, max, round, ceil, floor, abs, pow, sqrt, clamp, if, percent."
+msgstr "مجاز: اعداد، متغیرها، عملگرهای + - * / % ^، مقایسه‌ها، and/or/not و توابع min، max، round، ceil، floor، abs، pow، sqrt، clamp، if، percent."
+
+msgid "Amount in store unit"
+msgstr "مبلغ به واحد فروشگاه"
+
+msgid "Applies to rates and other highlighted values."
+msgstr "روی نرخ‌ها و دیگر مقادیر برجسته اعمال می‌شود."
+
+msgid "Base price (USD)"
+msgstr "قیمت پایه (دلار)"
+
+msgid "Calculate"
+msgstr "محاسبه"
+
+msgid "Could not delete the formula."
+msgstr "حذف فرمول انجام نشد."
+
+msgid "Could not duplicate the formula."
+msgstr "تکثیر فرمول انجام نشد."
+
+msgid "Could not save the formula."
+msgstr "ذخیره فرمول انجام نشد."
+
+msgid "Create a formula"
+msgstr "ساخت فرمول"
+
+msgid "Create missing variables"
+msgstr "ساخت متغیرهای جا افتاده"
+
+msgid "Currency × base price"
+msgstr "ارز × قیمت پایه"
+
+msgid "Custom value"
+msgstr "مقدار دلخواه"
+
+msgid "Default"
+msgstr "پیش‌فرض"
+
+msgid "Delete this formula?"
+msgstr "این فرمول حذف شود؟"
+
+msgid "Description"
+msgstr "توضیحات"
+
+msgid "Details"
+msgstr "جزئیات"
+
+msgid "Dollar price plus a fixed markup."
+msgstr "قیمت دلاری به‌همراه سود ثابت."
+
+msgid "Duplicate"
+msgstr "تکثیر"
+
+msgid "Edit formula"
+msgstr "ویرایش فرمول"
+
+msgid "Enable formula"
+msgstr "فعال‌سازی فرمول"
+
+msgid "Enter sample values and see the raw result. Currency variables are prefilled with the live rate; nothing is saved. The final price then applies the minimum price, rounding and the fluctuation margin (%s)."
+msgstr "مقادیر نمونه را وارد کنید و نتیجه خام را ببینید. متغیرهای ارزی با نرخ روز پر می‌شوند؛ هیچ چیزی ذخیره نمی‌شود. قیمت نهایی سپس حداقل قیمت، گرد کردن و حاشیه نوسان (%s) را اعمال می‌کند."
+
+msgid "Every identifier used in the expression must be declared here."
+msgstr "هر شناسه‌ای که در عبارت استفاده می‌شود باید اینجا تعریف شده باشد."
+
+msgid "Expression"
+msgstr "عبارت"
+
+msgid "Extra"
+msgstr "اضافه"
+
+msgid "Formula"
+msgstr "فرمول"
+
+msgid "Formula deleted and %d products switched back to currency mode."
+msgstr "فرمول حذف شد و %d محصول به حالت ارز برگشت."
+
+msgid "Formula deleted."
+msgstr "فرمول حذف شد."
+
+msgid "Formula disabled."
+msgstr "فرمول غیرفعال شد."
+
+msgid "Formula duplicated (disabled)."
+msgstr "فرمول تکثیر شد (غیرفعال)."
+
+msgid "Formula enabled."
+msgstr "فرمول فعال شد."
+
+msgid "Formula not found."
+msgstr "فرمول پیدا نشد."
+
+msgid "Formula result"
+msgstr "نتیجه فرمول"
+
+msgid "Formula saved. Products using it will be recalculated."
+msgstr "فرمول ذخیره شد. محصولاتی که از آن استفاده می‌کنند دوباره محاسبه می‌شوند."
+
+msgid "Formulas"
+msgstr "فرمول‌ها"
+
+msgid "Functions:"
+msgstr "توابع:"
+
+msgid "Generated from the name; must stay unique."
+msgstr "از نام ساخته می‌شود و باید یکتا بماند."
+
+msgid "Global rounding mode: %1$s. Formula prices are in %2$s. Formula products ignore the currency profit, commission and extra amount — put them in the formula."
+msgstr "حالت گرد کردن جهانی: %1$s. قیمت‌های فرمولی به %2$s هستند. محصولات فرمولی سود، کارمزد و مقدار اضافه ارز را نادیده می‌گیرند — آن‌ها را در خود فرمول بگذارید."
+
+msgid "Gold price (weight × 18K gold)"
+msgstr "قیمت طلا (وزن × طلای ۱۸ عیار)"
+
+msgid "Height"
+msgstr "ارتفاع"
+
+msgid "In formula mode the currency, base price, profit, commission and extra amount are ignored: put them in the formula. Formula products also have no automatic sale price."
+msgstr "در حالت فرمول، ارز، قیمت پایه، سود، کارمزد و مقدار اضافه نادیده گرفته می‌شوند: آن‌ها را در خود فرمول بگذارید. محصولات فرمولی قیمت ویژه خودکار هم ندارند."
+
+msgid "Label"
+msgstr "برچسب"
+
+msgid "Length"
+msgstr "طول"
+
+msgid "Making charge (%)"
+msgstr "اجرت ساخت (%)"
+
+msgid "Max"
+msgstr "حداکثر"
+
+msgid "Min"
+msgstr "حداقل"
+
+msgid "Minimum price applied"
+msgstr "حداقل قیمت اعمال شد"
+
+msgid "Name and expression are required."
+msgstr "نام و عبارت الزامی هستند."
+
+msgid "No formula is assigned to this product."
+msgstr "هیچ فرمولی به این محصول اختصاص داده نشده است."
+
+msgid "No formula selected"
+msgstr "فرمولی انتخاب نشده"
+
+msgid "No formulas yet. Use “Add formula” or “Add samples”."
+msgstr "هنوز فرمولی وجود ندارد. از «افزودن فرمول» یا «افزودن نمونه» استفاده کنید."
+
+msgid "No variables declared yet."
+msgstr "هنوز متغیری تعریف نشده است."
+
+msgid "Operators:"
+msgstr "عملگرها:"
+
+msgid "Previous price kept (fluctuation margin)"
+msgstr "قیمت قبلی حفظ شد (حاشیه نوسان)"
+
+msgid "Price a piece of gold jewellery from its weight."
+msgstr "قیمت‌گذاری طلای ساخته‌شده بر اساس وزن."
+
+msgid "Pricing method"
+msgstr "روش قیمت‌گذاری"
+
+msgid "Product field"
+msgstr "فیلد محصول"
+
+msgid "Products"
+msgstr "محصولات"
+
+msgid "Products use this formula. Detach them (they switch back to currency mode) and delete it?"
+msgstr "محصولاتی از این فرمول استفاده می‌کنند. آن‌ها جدا شوند (به حالت ارز برمی‌گردند) و فرمول حذف شود؟"
+
+msgid "Profit (%)"
+msgstr "سود (%)"
+
+msgid "Result"
+msgstr "نتیجه"
+
+msgid "Rounded"
+msgstr "گرد شد"
+
+msgid "Rounding mode"
+msgstr "حالت گرد کردن"
+
+msgid "Rounding override"
+msgstr "بازنویسی گرد کردن"
+
+msgid "Save formula"
+msgstr "ذخیره فرمول"
+
+msgid "Save the product once before previewing a formula price."
+msgstr "برای پیش‌نمایش قیمت فرمولی، ابتدا محصول را یک‌بار ذخیره کنید."
+
+msgid "Select a formula first."
+msgstr "ابتدا یک فرمول انتخاب کنید."
+
+msgid "Select a formula…"
+msgstr "یک فرمول انتخاب کنید…"
+
+msgid "Simple USD price"
+msgstr "قیمت ساده دلاری"
+
+msgid "Slug"
+msgstr "نامک"
+
+msgid "Step"
+msgstr "گام"
+
+msgid "Test the formula"
+msgstr "آزمایش فرمول"
+
+msgid "The assigned formula is disabled."
+msgstr "فرمول اختصاص‌داده‌شده غیرفعال است."
+
+msgid "The assigned formula no longer exists."
+msgstr "فرمول اختصاص‌داده‌شده دیگر وجود ندارد."
+
+msgid "The expression contains a character that is not allowed."
+msgstr "عبارت شامل کاراکتری است که مجاز نیست."
+
+msgid "The expression divides by zero."
+msgstr "عبارت بر صفر تقسیم می‌کند."
+
+msgid "The expression is empty."
+msgstr "عبارت خالی است."
+
+msgid "The expression is nested too deeply."
+msgstr "عبارت بیش از حد تودرتو است."
+
+msgid "The expression is too complex."
+msgstr "عبارت بیش از حد پیچیده است."
+
+msgid "The expression is too long (max 2000 characters)."
+msgstr "عبارت بیش از حد طولانی است (حداکثر ۲۰۰۰ کاراکتر)."
+
+msgid "The expression uses a variable that is not defined."
+msgstr "عبارت از متغیری استفاده می‌کند که تعریف نشده است."
+
+msgid "The formula divides by zero."
+msgstr "فرمول بر صفر تقسیم می‌کند."
+
+msgid "The formula expression is invalid, so the price was left unchanged."
+msgstr "عبارت فرمول نامعتبر است، بنابراین قیمت بدون تغییر ماند."
+
+msgid "The formula is not valid."
+msgstr "فرمول معتبر نیست."
+
+msgid "The formula is valid."
+msgstr "فرمول معتبر است."
+
+msgid "The formula produced a price that is not a positive number."
+msgstr "فرمول قیمتی تولید کرد که عددی مثبت نیست."
+
+msgid "The formula takes the square root of a negative number."
+msgstr "فرمول از یک عدد منفی جذر می‌گیرد."
+
+msgid "The formula uses a variable that has no value."
+msgstr "فرمول از متغیری استفاده می‌کند که مقدار ندارد."
+
+msgid "The formula was evaluated."
+msgstr "فرمول محاسبه شد."
+
+msgid "The function is called with the wrong number of arguments."
+msgstr "تابع با تعداد آرگومان نادرست فراخوانی شده است."
+
+msgid "The price could not be calculated with the formula “%s”."
+msgstr "قیمت با فرمول «%s» محاسبه نشد."
+
+msgid "The product is missing a value the formula needs (for example its weight)."
+msgstr "محصول فاقد مقداری است که فرمول لازم دارد (برای مثال وزن آن)."
+
+msgid "The result is not a finite number."
+msgstr "نتیجه عدد محدود نیست."
+
+msgid "The sample formulas already exist."
+msgstr "فرمول‌های نمونه از قبل وجود دارند."
+
+msgid "The square root of a negative number is not defined."
+msgstr "جذر یک عدد منفی تعریف نشده است."
+
+msgid "There is no enabled formula yet."
+msgstr "هنوز هیچ فرمول فعالی وجود ندارد."
+
+msgid "This currency has no rate yet, so the price cannot be calculated."
+msgstr "این ارز هنوز نرخ ندارد، بنابراین قیمت محاسبه نمی‌شود."
+
+msgid "This function is not supported."
+msgstr "این تابع پشتیبانی نمی‌شود."
+
+msgid "This name is reserved and cannot be used as a variable."
+msgstr "این نام رزرو شده و نمی‌تواند به‌عنوان متغیر استفاده شود."
+
+msgid "This product has no value for this field, so the price cannot be calculated."
+msgstr "این محصول برای این فیلد مقداری ندارد، بنابراین قیمت محاسبه نمی‌شود."
+
+msgid "Type"
+msgstr "نوع"
+
+msgid "US dollar"
+msgstr "دلار آمریکا"
+
+msgid "Unexpected syntax. Check the operators and parentheses."
+msgstr "ساختار نادرست است. عملگرها و پرانتزها را بررسی کنید."
+
+msgid "Unused variables: %s"
+msgstr "متغیرهای بی‌استفاده: %s"
+
+msgid "Use the global setting"
+msgstr "استفاده از تنظیم جهانی"
+
+msgid "Variables"
+msgstr "متغیرها"
+
+msgid "Variables:"
+msgstr "متغیرها:"
+
+msgid "Weight"
+msgstr "وزن"
+
+msgid "Weight (g)"
+msgstr "وزن (گرم)"
+
+msgid "Width"
+msgstr "عرض"
+
+msgid "default: %s"
+msgstr "پیش‌فرض: %s"
+
+msgid "formula"
+msgstr "فرمول"
+
+msgid "live rate"
+msgstr "نرخ روز"
+
+msgid "min %1$s, max %2$s"
+msgstr "حداقل %1$s، حداکثر %2$s"

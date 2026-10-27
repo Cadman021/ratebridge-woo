@@ -21,9 +21,12 @@ if ( ! is_array( $rbw_settings ) || empty( $rbw_settings['delete_data_on_uninsta
 
 global $wpdb;
 
-// Remove the currencies table.
+// Remove the currencies and formulas tables.
 $rbw_table = $wpdb->prefix . 'rbw_currencies';
 $wpdb->query( "DROP TABLE IF EXISTS `{$rbw_table}`" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.SchemaChange
+
+$rbw_formulas_table = $wpdb->prefix . 'rbw_formulas';
+$wpdb->query( "DROP TABLE IF EXISTS `{$rbw_formulas_table}`" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.SchemaChange
 
 // Remove plugin options.
 delete_option( 'rbw_settings' );
@@ -75,6 +78,10 @@ $rbw_meta_keys = array(
 	'_rbw_last_price',
 	'_rbw_last_calc',
 	'_rbw_last_rate',
+	'_rbw_last_error',
+	'_rbw_mode',
+	'_rbw_formula_id',
+	'_rbw_formula_vars',
 );
 
 $rbw_placeholders = implode( ', ', array_fill( 0, count( $rbw_meta_keys ), '%s' ) );

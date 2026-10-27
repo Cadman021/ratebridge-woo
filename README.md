@@ -9,18 +9,18 @@ the plugin recalculate the store-currency price (Iranian Toman or Rial) from liv
 - **Namespace / prefix:** `RateBridge\` / `rbw_`
 - **Requirements:** PHP 8.1+, WordPress 6.4+, WooCommerce 8+ (HPOS compatible)
 
-> **Status – Phase 5.** Currency management, real price sources (Navasan + AlanChand),
+> **Status – Phase 6.** Currency management, real price sources (Navasan + AlanChand),
 > per-provider settings, request-quota protection, **product pricing by currency**
 > (simple + variable products, classic editor), **automatic repricing when a rate
 > changes**, store-unit migration, **order rate records on every line item**,
 > **shortcodes** (single rate, currencies table, ticker, product info), an optional
-> **product page info block**, **7 Elementor widgets** in a dedicated category, and full
-> Persian UI.
+> **product page info block**, **8 Elementor widgets**, a safe **formula builder** with
+> typed variables and formula pricing, and full Persian UI.
 >
-> Still out of scope: Elementor dynamic tags and Pro features, the formula builder,
-> import/export, bulk/quick edit integration, new providers, Gutenberg blocks, modifying
-> WooCommerce's price HTML, Persian digits inside WooCommerce's own price output, and
-> emails other than the optional order item rate line.
+> Still out of scope: Elementor dynamic tags and Pro features, import/export,
+> bulk/quick edit integration, new providers, Gutenberg blocks, modifying WooCommerce's
+> price HTML, Persian digits inside WooCommerce's own price output, user-defined
+> functions, loops, string values and automatic sale-price formulas.
 
 ---
 
@@ -39,6 +39,7 @@ ratebridge-woo/
 │   ├── parse-fixtures.php      CLI parser test against docs/api-samples/ (no WordPress)
 │   ├── price-calculator.php    CLI test for the calculation engine (no WordPress)
 │   ├── rate-formatter.php      CLI test for the frontend formatter (no WordPress)
+│   ├── formula-engine.php      Formula engine: grammar, functions, injection (No WP)
 │   ├── elementor-contracts.php Static contract test for the Elementor widgets
 │   ├── ajax-actions.php        JS request() slugs vs registered wp_ajax hooks
 │   └── scrub-secrets.php       Credentials never leak into messages
@@ -88,7 +89,14 @@ ratebridge-woo/
 │   ├── Elementor/
 │   │   ├── ElementorIntegration.php  Bootstrap, «نرخ ساز» category, version guard
 │   │   ├── CacheInvalidator.php      Flushes Elementor's document cache on rate changes
-│   │   └── Widgets/                  7 widgets + AbstractWidget (shared controls/helpers)
+│   │   └── Widgets/                  8 widgets + AbstractWidget (shared controls/helpers)
+│   ├── Formula/
+│   │   ├── Normalizer.php            Digits/operators/separators -> ASCII
+│   │   ├── Lexer.php, Node.php, Parser.php   Tokenizer + AST (precedence climbing)
+│   │   ├── Functions.php, Evaluator.php      Whitelisted functions + AST walk
+│   │   ├── FormulaError.php, CompiledFormula.php, Formula.php   Public API
+│   │   ├── FormulaModel.php          Value object + variable sanitising
+│   │   └── FormulaRepository.php     CRUD, find_using_currency(), usage counts
 │   ├── Cron/
 │   │   └── Scheduler.php       `rbw_every_five_minutes` schedule + `rbw_update_rates` event
 │   └── Admin/
@@ -202,6 +210,21 @@ run repeatedly).
 
 On activation four currencies are seeded **disabled**: `USD`, `EUR`, `AED`, `GOLD18`
 (18K gold gram) using the `mock` provider, so you can enable and test them immediately.
+
+Schema **1.2.0** adds `{prefix}rbw_formulas`:
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | bigint unsigned, PK | |
+| `name` | varchar(190) | display name |
+| `slug` | varchar(64), UNIQUE | ASCII, auto-generated |
+| `expression` | text | raw text as typed (normalised at compile time) |
+| `description` | text | free text |
+| `variables` | longtext | JSON variable definitions |
+| `rounding_mode` | varchar(16) | `''` = use the global setting |
+| `rounding_step` | decimal(30,10) | `0` = use the global step |
+| `is_enabled` | tinyint(1) | |
+| `created_at` / `updated_at` | datetime (UTC) | |
 
 Settings are stored in a single option, `rbw_settings`:
 
@@ -384,10 +407,11 @@ be tested from the CLI against the real fixtures:
 
 ```bash
 php tests/parse-fixtures.php    # parsing + cross-source consistency (82 assertions)
-php tests/price-calculator.php  # calculation engine, no WordPress (63 assertions)
+php tests/price-calculator.php  # calculation engine + formula post-processing (72)
 php tests/rate-formatter.php    # frontend formatter + templates, no WordPress (85)
-php tests/elementor-contracts.php # widget structure/delegation rules, no WordPress (107)
-php tests/ajax-actions.php      # JS request() slugs vs registered wp_ajax hooks (105)
+php tests/formula-engine.php    # formula engine + injection suite, no WordPress (165)
+php tests/elementor-contracts.php # widget structure/delegation rules, no WordPress (137)
+php tests/ajax-actions.php      # JS request() slugs vs registered wp_ajax hooks (138)
 php tests/scrub-secrets.php     # credentials never leak into messages (11)
 ```
 
@@ -749,6 +773,8 @@ currencies the block renders nothing — a single rate would be misleading.
 | `rbw_currency_changed` | action | `( string $code, string $what )` – `created`/`updated`/`deleted`; flushes the fragment cache |
 | `rbw_currency_rate_pending` | action | `( int $id, string $code )` – the source changed and the rate was reset; triggers one budget-respecting fetch |
 | `rbw_elementor_cache_flushed` | action | `( int $deleted )` – Elementor's document cache was invalidated |
+| `rbw_formula_saved` | action | `( int $id, FormulaModel $formula )` – a formula was created or updated; reprices its products |
+| `rbw_formula_deleted` | action | `( int $id, string $slug )` – a formula was deleted |
 | `rbw_use_persian_digits` | filter | `( bool $enabled )` – force Persian digits on/off in code |
 
 ### Frontend styles
@@ -924,6 +950,198 @@ Consequences, all verified:
 
 ---
 
+## Formulas (Phase 6)
+
+A formula prices a product from variables instead of "base price × rate":
+
+```text
+weight * gold18 * (1 + wage / 100) * (1 + profit / 100)
+```
+
+The engine is pure PHP (`RateBridge\Formula`), compiles once and evaluates many times, and can
+never execute code.
+
+### Pipeline and safety
+
+```
+Normalizer → Lexer → Parser (precedence climbing) → AST → Evaluator
+```
+
+- **No `eval()`**, no `create_function()`, no `preg_replace/e`, no generated files to include, no
+  `call_user_func` on user input, no variable variables.
+- Only the whitelisted functions below can be called; anything else is rejected by the **parser**,
+  so an unknown name never reaches a call.
+- The expression is never written to disk and never becomes PHP.
+
+### Grammar and precedence
+
+Lowest to highest:
+
+| Level | Operators | Notes |
+| --- | --- | --- |
+| or | `or`, `\|\|` | short-circuits |
+| and | `and`, `&&` | short-circuits |
+| not | `not`, `!` | prefix, right-associative |
+| equality | `==`, `!=` | |
+| comparison | `<`, `>`, `<=`, `>=` | |
+| additive | `+`, `-` | left-associative |
+| multiplicative | `*`, `/`, `%` | left-associative |
+| unary | `+`, `-` | right-associative |
+| power | `^` | **right-associative**, binds tighter than unary minus |
+| primary | number, variable, `fn(...)`, `(...)` | |
+
+Documented consequences:
+
+- `2^3^2` = `2^(3^2)` = **512**
+- `-2^2` = `-(2^2)` = **-4** (write `(-2)^2` for 4)
+- `2^-1` = 0.5
+- `10-2-3` = 5 and `100/10/2` = 5 (left-associative)
+- `10 % 3` = 1; the sign follows the dividend (`-10 % 3` = -1, PHP `fmod`)
+- `round()` is PHP's half-away-from-zero: `round(2.5)` = 3, `round(-2.5)` = -3
+- `true` = 1, `false` = 0; comparisons return 1/0; `==`/`!=` use a 1e-9 tolerance
+
+### Numbers
+
+- Integers and decimals: `1`, `1.5`, `.5`. A trailing dot (`1.`) and a double dot (`1.2.3`) are
+  syntax errors.
+- Persian (۰-۹) and Arabic-Indic (٠-٩) digits are converted to ASCII.
+- `٫` (U+066B) is the **decimal separator**.
+- **Thousands separators inside a number are not allowed**: `26,051,530` is a syntax error, write
+  `26051530`.
+- `,` and `،` are **argument separators** only.
+- `×` → `*`, `÷` → `/`, `−` (U+2212) → `-`, full-width parentheses are accepted.
+- Zero-width/bidi marks (ZWNJ, ZWJ, LRM, RLM, BOM, NBSP) are stripped.
+- Exponent notation (`1e999`) is not part of the grammar and is rejected.
+
+### Functions
+
+| Function | Arity | Notes |
+| --- | --- | --- |
+| `min(a, …)` / `max(a, …)` | 1+ | variadic |
+| `round(x [, decimals])` | 1–2 | decimals clamped to 0–10 |
+| `ceil(x)`, `floor(x)`, `abs(x)` | 1 | |
+| `pow(a, b)`, `sqrt(x)` | 2 / 1 | `sqrt` of a negative number is an error |
+| `clamp(x, min, max)` | 3 | reversed bounds are normalised |
+| `if(cond, a, b)` | 3 | **lazy**: the unused branch is not evaluated |
+| `percent(value, p)` | 2 | `value * p / 100` |
+
+### Variables
+
+- ASCII identifier: `[A-Za-z_][A-Za-z0-9_]*`, max 40 characters.
+- **Reserved** (cannot be variable names): all function names plus `and`, `or`, `not`, `true`,
+  `false`.
+- Three types:
+
+| Type | Value |
+| --- | --- |
+| `currency` | the currency's current rate in the store unit (`currency_code`) |
+| `product` | a WC product field: `weight`, `length`, `width`, `height` (a variation inherits the parent's value when its own is empty) |
+| `custom` | a number typed by the admin: `default`, optional `min`/`max`, `is_money` |
+
+### Limits
+
+| Limit | Value |
+| --- | --- |
+| Expression length | 2000 characters |
+| Tokens | 400 |
+| Number literal length | 30 digits |
+| AST depth | 40 |
+| Parenthesis / call nesting | 40 / 20 |
+
+Runtime errors: division or modulo by zero, `sqrt` of a negative number, NaN/INF results, unknown
+variable. All produce an error **code + position**, never a number.
+
+### API
+
+```php
+$compiled = \RateBridge\Formula\Formula::compile( 'weight * gold18 * (1 + wage / 100)' );
+// CompiledFormula|FormulaError
+
+$compiled->variables();        // ['weight', 'gold18', 'wage']
+$compiled->functions();        // []
+$result = $compiled->evaluate( [ 'weight' => 8, 'gold18' => 26051530, 'wage' => 15 ] );
+// Result { value: float, trace: [name => value] }  or  FormulaError { code, position, detail }
+
+\RateBridge\Formula\Formula::check( $expr, $declaredNames );  // validator payload for the UI
+```
+
+### Formula mode on a product
+
+- Product meta: `_rbw_mode` (`currency` default | `formula`), `_rbw_formula_id`,
+  `_rbw_formula_vars` (JSON of per-product custom overrides), `_rbw_last_error`.
+- Existing products have no `_rbw_mode` meta and keep behaving exactly as before.
+- **Final price = formula result**, then ONLY: minimum price → rounding (formula override, else the
+  global setting) → fluctuation margin. The same `PriceCalculator::round_to_step()` helper is used
+  as in the currency mode.
+- **Profit, commission and extra amount are NOT applied in formula mode** — put them inside the
+  formula. The product editor says so next to the formula picker.
+- **No automatic sale price** in formula mode (there is no second formula). Manual sale scheduling
+  in WooCommerce is untouched.
+- **Failure keeps the previous price**: a missing rate, a rate ≤ 0, a missing weight, a division by
+  zero or a non-positive result never writes a price. The reason is stored in `_rbw_last_error` and
+  shown in the products list and the editor.
+
+### Repricing dependencies
+
+| Trigger | What is repriced |
+| --- | --- |
+| `rbw_rate_updated` | products priced **in that currency**, **and** products whose formula references a currency variable bound to that code (`FormulaRepository::find_using_currency()`) |
+| `rbw_formula_saved` (create or update) | every product using that formula |
+| product save | that product |
+
+Both go through the same Action Scheduler batch job (`rbw_reprice_currency`, batches of 50,
+de-duplicated). Formula jobs use the key `formula:<id>` and process their own product list, so the
+currency and formula pipelines never interfere.
+
+### Order records (formula mode)
+
+Formula lines store `_rbw_mode=formula`, `_rbw_formula_name` and `_rbw_formula_vars` — a JSON
+snapshot of **every** variable value used (rates included) — so an old order stays explainable even
+if the formula or the rates change. The admin order screen shows
+«محاسبه با فرمول {name}» followed by the variable list. Customer display stays opt-in exactly as
+for currency lines.
+
+### Store-unit change
+
+`UnitMigration` converts the **money-type custom variable defaults** (`is_money`: `default`, `min`,
+`max`) of every formula and the per-product overrides of those variables.
+**Limitation (documented): numbers written directly inside an expression are NOT converted** — a
+literal like `500000` in a formula stays `500000`. The confirmation dialog says so.
+
+### Shortcode and Elementor
+
+```text
+[rbw_formula_var name="wage" id="" template="%value%" suffix=""]
+```
+
+Shows the effective value of one formula variable for the product's formula. Renders nothing when
+the product has no formula or no such variable (admins see a small warning). The Elementor widget
+«متغیر فرمول محصول» (`rbw_formula_variable`) renders the same value with a label, icon and the
+shared style controls.
+
+### Files
+
+```
+includes/Formula/
+├── Normalizer.php        digits, operators, separators, zero-width characters
+├── Lexer.php             Token + Lexer (ASCII only, token limit)
+├── Node.php              AST node value objects
+├── Parser.php            precedence climbing, depth/nesting limits
+├── Functions.php         whitelist + arity + implementations
+├── Evaluator.php         AST walk, Result + trace, runtime errors
+├── FormulaError.php      code + position + detail
+├── CompiledFormula.php   compile once / evaluate many
+├── Formula.php           facade: compile(), check(), name validation
+├── FormulaModel.php      value object + variable sanitising
+└── FormulaRepository.php CRUD, find_using_currency(), product counts
+includes/Pricing/FormulaPricer.php   variable resolution + min/round/fluctuation
+templates/tab-formulas.php           list + builder dialog
+assets/admin/js/admin.js             builder UI (chips, validation, test panel)
+tests/formula-engine.php             165 engine assertions
+```
+
+---
+
 ## Adding a new provider
 
 1. Create `includes/Providers/MyApiProvider.php`:
@@ -1084,7 +1302,7 @@ Rules for provider implementations:
 `uninstall.php` returns immediately unless **WooCommerce → نرخ ساز → تنظیمات عمومی →
 حذف تمام داده‌ها هنگام حذف افزونه** is enabled. When enabled it:
 
-- drops the currencies table;
+- drops the currencies table **and the formulas table**;
 - deletes `rbw_settings`, `rbw_db_version`, `rbw_update_log`, `rbw_provider_settings`,
   `rbw_request_budget`, `rbw_reprice_queue`, `rbw_unit_migration` and all `_transient_rbw_*` rows;
 - deletes **every `_rbw_*` post meta** row with one prepared `DELETE` (the 15 keys listed in

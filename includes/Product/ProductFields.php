@@ -16,6 +16,9 @@ use RateBridge\Core\Settings;
 use RateBridge\Currency\Currency;
 use RateBridge\Currency\CurrencyRepository;
 use RateBridge\Pricing\PriceCalculator;
+use RateBridge\Formula\FormulaModel;
+use RateBridge\Formula\FormulaRepository;
+use RateBridge\Pricing\FormulaPricer;
 use RateBridge\Pricing\Repricer;
 use WC_Product;
 use WC_Product_Variation;
@@ -179,6 +182,11 @@ final class ProductFields {
 
 		echo '<div class="rbw-product-fields" id="rbw-simple-fields"' . ( $data['enabled'] ? '' : ' hidden' ) . '>';
 
+		// Pricing method: currency (base price × rate) or formula.
+		$this->render_mode_select( $post_id, $data );
+
+		echo '<div class="rbw-mode-currency"' . ( ProductData::MODE_FORMULA === $data['mode'] ? ' hidden' : '' ) . '>';
+
 		if ( empty( $currencies ) ) {
 			printf(
 				'<p class="rbw-product-note rbw-product-note-warning">%s</p>',
@@ -250,6 +258,10 @@ final class ProductFields {
 		$this->render_rule_section( 'profit', __( 'Profit', 'ratebridge-woo' ), $data );
 		$this->render_rule_section( 'commission', __( 'Commission', 'ratebridge-woo' ), $data );
 		$this->render_rule_section( 'extra', __( 'Extra amount', 'ratebridge-woo' ), $data, true );
+
+		echo '</div><!-- .rbw-mode-currency -->';
+
+		$this->render_formula_block( $post_id, $data );
 
 		echo '<p class="form-field rbw-preview-row">';
 		printf(
@@ -325,6 +337,228 @@ final class ProductFields {
 			),
 			esc_url( admin_url( 'admin.php?page=ratebridge-woo' ) ),
 			esc_html__( 'Fix it in the currency settings', 'ratebridge-woo' )
+		);
+	}
+
+	/**
+	 * Pricing method select: currency (base price × rate) or formula.
+	 *
+	 * @param int                  $post_id Product id.
+	 * @param array<string, mixed> $data    Product data.
+	 * @return void
+	 */
+	private function render_mode_select( int $post_id, array $data ): void {
+		unset( $post_id );
+
+		printf(
+			'<p class="form-field rbw-field rbw-mode-field">
+				<label for="rbw_mode">%1$s</label>
+				<select id="rbw_mode" name="rbw_mode" class="rbw-mode-select">
+					<option value="currency"%2$s>%3$s</option>
+					<option value="formula"%4$s>%5$s</option>
+				</select>
+				<span class="description">%6$s</span>
+			</p>',
+			esc_html__( 'Pricing method', 'ratebridge-woo' ),
+			selected( $data['mode'] ?? ProductData::MODE_CURRENCY, ProductData::MODE_CURRENCY, false ),
+			esc_html__( 'Currency × base price', 'ratebridge-woo' ),
+			selected( $data['mode'] ?? ProductData::MODE_CURRENCY, ProductData::MODE_FORMULA, false ),
+			esc_html__( 'Formula', 'ratebridge-woo' ),
+			esc_html__( 'A formula computes the price from variables such as weight, rates and custom values.', 'ratebridge-woo' )
+		);
+	}
+
+	/**
+	 * Formula picker + variable inputs for the simple product editor.
+	 *
+	 * @param int                  $post_id Product id.
+	 * @param array<string, mixed> $data    Product data.
+	 * @return void
+	 */
+	private function render_formula_block( int $post_id, array $data ): void {
+		$formulas   = ( new FormulaRepository() )->get_all( true );
+		$formula_id = (int) ( $data['formula_id'] ?? 0 );
+		$overrides  = is_array( $data['formula_vars'] ?? null ) ? $data['formula_vars'] : array();
+		$hidden     = ProductData::MODE_FORMULA === ( $data['mode'] ?? '' ) ? '' : ' hidden';
+
+		echo '<div class="rbw-mode-formula"' . esc_attr( $hidden ) . '>';
+
+		if ( empty( $formulas ) ) {
+			printf(
+				'<p class="rbw-product-note rbw-product-note-warning">%s <a href="%s">%s</a></p>',
+				esc_html__( 'There is no enabled formula yet.', 'ratebridge-woo' ),
+				esc_url( admin_url( 'admin.php?page=ratebridge-woo&tab=formulas' ) ),
+				esc_html__( 'Create a formula', 'ratebridge-woo' )
+			);
+
+			echo '</div>';
+
+			return;
+		}
+
+		echo '<p class="form-field rbw-field">';
+		echo '<label for="rbw_formula_id">' . esc_html__( 'Formula', 'ratebridge-woo' ) . '</label>';
+		echo '<select id="rbw_formula_id" name="rbw_formula_id" class="rbw-formula-select">';
+		echo '<option value="">' . esc_html__( 'Select a formula…', 'ratebridge-woo' ) . '</option>';
+
+		foreach ( $formulas as $formula ) {
+			printf(
+				'<option value="%s"%s>%s</option>',
+				esc_attr( (string) $formula->id ),
+				selected( $formula_id, $formula->id, false ),
+				esc_html( $formula->name )
+			);
+		}
+
+		echo '</select>';
+		echo '</p>';
+
+		// Variables of the selected formula.
+		$selected = $formula_id > 0 ? ( new FormulaRepository() )->get( $formula_id ) : null;
+
+		echo '<div class="rbw-formula-vars-panel" id="rbw-product-formula-vars">';
+
+		if ( $selected instanceof FormulaModel ) {
+			$this->render_formula_variables( $selected, wc_get_product( $post_id ), $overrides );
+		}
+
+		echo '</div>';
+
+		printf(
+			'<p class="rbw-product-note">%s</p>',
+			esc_html__( 'In formula mode the currency, base price, profit, commission and extra amount are ignored: put them in the formula. Formula products also have no automatic sale price.', 'ratebridge-woo' )
+		);
+
+		echo '</div>';
+	}
+
+	/**
+	 * Render the variable rows for a formula on a product.
+	 *
+	 * @param FormulaModel       $formula   Formula.
+	 * @param \WC_Product|null   $product   Product.
+	 * @param array<string,float> $overrides Per-product overrides.
+	 * @return void
+	 */
+	private function render_formula_variables( FormulaModel $formula, $product, array $overrides ): void {
+		$pricer    = new FormulaPricer();
+		$parent_id = $product instanceof \WC_Product && $product->is_type( 'variation' ) ? (int) $product->get_parent_id() : 0;
+
+		echo '<table class="widefat striped rbw-formula-variable-table"><tbody>';
+
+		foreach ( $formula->variables as $variable ) {
+			$name  = (string) $variable['name'];
+			$label = (string) ( $variable['label'] ?? $name );
+			$type  = (string) $variable['type'];
+
+			echo '<tr>';
+			printf(
+				'<th scope="row"><code dir="ltr">%s</code><div class="rbw-muted">%s</div></th>',
+				esc_html( $name ),
+				esc_html( $label )
+			);
+			echo '<td>';
+
+			if ( FormulaModel::TYPE_CURRENCY === $type ) {
+				$currency = ( new \RateBridge\Currency\CurrencyRepository() )->get_by_code( (string) ( $variable['currency_code'] ?? '' ) );
+				$rate     = $currency instanceof \RateBridge\Currency\Currency ? $currency->rate : 0.0;
+
+				printf(
+					'<span class="rbw-readonly-value" dir="ltr">%s</span> <span class="rbw-muted">%s</span>%s',
+					esc_html( SettingsPage::format_number( $rate, $rate >= 1000 ? 0 : 4 ) ),
+					esc_html( SettingsPage::unit_label() ),
+					'' === (string) ( $variable['currency_code'] ?? '' )
+						? ''
+						: ' <code dir="ltr">' . esc_html( (string) $variable['currency_code'] ) . '</code>'
+				);
+
+				if ( $rate <= 0 ) {
+					printf(
+						'<div class="rbw-error-text">%s</div>',
+						esc_html__( 'This currency has no rate yet, so the price cannot be calculated.', 'ratebridge-woo' )
+					);
+				}
+			} elseif ( FormulaModel::TYPE_PRODUCT === $type ) {
+				$field = (string) ( $variable['product_field'] ?? 'weight' );
+				$value = $product instanceof \WC_Product ? $pricer->product_field( $product, $field, $parent_id ) : null;
+
+				printf(
+					'<span class="rbw-readonly-value" dir="ltr">%s</span> <span class="rbw-muted">%s</span>',
+					null === $value ? '—' : esc_html( SettingsPage::format_number( $value, 4 ) ),
+					esc_html( (string) ( self::product_field_labels()[ $field ] ?? $field ) )
+				);
+
+				if ( null === $value ) {
+					printf(
+						'<div class="rbw-error-text">%s</div>',
+						esc_html__( 'This product has no value for this field, so the price cannot be calculated.', 'ratebridge-woo' )
+					);
+				}
+			} else {
+				$value = array_key_exists( $name, $overrides )
+					? (string) $overrides[ $name ]
+					: ( isset( $variable['default'] ) ? (string) $variable['default'] : '' );
+
+				printf(
+					'<input type="text" class="short rbw-number rbw-formula-var-input" dir="ltr" inputmode="decimal"
+						id="rbw_var_%1$s" name="rbw_formula_vars[%1$s]" value="%2$s" data-default="%3$s" />',
+					esc_attr( $name ),
+					esc_attr( $value ),
+					esc_attr( isset( $variable['default'] ) ? (string) $variable['default'] : '0' )
+				);
+
+				if ( '' !== (string) ( $variable['default'] ?? '' ) ) {
+					printf(
+						' <span class="rbw-muted">%s</span>',
+						esc_html(
+							sprintf(
+								/* translators: %s: default value */
+								__( 'default: %s', 'ratebridge-woo' ),
+								(string) $variable['default']
+							)
+						)
+					);
+				}
+
+				if ( ! empty( $variable['is_money'] ) ) {
+					printf(
+						' <span class="rbw-muted">(%s)</span>',
+						esc_html( SettingsPage::unit_label() )
+					);
+				}
+
+				if ( isset( $variable['min'] ) || isset( $variable['max'] ) ) {
+					printf(
+						' <span class="rbw-muted">(%s)</span>',
+						esc_html(
+							sprintf(
+								/* translators: 1: min, 2: max */
+								__( 'min %1$s, max %2$s', 'ratebridge-woo' ),
+								null === ( $variable['min'] ?? null ) ? '—' : (string) $variable['min'],
+								null === ( $variable['max'] ?? null ) ? '—' : (string) $variable['max']
+							)
+						)
+					);
+				}
+			}
+
+			echo '</td></tr>';
+		}
+
+		echo '</tbody></table>';
+	}
+
+	/**
+	 * Persian labels for the supported product fields.
+	 *
+	 * @return array<string, string>
+	 */
+	private static function product_field_labels(): array {
+		return array(
+			'weight' => __( 'Weight', 'ratebridge-woo' ),
+			'length' => __( 'Length', 'ratebridge-woo' ),
+			'width'  => __( 'Width', 'ratebridge-woo' ),
+			'height' => __( 'Height', 'ratebridge-woo' ),
 		);
 	}
 
@@ -472,6 +706,59 @@ final class ProductFields {
 
 		if ( $enabled ) {
 			update_post_meta( $post_id, ProductData::META_ENABLED, 'yes' );
+
+			// Pricing method: currency (default) or formula.
+			$mode = isset( $_POST['rbw_mode'] )
+				? sanitize_key( wp_unslash( (string) $_POST['rbw_mode'] ) )
+				: ProductData::MODE_CURRENCY;
+
+			$mode = ProductData::MODE_FORMULA === $mode ? ProductData::MODE_FORMULA : ProductData::MODE_CURRENCY;
+
+			if ( ProductData::MODE_CURRENCY === $mode ) {
+				// Keep a clean row: no formula meta in currency mode.
+				delete_post_meta( $post_id, ProductData::META_MODE );
+				delete_post_meta( $post_id, ProductData::META_FORMULA_ID );
+				delete_post_meta( $post_id, ProductData::META_FORMULA_VARS );
+			} else {
+				update_post_meta( $post_id, ProductData::META_MODE, ProductData::MODE_FORMULA );
+
+				$formula_id = isset( $_POST['rbw_formula_id'] ) ? absint( $_POST['rbw_formula_id'] ) : 0;
+				$formula    = $formula_id > 0 ? ( new FormulaRepository() )->get( $formula_id ) : null;
+
+				if ( $formula instanceof FormulaModel ) {
+					update_post_meta( $post_id, ProductData::META_FORMULA_ID, (string) $formula->id );
+
+					// Custom variable overrides (empty = use the formula default).
+					$posted = isset( $_POST['rbw_formula_vars'] ) && is_array( $_POST['rbw_formula_vars'] )
+						? wp_unslash( $_POST['rbw_formula_vars'] )
+						: array();
+
+					$overrides = array();
+
+					foreach ( $formula->variables_of_type( FormulaModel::TYPE_CUSTOM ) as $variable ) {
+						$name = (string) $variable['name'];
+
+						if ( ! isset( $posted[ $name ] ) || '' === trim( (string) $posted[ $name ] ) ) {
+							continue;
+						}
+
+						$value = ProductData::to_decimal( $posted[ $name ] );
+
+						if ( $value > 0 || '0' === trim( (string) $posted[ $name ] ) ) {
+							$overrides[ $name ] = $value;
+						}
+					}
+
+					if ( empty( $overrides ) ) {
+						delete_post_meta( $post_id, ProductData::META_FORMULA_VARS );
+					} else {
+						update_post_meta( $post_id, ProductData::META_FORMULA_VARS, wp_json_encode( $overrides ) );
+					}
+				} else {
+					delete_post_meta( $post_id, ProductData::META_FORMULA_ID );
+					delete_post_meta( $post_id, ProductData::META_FORMULA_VARS );
+				}
+			}
 
 			$currency = isset( $_POST['rbw_currency'] ) ? strtoupper( sanitize_text_field( wp_unslash( (string) $_POST['rbw_currency'] ) ) ) : '';
 
@@ -919,6 +1206,41 @@ final class ProductFields {
 		$code   = ProductData::currency_code( $post_id );
 		$last   = (int) get_post_meta( $post_id, ProductData::META_LAST_CALC, true );
 
+		if ( ProductData::is_formula_mode( $post_id ) ) {
+			$formula_id = ProductData::formula_id( $post_id );
+			$formula    = $formula_id > 0 ? ( new FormulaRepository() )->get( $formula_id ) : null;
+
+			printf(
+				'<span class="rbw-formula-badge">%s</span>',
+				esc_html__( 'Formula', 'ratebridge-woo' )
+			);
+
+			if ( $formula instanceof FormulaModel ) {
+				printf(
+					'<div class="rbw-muted"><code dir="ltr">%s</code></div>',
+					esc_html( $formula->slug )
+				);
+			}
+
+			$problem = $this->unpriced_reason( $post_id, '' );
+
+			if ( '' !== $problem ) {
+				printf( '<div class="rbw-col-warning">%s</div>', esc_html( $problem ) );
+			}
+
+			if ( $last > 0 ) {
+				printf(
+					'<span class="rbw-col-date"><span class="rbw-col-date-label">%s</span> <time dir="ltr" datetime="%s">%s</time></span>',
+					esc_html__( 'Last calculation:', 'ratebridge-woo' ),
+					esc_attr( gmdate( 'c', $last ) ),
+					esc_html( wp_date( 'Y-m-d H:i', $last ) )
+				);
+			}
+
+			echo '</div>';
+			return;
+		}
+
 		echo '<code>' . esc_html( '' !== $code ? $code : '—' ) . '</code>';
 
 		// Why a managed product may still have no calculated price.
@@ -954,6 +1276,19 @@ final class ProductFields {
 	 * @return string Empty when there is nothing to report.
 	 */
 	private function unpriced_reason( int $post_id, string $code ): string {
+		// Formula mode: the last calculation error is the only useful reason.
+		if ( ProductData::is_formula_mode( $post_id ) ) {
+			$error = ProductData::last_error( $post_id );
+
+			if ( '' !== $error ) {
+				return $error;
+			}
+
+			$formula = ProductData::formula_id( $post_id );
+
+			return $formula > 0 ? '' : __( 'No formula selected', 'ratebridge-woo' );
+		}
+
 		if ( '' === $code ) {
 			return __( 'No currency selected', 'ratebridge-woo' );
 		}
@@ -997,6 +1332,10 @@ final class ProductFields {
 
 		if ( ! $product instanceof WC_Product || ! $product->is_type( 'variable' ) ) {
 			return '';
+		}
+
+		if ( ProductData::is_formula_mode( $product_id ) ) {
+			return __( 'formula', 'ratebridge-woo' );
 		}
 
 		$parent_code = ProductData::currency_code( $product_id );

@@ -179,7 +179,12 @@ final class Plugin {
 		unset( $old_rate, $new_rate );
 
 		$job = new RepriceJob();
+
+		// 1. Products priced in that currency (base price × rate).
 		$job->enqueue( (string) $currency_code );
+
+		// 2. Products whose FORMULA references that currency.
+		$job->enqueue_for_currency_formulas( (string) $currency_code );
 	}
 
 	/**

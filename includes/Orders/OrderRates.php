@@ -58,6 +58,21 @@ final class OrderRates {
 	public const META_IS_SALE = '_rbw_is_sale';
 
 	/**
+	 * Item meta: pricing mode used for the line (`currency` or `formula`).
+	 */
+	public const META_MODE = '_rbw_mode';
+
+	/**
+	 * Item meta: formula name (formula mode only).
+	 */
+	public const META_FORMULA_NAME = '_rbw_formula_name';
+
+	/**
+	 * Item meta: JSON snapshot of every formula variable value used.
+	 */
+	public const META_FORMULA_VARS = '_rbw_formula_vars';
+
+	/**
 	 * All item meta keys written by the plugin.
 	 *
 	 * @return string[]
@@ -70,6 +85,9 @@ final class OrderRates {
 			self::META_RATE_TIME,
 			self::META_UNIT,
 			self::META_IS_SALE,
+			self::META_MODE,
+			self::META_FORMULA_NAME,
+			self::META_FORMULA_VARS,
 		);
 	}
 
@@ -129,6 +147,14 @@ final class OrderRates {
 			return null;
 		}
 
+		/*
+		 * Formula mode: record the formula and every variable value used, so the
+		 * order line stays explainable years later even if the formula changes.
+		 */
+		if ( ProductData::is_formula_mode( $managed_id ) || ProductData::is_formula_mode( $product_id ) ) {
+			return $this->formula_snapshot( $product );
+		}
+
 		$code = ProductData::currency_code( $product_id );
 
 		if ( '' === $code && $parent_id > 0 ) {
@@ -175,6 +201,76 @@ final class OrderRates {
 			'unit'        => Settings::store_unit(),
 			'is_sale'     => $is_sale,
 		);
+	}
+
+	/**
+	 * Build the snapshot for a product priced by a formula.
+	 *
+	 * Records EVERY variable value the formula used (rates included), so the
+	 * order line can be explained even after the formula or the rates change.
+	 *
+	 * @param WC_Product $product Product.
+	 * @return array<string, mixed>|null Null when nothing could be recorded.
+	 */
+	private function formula_snapshot( WC_Product $product ): ?array {
+		$pricer  = new \RateBridge\Pricing\FormulaPricer();
+		$formula = $pricer->formula_for( (int) $product->get_id() );
+
+		if ( ! $formula instanceof \RateBridge\Formula\FormulaModel ) {
+			return null;
+		}
+
+		// Non-strict: record whatever could be resolved, never block checkout.
+		$values = $pricer->resolve_variables( $formula, $product, false );
+
+		if ( ! is_array( $values ) ) {
+			$values = array();
+		}
+
+		$labels = array();
+
+		foreach ( $formula->variables as $variable ) {
+			$labels[ (string) $variable['name'] ] = (string) ( $variable['label'] ?? $variable['name'] );
+		}
+
+		$rows = array();
+
+		foreach ( $values as $name => $value ) {
+			$rows[] = array(
+				'name'  => (string) $name,
+				'label' => (string) ( $labels[ $name ] ?? $name ),
+				'value' => (float) $value,
+			);
+		}
+
+		return array(
+			'kind'         => 'formula',
+			'formula_name' => $formula->name,
+			'variables'    => $rows,
+			'unit'         => Settings::store_unit(),
+			'rate_time'    => $this->latest_rate_time( $formula ),
+		);
+	}
+
+	/**
+	 * Newest rate timestamp among the currencies a formula uses.
+	 *
+	 * @param \RateBridge\Formula\FormulaModel $formula Formula.
+	 * @return int 0 when the formula uses no currency.
+	 */
+	private function latest_rate_time( \RateBridge\Formula\FormulaModel $formula ): int {
+		$repository = new CurrencyRepository();
+		$latest     = 0;
+
+		foreach ( $formula->currency_codes() as $code ) {
+			$currency = $repository->get_by_code( $code );
+
+			if ( $currency instanceof Currency ) {
+				$latest = max( $latest, $this->currency_rate_time( $currency ) );
+			}
+		}
+
+		return $latest;
 	}
 
 	/**
@@ -227,8 +323,21 @@ final class OrderRates {
 			return false;
 		}
 
-		if ( '' !== (string) $item->get_meta( self::META_CURRENCY, true ) ) {
+		// Already recorded? Never overwrite a checkout-time snapshot.
+		if ( '' !== (string) $item->get_meta( self::META_CURRENCY, true )
+			|| '' !== (string) $item->get_meta( self::META_FORMULA_NAME, true ) ) {
 			return false;
+		}
+
+		// Formula snapshot: no currency/rate, only the formula + variable values.
+		if ( 'formula' === ( $snapshot['kind'] ?? '' ) ) {
+			$item->add_meta_data( self::META_MODE, ProductData::MODE_FORMULA, true );
+			$item->add_meta_data( self::META_FORMULA_NAME, (string) $snapshot['formula_name'], true );
+			$item->add_meta_data( self::META_FORMULA_VARS, (string) wp_json_encode( $snapshot['variables'] ), true );
+			$item->add_meta_data( self::META_UNIT, (string) $snapshot['unit'], true );
+			$item->add_meta_data( self::META_RATE_TIME, (int) $snapshot['rate_time'], true );
+
+			return true;
 		}
 
 		$item->add_meta_data( self::META_CURRENCY, (string) $snapshot['code'], true );
@@ -435,6 +544,33 @@ final class OrderRates {
 	 * @return array<string, mixed>|null Null when the item has no snapshot.
 	 */
 	public function read_snapshot( WC_Order_Item $item ): ?array {
+		$formula_name = (string) $item->get_meta( self::META_FORMULA_NAME, true );
+
+		if ( '' !== $formula_name ) {
+			$decoded  = json_decode( (string) $item->get_meta( self::META_FORMULA_VARS, true ), true );
+			$rows     = array();
+
+			foreach ( is_array( $decoded ) ? $decoded : array() as $row ) {
+				if ( ! is_array( $row ) || ! isset( $row['name'] ) ) {
+					continue;
+				}
+
+				$rows[] = array(
+					'name'  => (string) $row['name'],
+					'label' => (string) ( $row['label'] ?? $row['name'] ),
+					'value' => (float) ( $row['value'] ?? 0 ),
+				);
+			}
+
+			return array(
+				'kind'         => 'formula',
+				'formula_name' => $formula_name,
+				'variables'    => $rows,
+				'rate_time'    => (int) $item->get_meta( self::META_RATE_TIME, true ),
+				'unit'         => (string) $item->get_meta( self::META_UNIT, true ),
+			);
+		}
+
 		$code = (string) $item->get_meta( self::META_CURRENCY, true );
 
 		if ( '' === $code ) {
@@ -524,6 +660,10 @@ final class OrderRates {
 	 * @return string
 	 */
 	public function format_line( array $snapshot ): string {
+		if ( 'formula' === ( $snapshot['kind'] ?? '' ) ) {
+			return $this->format_formula_line( $snapshot );
+		}
+
 		$currency = ( new CurrencyRepository() )->get_by_code( (string) $snapshot['code'] );
 
 		$name = $currency instanceof Currency && '' !== $currency->name ? $currency->name : (string) $snapshot['code'];
@@ -563,6 +703,48 @@ final class OrderRates {
 		}
 
 		return 4;
+	}
+
+	/**
+	 * Localised line for a formula-priced item.
+	 *
+	 * «محاسبه با فرمول قیمت طلا — weight: 8، gold18: 26,051,530 …»
+	 *
+	 * @param array<string, mixed> $snapshot Snapshot.
+	 * @return string
+	 */
+	public function format_formula_line( array $snapshot ): string {
+		$line = sprintf(
+			/* translators: %s: formula name */
+			__( 'Calculated with the formula “%s”', 'ratebridge-woo' ),
+			(string) $snapshot['formula_name']
+		);
+
+		$pairs = array();
+
+		foreach ( (array) ( $snapshot['variables'] ?? array() ) as $row ) {
+			$value = (float) $row['value'];
+			$text  = \RateBridge\Frontend\RateFormatter::number(
+				$value,
+				abs( $value - round( $value ) ) < 0.000001 ? 0 : 2
+			);
+
+			$pairs[] = sprintf( '%s: %s', (string) $row['label'], $text );
+		}
+
+		if ( ! empty( $pairs ) ) {
+			$line .= ' — ' . implode( ' · ', array_slice( $pairs, 0, 8 ) );
+		}
+
+		if ( ! empty( $snapshot['rate_time'] ) ) {
+			$line .= ' — ' . sprintf(
+				/* translators: %s: formatted date/time */
+				__( 'rate updated: %s', 'ratebridge-woo' ),
+				wp_date( 'Y-m-d H:i', (int) $snapshot['rate_time'] )
+			);
+		}
+
+		return $line;
 	}
 
 	/**

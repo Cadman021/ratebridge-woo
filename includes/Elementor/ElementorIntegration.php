@@ -52,6 +52,7 @@ final class ElementorIntegration {
 			'ProductPrice',
 			'ProductUpdated',
 			'SiteUpdated',
+			'FormulaVariable',
 		);
 	}
 

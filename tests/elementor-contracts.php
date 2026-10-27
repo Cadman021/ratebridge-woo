@@ -178,7 +178,7 @@ el_check(
 el_check(
 	'every widget class is listed for registration',
 	count( $widget_files ) === count( array_filter(
-		array( 'RatesTable', 'Ticker', 'CurrencyRate', 'ProductCurrency', 'ProductPrice', 'ProductUpdated', 'SiteUpdated' ),
+		array( 'RatesTable', 'Ticker', 'CurrencyRate', 'ProductCurrency', 'ProductPrice', 'ProductUpdated', 'SiteUpdated', 'FormulaVariable' ),
 		static fn ( string $c ): bool => str_contains( $integration, "'{$c}'" )
 	) ),
 	'not every widget appears in widget_classes()'

@@ -107,3 +107,23 @@
 	border-left: 0;
 	text-align: right;
 }
+
+/* Formulas tab */
+.rbw-formula-expression,
+.rbw-formula-error-line,
+.rbw-formula-test-result {
+	direction: ltr;
+	text-align: left;
+}
+
+.rbw-mode-formula {
+	border-inline-start: 3px solid #2271b1;
+	border-inline-end: 0;
+	text-align: right;
+}
+
+.rbw-formula-chips,
+.rbw-var-custom,
+.rbw-formula-test {
+	direction: rtl;
+}

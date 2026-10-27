@@ -12,7 +12,12 @@ use RateBridge\Core\Logger;
 use RateBridge\Core\Settings;
 use RateBridge\Currency\Currency;
 use RateBridge\Currency\CurrencyRepository;
+use RateBridge\Formula\Formula;
+use RateBridge\Formula\FormulaModel;
+use RateBridge\Formula\FormulaRepository;
 use RateBridge\Core\UnitMigration;
+use RateBridge\Formula\FormulaModel as FormulaModelValue;
+use RateBridge\Pricing\FormulaPricer;
 use RateBridge\Pricing\PriceCalculator;
 use RateBridge\Pricing\RateUpdater;
 use RateBridge\Pricing\Repricer;
@@ -77,6 +82,13 @@ final class AjaxController
 			'preview_price',
 			'migrate_unit',
 			'dismiss_stale_notice',
+			'validate_formula',
+			'test_formula',
+			'save_formula',
+			'delete_formula',
+			'duplicate_formula',
+			'toggle_formula',
+			'add_formula_samples',
 		);
 	}
 
@@ -109,6 +121,11 @@ final class AjaxController
 			'rbw_preview_price'              => 'preview_price',
 			'rbw_migrate_unit'               => 'migrate_unit',
 			'rbw_dismiss_stale_notice'       => 'dismiss_stale_notice',
+			'rbw_validate_formula'           => 'validate_formula',
+			'rbw_test_formula'               => 'test_formula',
+			'rbw_save_formula'               => 'save_formula',
+			'rbw_delete_formula'             => 'delete_formula',
+			'rbw_toggle_formula'             => 'toggle_formula',
 		);
 	}
 
@@ -205,6 +222,27 @@ final class AjaxController
 				break;
 			case 'dismiss_stale_notice':
 				$this->dismiss_stale_notice();
+				break;
+			case 'validate_formula':
+				$this->validate_formula();
+				break;
+			case 'test_formula':
+				$this->test_formula();
+				break;
+			case 'save_formula':
+				$this->save_formula();
+				break;
+			case 'delete_formula':
+				$this->delete_formula();
+				break;
+			case 'duplicate_formula':
+				$this->duplicate_formula();
+				break;
+			case 'toggle_formula':
+				$this->toggle_formula();
+				break;
+			case 'add_formula_samples':
+				$this->add_formula_samples();
 				break;
 		}
 	}
@@ -871,6 +909,18 @@ final class AjaxController
 			wp_send_json_error(array('message' => __('You are not allowed to do this.', 'ratebridge-woo')), 403);
 		}
 
+		/*
+		 * Formula mode has its own preview: the expression, not a base price,
+		 * produces the number. Answered before any currency validation so a
+		 * formula product needs no currency at all.
+		 */
+		$pricing_mode = isset($_POST['mode']) ? sanitize_key(wp_unslash((string) $_POST['mode'])) : ProductData::MODE_CURRENCY;
+
+		if (ProductData::MODE_FORMULA === $pricing_mode) {
+			$this->preview_formula_price();
+			return;
+		}
+
 		$code = isset($_POST['currency']) ? strtoupper(sanitize_text_field(wp_unslash((string) $_POST['currency']))) : '';
 		$repo = new CurrencyRepository();
 		$currency = '' !== $code ? $repo->get_by_code($code) : null;
@@ -1011,6 +1061,102 @@ final class AjaxController
 		);
 
 		if (! $result['ok']) {
+			wp_send_json_error($payload, 200);
+		}
+
+		wp_send_json_success($payload);
+	}
+
+	/**
+	 * Preview a price for a product in formula mode.
+	 *
+	 * @return void
+	 */
+	private function preview_formula_price(): void
+	{
+		$formula_id = isset($_POST['formula_id']) ? absint($_POST['formula_id']) : 0;
+		$product_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : 0;
+		$repo = new FormulaRepository();
+		$formula = $repo->get($formula_id);
+
+		if (! $formula instanceof FormulaModel) {
+			wp_send_json_error(array('message' => __('Select a formula first.', 'ratebridge-woo')), 400);
+		}
+
+		$product = $product_id > 0 ? wc_get_product($product_id) : null;
+
+		if (! $product instanceof \WC_Product) {
+			wp_send_json_error(array('message' => __('Save the product once before previewing a formula price.', 'ratebridge-woo')), 400);
+		}
+
+		// Preview-only overrides typed in the form (nothing is saved here).
+		$posted = isset($_POST['formula_vars']) && is_array($_POST['formula_vars']) ? wp_unslash($_POST['formula_vars']) : array();
+		$overrides = array();
+
+		foreach ($formula->variables_of_type(FormulaModel::TYPE_CUSTOM) as $variable) {
+			$name = (string) $variable['name'];
+
+			if (isset($posted[ $name ]) && '' !== trim((string) $posted[ $name ]) && is_numeric($posted[ $name ])) {
+				$overrides[ $name ] = (float) $posted[ $name ];
+			}
+		}
+
+		// Temporarily write the overrides so the pricer reads them like the editor
+		// would after saving; restore immediately afterwards.
+		$previous_meta = get_post_meta($product_id, ProductData::META_FORMULA_VARS, true);
+
+		if (empty($overrides)) {
+			delete_post_meta($product_id, ProductData::META_FORMULA_VARS);
+		} else {
+			update_post_meta($product_id, ProductData::META_FORMULA_VARS, wp_json_encode($overrides));
+		}
+
+		$pricer = new FormulaPricer();
+		$previous_price = ProductData::to_decimal(get_post_meta($product_id, ProductData::META_LAST_PRICE, true));
+		$calc = $pricer->calculate($product, $formula, $previous_price, false);
+
+		// Restore the stored overrides: a preview must never persist anything.
+		if ('' === $previous_meta || null === $previous_meta) {
+			delete_post_meta($product_id, ProductData::META_FORMULA_VARS);
+		} else {
+			update_post_meta($product_id, ProductData::META_FORMULA_VARS, $previous_meta);
+		}
+
+		$rows = array();
+
+		foreach ((array) ($calc['breaks'] ?? array()) as $row) {
+			$rows[] = array(
+				'key' => (string) ($row['key'] ?? ''),
+				'label' => (string) ($row['label'] ?? ''),
+				'value' => $this->format_money((float) ($row['value'] ?? 0)),
+			);
+		}
+
+		$variables = array();
+
+		foreach ((array) ($calc['variables'] ?? array()) as $name => $value) {
+			$variables[] = array(
+				'name' => (string) $name,
+				'value' => is_numeric($value) ? $this->format_money((float) $value) : (string) $value,
+			);
+		}
+
+		$repricer = new Repricer();
+		$payload = array(
+			'ok' => (bool) $calc['ok'],
+			'code' => (string) $calc['code'],
+			'message' => $calc['ok'] ? '' : $repricer->formula_error_message((string) $calc['code'], $formula),
+			'formula' => array('id' => $formula->id, 'name' => $formula->name),
+			'price' => $calc['ok'] ? (float) $calc['price'] : null,
+			'price_formatted' => $calc['ok'] ? $this->format_money((float) $calc['price']) : '',
+			'value_formatted' => $this->format_money((float) $calc['value']),
+			'breakdown' => $rows,
+			'variables' => $variables,
+			'kept' => (bool) ($calc['kept'] ?? false),
+			'unit' => SettingsPage::unit_label(),
+		);
+
+		if (! $calc['ok']) {
 			wp_send_json_error($payload, 200);
 		}
 
@@ -1216,6 +1362,495 @@ final class AjaxController
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * Read the variables posted by the formula builder.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function read_formula_variables(): array
+	{
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitised per field below.
+		$raw = isset($_POST['variables']) && is_array($_POST['variables']) ? wp_unslash($_POST['variables']) : array();
+		$list = array();
+
+		foreach ($raw as $row) {
+			if (! is_array($row)) {
+				continue;
+			}
+
+			$name = isset($row['name']) ? sanitize_text_field((string) $row['name']) : '';
+
+			if (! Formula::is_valid_variable_name($name)) {
+				continue;
+			}
+
+			$type = isset($row['type']) ? sanitize_key((string) $row['type']) : 'custom';
+
+			$item = array(
+				'name' => $name,
+				'label' => isset($row['label']) ? sanitize_text_field((string) $row['label']) : $name,
+				'type' => $type,
+			);
+
+			if (FormulaModel::TYPE_CURRENCY === $type) {
+				$code = isset($row['currency_code']) ? strtoupper(sanitize_text_field((string) $row['currency_code'])) : '';
+				$item['currency_code'] = preg_replace('/[^A-Z0-9_\-]/', '', $code) ?? '';
+			}
+
+			if (FormulaModel::TYPE_PRODUCT === $type) {
+				$field = isset($row['product_field']) ? sanitize_key((string) $row['product_field']) : 'weight';
+				$item['product_field'] = $field;
+			}
+
+			if (FormulaModel::TYPE_CUSTOM === $type) {
+				$item['default'] = isset($row['default']) ? (float) $row['default'] : 0.0;
+				$item['is_money'] = ! empty($row['is_money']);
+				$item['min'] = isset($row['min']) && '' !== $row['min'] ? (float) $row['min'] : null;
+				$item['max'] = isset($row['max']) && '' !== $row['max'] ? (float) $row['max'] : null;
+			}
+
+			$list[] = $item;
+		}
+
+		return $list;
+	}
+
+	/**
+	 * Validate an expression against the declared variables.
+	 *
+	 * @return void
+	 */
+	private function validate_formula(): void
+	{
+		$expression = isset($_POST['expression']) ? wp_strip_all_tags(wp_unslash((string) $_POST['expression'])) : '';
+		$variables = $this->read_formula_variables();
+		$declared = array_column($variables, 'name');
+
+		$report = Formula::check($expression, $declared);
+
+		if (! $report['ok']) {
+			wp_send_json_error(
+				array(
+					'message' => $this->formula_message((string) $report['code']),
+					'code' => (string) $report['code'],
+					'position' => (int) $report['position'],
+					'detail' => (string) $report['detail'],
+					'expression' => $expression,
+				),
+				200
+			);
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => __('The formula is valid.', 'ratebridge-woo'),
+				'source' => (string) $report['source'],
+				'variables' => (array) $report['variables'],
+				'functions' => (array) $report['functions'],
+				'undeclared' => (array) $report['undeclared'],
+				'unused' => (array) $report['unused'],
+			)
+		);
+	}
+
+	/**
+	 * Evaluate an expression with sample values (nothing is saved).
+	 *
+	 * @return void
+	 */
+	private function test_formula(): void
+	{
+		$expression = isset($_POST['expression']) ? wp_strip_all_tags(wp_unslash((string) $_POST['expression'])) : '';
+		$variables = $this->read_formula_variables();
+		$declared = array_column($variables, 'name');
+
+		$report = Formula::check($expression, $declared);
+
+		if (! $report['ok']) {
+			wp_send_json_error(
+				array(
+					'message' => $this->formula_message((string) $report['code']),
+					'code' => (string) $report['code'],
+					'position' => (int) $report['position'],
+				),
+				200
+			);
+		}
+
+		$compiled = Formula::compile($expression);
+
+		if (! $compiled instanceof \RateBridge\Formula\CompiledFormula) {
+			wp_send_json_error(array('message' => $this->formula_message($compiled->code)), 200);
+		}
+
+		// Sample values posted from the test panel.
+		$raw_values = isset($_POST['values']) && is_array($_POST['values']) ? wp_unslash($_POST['values']) : array();
+		$values = array();
+		$used_defaults = array();
+
+		foreach ($variables as $variable) {
+			$name = (string) $variable['name'];
+
+			if (isset($raw_values[$name]) && '' !== $raw_values[$name] && is_numeric($raw_values[$name])) {
+				$values[$name] = (float) $raw_values[$name];
+				continue;
+			}
+
+			if (FormulaModel::TYPE_CURRENCY === $variable['type']) {
+				$currency = (new CurrencyRepository())->get_by_code((string) ($variable['currency_code'] ?? ''));
+
+				if ($currency instanceof Currency && $currency->has_rate()) {
+					$values[$name] = $currency->rate;
+					continue;
+				}
+			}
+
+			if (FormulaModel::TYPE_CUSTOM === $variable['type'] && isset($variable['default'])) {
+				$values[$name] = (float) $variable['default'];
+				$used_defaults[] = $name;
+			}
+		}
+
+		$result = $compiled->evaluate($values);
+
+		if (! $result instanceof \RateBridge\Formula\Result) {
+			wp_send_json_error(
+				array(
+					'message' => $this->formula_message($result->code),
+					'code' => $result->code,
+					'variables' => $values,
+				),
+				200
+			);
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => __('The formula was evaluated.', 'ratebridge-woo'),
+				'value' => $result->value,
+				'value_formatted' => SettingsPage::format_number($result->value),
+				'trace' => $result->trace,
+				'used_defaults' => $used_defaults,
+				'unit' => SettingsPage::unit_label(),
+			)
+		);
+	}
+
+	/**
+	 * Create or update a formula.
+	 *
+	 * @return void
+	 */
+	private function save_formula(): void
+	{
+		$id = isset($_POST['id']) ? absint($_POST['id']) : 0;
+		$name = isset($_POST['name']) ? sanitize_text_field(wp_unslash((string) $_POST['name'])) : '';
+		$expression = isset($_POST['expression']) ? wp_strip_all_tags(wp_unslash((string) $_POST['expression'])) : '';
+		$variables = $this->read_formula_variables();
+
+		if ('' === $name || '' === trim($expression)) {
+			wp_send_json_error(array('message' => __('Name and expression are required.', 'ratebridge-woo')), 400);
+		}
+
+		$report = Formula::check($expression, array_column($variables, 'name'));
+
+		if (! $report['ok']) {
+			wp_send_json_error(
+				array(
+					'message' => $this->formula_message((string) $report['code']),
+					'code' => (string) $report['code'],
+					'position' => (int) $report['position'],
+				),
+				400
+			);
+		}
+
+		$data = array(
+			'name' => $name,
+			'slug' => isset($_POST['slug']) ? sanitize_key(wp_unslash((string) $_POST['slug'])) : '',
+			'expression' => $expression,
+			'description' => isset($_POST['description']) ? wp_unslash((string) $_POST['description']) : '',
+			'variables' => $variables,
+			'rounding_mode' => isset($_POST['rounding_mode']) ? sanitize_key(wp_unslash((string) $_POST['rounding_mode'])) : '',
+			'rounding_step' => isset($_POST['rounding_step']) ? (float) $_POST['rounding_step'] : 0.0,
+			'is_enabled' => isset($_POST['is_enabled']) && '1' === sanitize_text_field(wp_unslash((string) $_POST['is_enabled'])),
+		);
+
+		$repo = new FormulaRepository();
+
+		if ($id > 0) {
+			if (! $repo->update($id, $data)) {
+				wp_send_json_error(array('message' => __('Could not save the formula.', 'ratebridge-woo')), 500);
+			}
+		} else {
+			$id = $repo->create($data);
+
+			if ($id <= 0) {
+				wp_send_json_error(array('message' => __('Could not save the formula.', 'ratebridge-woo')), 500);
+			}
+		}
+
+		$formula = $repo->get($id);
+
+		wp_send_json_success(
+			array(
+				'message' => __('Formula saved. Products using it will be recalculated.', 'ratebridge-woo'),
+				'formula' => $formula instanceof FormulaModel ? $this->formula_payload($formula) : array(),
+			)
+		);
+	}
+
+	/**
+	 * Delete a formula (blocked while products use it unless confirmed).
+	 *
+	 * @return void
+	 */
+	private function delete_formula(): void
+	{
+		$id = isset($_POST['id']) ? absint($_POST['id']) : 0;
+		$detach = isset($_POST['detach']) && '1' === sanitize_text_field(wp_unslash((string) $_POST['detach']));
+		$repo = new FormulaRepository();
+		$formula = $repo->get($id);
+
+		if (! $formula instanceof FormulaModel) {
+			wp_send_json_error(array('message' => __('Formula not found.', 'ratebridge-woo')), 404);
+		}
+
+		$used = $repo->count_products_using($id);
+
+		if ($used > 0 && ! $detach) {
+			wp_send_json_error(
+				array(
+					'message' => sprintf(
+						/* translators: %d: product count */
+						_n('%d product uses this formula. Confirm detaching them to delete it.', '%d products use this formula. Confirm detaching them to delete it.', $used, 'ratebridge-woo'),
+						$used
+					),
+					'products' => $used,
+					'needs_confirm' => true,
+				),
+				409
+			);
+		}
+
+		$affected = 0;
+
+		if ($detach) {
+			foreach ($repo->product_ids_using($id) as $post_id) {
+				delete_post_meta($post_id, ProductData::META_FORMULA_ID);
+				delete_post_meta($post_id, ProductData::META_FORMULA_VARS);
+				update_post_meta($post_id, ProductData::META_MODE, ProductData::MODE_CURRENCY);
+				++$affected;
+			}
+		}
+
+		if (! $repo->delete($id)) {
+			wp_send_json_error(array('message' => __('Could not delete the formula.', 'ratebridge-woo')), 500);
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => $detach && $affected > 0
+					? sprintf(
+						/* translators: %d: product count */
+						__('Formula deleted and %d products switched back to currency mode.', 'ratebridge-woo'),
+						$affected
+					)
+					: __('Formula deleted.', 'ratebridge-woo'),
+				'id' => $id,
+				'detached' => $affected,
+			)
+		);
+	}
+
+	/**
+	 * Duplicate a formula.
+	 *
+	 * @return void
+	 */
+	private function duplicate_formula(): void
+	{
+		$id = isset($_POST['id']) ? absint($_POST['id']) : 0;
+		$repo = new FormulaRepository();
+		$formula = $repo->get($id);
+
+		if (! $formula instanceof FormulaModel) {
+			wp_send_json_error(array('message' => __('Formula not found.', 'ratebridge-woo')), 404);
+		}
+
+		$new_id = $repo->create(
+			array(
+				'name' => sprintf(
+					/* translators: %s: original formula name */
+					__('%s (copy)', 'ratebridge-woo'),
+					$formula->name
+				),
+				'slug' => $formula->slug . '-copy',
+				'expression' => $formula->expression,
+				'description' => $formula->description,
+				'variables' => $formula->variables,
+				'rounding_mode' => $formula->rounding_mode,
+				'rounding_step' => $formula->rounding_step,
+				'is_enabled' => false,
+			)
+		);
+
+		if ($new_id <= 0) {
+			wp_send_json_error(array('message' => __('Could not duplicate the formula.', 'ratebridge-woo')), 500);
+		}
+
+		$copy = $repo->get($new_id);
+
+		wp_send_json_success(
+			array(
+				'message' => __('Formula duplicated (disabled).', 'ratebridge-woo'),
+				'formula' => $copy instanceof FormulaModel ? $this->formula_payload($copy) : array(),
+			)
+		);
+	}
+
+	/**
+	 * Enable/disable a formula.
+	 *
+	 * @return void
+	 */
+	private function toggle_formula(): void
+	{
+		$id = isset($_POST['id']) ? absint($_POST['id']) : 0;
+		$enabled = isset($_POST['enabled']) && '1' === sanitize_text_field(wp_unslash((string) $_POST['enabled']));
+		$repo = new FormulaRepository();
+
+		if (! $repo->get($id) instanceof FormulaModel) {
+			wp_send_json_error(array('message' => __('Formula not found.', 'ratebridge-woo')), 404);
+		}
+
+		if (! $repo->update($id, array('is_enabled' => $enabled))) {
+			wp_send_json_error(array('message' => __('Could not save the change.', 'ratebridge-woo')), 500);
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => $enabled ? __('Formula enabled.', 'ratebridge-woo') : __('Formula disabled.', 'ratebridge-woo'),
+				'id' => $id,
+				'is_enabled' => $enabled,
+			)
+		);
+	}
+
+	/**
+	 * Create the two example formulas (disabled).
+	 *
+	 * @return void
+	 */
+	private function add_formula_samples(): void
+	{
+		$repo = new FormulaRepository();
+		$created = array();
+
+		$samples = array(
+			array(
+				'name' => __('Gold price (weight × 18K gold)', 'ratebridge-woo'),
+				'slug' => 'gold-price',
+				'expression' => 'weight * gold18 * (1 + wage / 100) * (1 + profit / 100)',
+				'description' => __('Price a piece of gold jewellery from its weight.', 'ratebridge-woo'),
+				'variables' => array(
+					array('name' => 'weight', 'label' => __('Weight (g)', 'ratebridge-woo'), 'type' => 'product', 'product_field' => 'weight'),
+					array('name' => 'gold18', 'label' => __('18K gold (gram)', 'ratebridge-woo'), 'type' => 'currency', 'currency_code' => 'GOLD18'),
+					array('name' => 'wage', 'label' => __('Making charge (%)', 'ratebridge-woo'), 'type' => 'custom', 'default' => 15, 'is_money' => false),
+					array('name' => 'profit', 'label' => __('Profit (%)', 'ratebridge-woo'), 'type' => 'custom', 'default' => 7, 'is_money' => false),
+				),
+			),
+			array(
+				'name' => __('Simple USD price', 'ratebridge-woo'),
+				'slug' => 'usd-price',
+				'expression' => 'base * usd + extra',
+				'description' => __('Dollar price plus a fixed markup.', 'ratebridge-woo'),
+				'variables' => array(
+					array('name' => 'base', 'label' => __('Base price (USD)', 'ratebridge-woo'), 'type' => 'custom', 'default' => 100, 'is_money' => false),
+					array('name' => 'usd', 'label' => __('US dollar', 'ratebridge-woo'), 'type' => 'currency', 'currency_code' => 'USD'),
+					array('name' => 'extra', 'label' => __('Extra', 'ratebridge-woo'), 'type' => 'custom', 'default' => 0, 'is_money' => true),
+				),
+			),
+		);
+
+		foreach ($samples as $sample) {
+			if ($repo->get_by_slug($sample['slug']) instanceof FormulaModel) {
+				continue;
+			}
+
+			$sample['is_enabled'] = false;
+			$id = $repo->create($sample);
+
+			if ($id > 0) {
+				$created[] = $id;
+			}
+		}
+
+		if (empty($created)) {
+			wp_send_json_error(array('message' => __('The sample formulas already exist.', 'ratebridge-woo')), 200);
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => sprintf(
+					/* translators: %d: number of created formulas */
+					_n('%d sample formula created (disabled).', '%d sample formulas created (disabled).', count($created), 'ratebridge-woo'),
+					count($created)
+				),
+				'created' => $created,
+			)
+		);
+	}
+
+	/**
+	 * Persian message for a formula engine error code.
+	 *
+	 * @param string $code Machine code.
+	 * @return string
+	 */
+	private function formula_message(string $code): string
+	{
+		$messages = array(
+			'empty' => __('The expression is empty.', 'ratebridge-woo'),
+			'too_long' => __('The expression is too long (max 2000 characters).', 'ratebridge-woo'),
+			'too_many_tokens' => __('The expression is too complex.', 'ratebridge-woo'),
+			'too_deep' => __('The expression is nested too deeply.', 'ratebridge-woo'),
+			'unexpected_char' => __('The expression contains a character that is not allowed.', 'ratebridge-woo'),
+			'unexpected_token' => __('Unexpected syntax. Check the operators and parentheses.', 'ratebridge-woo'),
+			'missing_paren' => __('A closing parenthesis is missing.', 'ratebridge-woo'),
+			'bad_number' => __('A number is written incorrectly.', 'ratebridge-woo'),
+			'number_too_long' => __('A number is too long.', 'ratebridge-woo'),
+			'number_out_of_range' => __('A number is out of range.', 'ratebridge-woo'),
+			'identifier_too_long' => __('A variable name is too long (max 40 characters).', 'ratebridge-woo'),
+			'unknown_function' => __('This function is not supported.', 'ratebridge-woo'),
+			'bad_arity' => __('The function is called with the wrong number of arguments.', 'ratebridge-woo'),
+			'function_needs_args' => __('A function always needs parentheses, for example min(1, 2).', 'ratebridge-woo'),
+			'reserved_name' => __('This name is reserved and cannot be used as a variable.', 'ratebridge-woo'),
+			'unknown_variable' => __('The expression uses a variable that is not defined.', 'ratebridge-woo'),
+			'division_by_zero' => __('The expression divides by zero.', 'ratebridge-woo'),
+			'negative_sqrt' => __('The square root of a negative number is not defined.', 'ratebridge-woo'),
+			'not_finite' => __('The result is not a finite number.', 'ratebridge-woo'),
+		);
+
+		return $messages[ $code ] ?? __('The formula is not valid.', 'ratebridge-woo');
+	}
+
+	/**
+	 * Serialisable formula payload for JS.
+	 *
+	 * @param FormulaModel $formula Formula.
+	 * @return array<string, mixed>
+	 */
+	private function formula_payload(FormulaModel $formula): array
+	{
+		return array_merge(
+			$formula->to_array(),
+			array(
+				'products' => (new FormulaRepository())->count_products_using($formula->id),
+			)
+		);
 	}
 
 	/**

@@ -50,6 +50,7 @@ final class Shortcodes {
 		add_shortcode( 'rbw_ticker', array( $this, 'shortcode_ticker' ) );
 		add_shortcode( 'rbw_product_rate', array( $this, 'shortcode_product_rate' ) );
 		add_shortcode( 'rbw_product_updated', array( $this, 'shortcode_product_updated' ) );
+		add_shortcode( 'rbw_formula_var', array( $this, 'shortcode_formula_var' ) );
 	}
 
 	/**
@@ -454,6 +455,70 @@ final class Shortcodes {
 				return $this->render_ticker( $currencies, $template, $speed, $pause, (string) $atts['class'] );
 			}
 		);
+	}
+
+	/**
+	 * `[rbw_formula_var name="wage" id=""]` — effective value of a formula variable.
+	 *
+	 * @param array<string, mixed>|string $atts Attributes.
+	 * @return string
+	 */
+	public function shortcode_formula_var( $atts ): string
+	{
+		$atts = shortcode_atts(
+			array(
+				'name'     => '',
+				'id'       => '',
+				'template' => '%value%',
+				'suffix'   => '',
+			),
+			(is_array($atts) ? $atts : array()),
+			'rbw_formula_var'
+		);
+
+		$name = sanitize_text_field((string) $atts['name']);
+
+		if ('' === $name) {
+			return Frontend::warning(__('The [rbw_formula_var] shortcode needs a name attribute, for example name="wage".', 'ratebridge-woo'));
+		}
+
+		$product = Frontend::current_product(absint($atts['id']));
+
+		if (! $product instanceof \WC_Product) {
+			return '';
+		}
+
+		$value = Frontend::formula_variable_value($product, $name);
+
+		if (null === $value) {
+			return Frontend::warning(
+				sprintf(
+					/* translators: %s: variable name */
+					__('The product has no formula variable named “%s”.', 'ratebridge-woo'),
+					$name
+				)
+			);
+		}
+
+		$template = (string) $atts['template'];
+		$suffix = sanitize_text_field((string) $atts['suffix']);
+
+		$inner = esc_html($value['formatted']);
+
+		if ('' !== $suffix) {
+			$inner .= ' ' . esc_html($suffix);
+		}
+
+		$html = str_replace('%value%', $inner, RateFormatter::sanitize_template(
+			$template,
+			static fn (string $fragment): string => wp_kses($fragment, Frontend::allowed_html())
+		));
+
+		if (! str_contains($template, '%value%')) {
+			$html = $inner;
+		}
+
+		return sprintf('<span class="rbw-formula-var" data-var="%s">%s</span>', esc_attr($name), $html);
 	}
 
 	/**

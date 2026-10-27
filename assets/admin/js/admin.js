@@ -1520,6 +1520,843 @@
 		} );
 	}
 
+	/* ------------------------------------------------------------------ */
+	/* Formula builder                                                    */
+	/* ------------------------------------------------------------------ */
+
+	var formulaState = {
+		variables: [],
+		lastReport: null
+	};
+
+	/**
+	 * The formula dialog form.
+	 *
+	 * @return {HTMLElement|null} Form element.
+	 */
+	function formulaForm() {
+		return qs( '#rbw-formula-form' );
+	}
+
+	/**
+	 * Read a field from the formula form.
+	 *
+	 * @param {string} name Field name.
+	 * @return {string} Value.
+	 */
+	function formulaField( name ) {
+		var form = formulaForm();
+
+		if ( ! form ) {
+			return '';
+		}
+
+		var field = form.querySelector( '[name="' + name + '"]' );
+
+		return field ? field.value : '';
+	}
+
+	/**
+	 * Insert text at the caret of the expression textarea.
+	 *
+	 * @param {string} text  Text to insert.
+	 * @param {number} caret Offset relative to the end of the inserted text.
+	 */
+	function insertIntoExpression( text, caret ) {
+		var area = qs( '#rbw-formula-expression' );
+
+		if ( ! area ) {
+			return;
+		}
+
+		var start = area.selectionStart;
+		var end   = area.selectionEnd;
+		var value = area.value;
+
+		// Keep tokens separated: add a space when needed.
+		var before = value.slice( 0, start );
+		var after  = value.slice( end );
+
+		if ( before && ! /[\s(]$/.test( before ) && ! /^[\s).,]/.test( text ) ) {
+			text = ' ' + text;
+		}
+
+		if ( after && ! /^[\s)]/.test( after ) && ! /[\s(]$/.test( text ) ) {
+			text = text + ' ';
+		}
+
+		area.value = before + text + after;
+
+		var pos = before.length + text.length + ( caret || 0 );
+
+		area.focus();
+		area.setSelectionRange( pos, pos );
+
+		scheduleValidate();
+	}
+
+	/**
+	 * Debounced validation.
+	 */
+	var validateTimer = null;
+
+	function scheduleValidate() {
+		window.clearTimeout( validateTimer );
+		validateTimer = window.setTimeout( validateFormula, 350 );
+	}
+
+	/**
+	 * Collect the variable rows from the editor.
+	 *
+	 * @return {Array} Variable definitions.
+	 */
+	function collectVariables() {
+		return formulaState.variables.slice();
+	}
+
+	/**
+	 * Send the expression to the server for validation.
+	 */
+	function validateFormula() {
+		var form = formulaForm();
+
+		if ( ! form || form.querySelector( '[name="expression"]' ).value.trim() === '' ) {
+			setFormulaStatus( '', '' );
+			return;
+		}
+
+		request( 'validate_formula', {
+			expression: formulaField( 'expression' ),
+			variables: collectVariables()
+		} )
+			.then( function ( response ) {
+				var data = response.data || {};
+
+				if ( ! response.success ) {
+					formulaState.lastReport = null;
+					setFormulaStatus( data.message || strings.formulaInvalid, 'error', data.position, data.expression );
+					return;
+				}
+
+				formulaState.lastReport = data;
+				setFormulaStatus( data.message || strings.formulaValid, 'success' );
+
+				renderChips( data.variables || [] );
+
+				var missing = data.undeclared || [];
+				var autoButton = qs( '#rbw-autocreate-vars' );
+
+				if ( autoButton ) {
+					autoButton.hidden = missing.length === 0;
+					autoButton.setAttribute( 'data-missing', missing.join( ',' ) );
+					autoButton.textContent = ( strings.createMissing || 'Create missing variables' ) +
+						( missing.length ? ' (' + missing.length + ')' : '' );
+				}
+
+				if ( data.unused && data.unused.length ) {
+					setFormulaStatus(
+						( data.message || '' ) + ' — ' +
+						( strings.unusedVars || 'Unused variables: %s' ).replace( '%s', data.unused.join( ', ' ) ),
+						'warning'
+					);
+				}
+			} )
+			.catch( function ( error ) {
+				setFormulaStatus( ( error && error.message ) || strings.genericError, 'error' );
+			} );
+	}
+
+	/**
+	 * Show a status line under the expression (and the offending snippet).
+	 *
+	 * @param {string} message  Message.
+	 * @param {string} type     success|error|warning.
+	 * @param {number} position Character offset of the error.
+	 * @param {string} source   Expression text.
+	 */
+	function setFormulaStatus( message, type, position, source ) {
+		var status = qs( '#rbw-formula-status' );
+		var errorLine = qs( '#rbw-formula-error-line' );
+
+		if ( status ) {
+			status.hidden = ! message;
+			status.className = 'rbw-formula-status' + ( type ? ' is-' + type : '' );
+			status.textContent = message || '';
+		}
+
+		if ( ! errorLine ) {
+			return;
+		}
+
+		if ( 'error' !== type || 'number' !== typeof position ) {
+			errorLine.hidden = true;
+			errorLine.textContent = '';
+			return;
+		}
+
+		// Show the expression with the error position marked.
+		var text = typeof source === 'string' && source ? source : ( qs( '#rbw-formula-expression' ) || {} ).value || '';
+
+		errorLine.hidden = false;
+		errorLine.textContent = text + '\n' + new Array( Math.max( 0, position ) + 1 ).join( ' ' ) + '^';
+
+		// Put the caret on the error so it is immediately visible.
+		var area = qs( '#rbw-formula-expression' );
+
+		if ( area ) {
+			area.focus();
+			area.setSelectionRange( position, position );
+		}
+	}
+
+	/**
+	 * Render the variable chips above the expression.
+	 *
+	 * @param {Array} names Variable names.
+	 */
+	function renderChips( names ) {
+		var box = qs( '#rbw-chip-vars' );
+
+		if ( ! box ) {
+			return;
+		}
+
+		box.innerHTML = '';
+
+		names.forEach( function ( name ) {
+			var chip = document.createElement( 'button' );
+			chip.type = 'button';
+			chip.className = 'button button-small rbw-chip rbw-insert';
+			chip.textContent = name;
+			chip.addEventListener( 'click', function () {
+				insertIntoExpression( name, 0 );
+			} );
+			box.appendChild( chip );
+		} );
+
+		if ( ! names.length ) {
+			var hint = document.createElement( 'span' );
+			hint.className = 'rbw-muted';
+			hint.textContent = strings.noVarsYet || '—';
+			box.appendChild( hint );
+		}
+	}
+
+	/**
+	 * Render the variable editor rows.
+	 */
+	function renderVariableRows() {
+		var body = qs( '#rbw-formula-vars-body' );
+
+		if ( ! body ) {
+			return;
+		}
+
+		body.innerHTML = '';
+
+		formulaState.variables.forEach( function ( variable, index ) {
+			var tr = document.createElement( 'tr' );
+			tr.setAttribute( 'data-index', String( index ) );
+
+			tr.innerHTML =
+				'<td><input type="text" class="rbw-var-name" dir="ltr" maxlength="40" /></td>' +
+				'<td><input type="text" class="rbw-var-label" /></td>' +
+				'<td><select class="rbw-var-type"></select></td>' +
+				'<td class="rbw-var-extra"></td>' +
+				'<td class="rbw-actions"><button type="button" class="button button-small button-link-delete rbw-var-remove">×</button></td>';
+
+			var nameField = qs( '.rbw-var-name', tr );
+			var labelField = qs( '.rbw-var-label', tr );
+			var typeField = qs( '.rbw-var-type', tr );
+			var extra = qs( '.rbw-var-extra', tr );
+
+			nameField.value = variable.name || '';
+			labelField.value = variable.label || '';
+			typeField.innerHTML = '';
+
+			Object.keys( config.variableTypes || {} ).forEach( function ( key ) {
+				var option = document.createElement( 'option' );
+				option.value = key;
+				option.textContent = config.variableTypes[ key ];
+				if ( variable.type === key ) {
+					option.selected = true;
+				}
+				typeField.appendChild( option );
+			} );
+
+			nameField.addEventListener( 'input', function () {
+				formulaState.variables[ index ].name = nameField.value.trim();
+				scheduleValidate();
+				renderTestInputs();
+			} );
+
+			labelField.addEventListener( 'input', function () {
+				formulaState.variables[ index ].label = labelField.value;
+				renderTestInputs();
+			} );
+
+			typeField.addEventListener( 'change', function () {
+				formulaState.variables[ index ].type = typeField.value;
+				renderVariableExtra( extra, formulaState.variables[ index ] );
+				renderTestInputs();
+				scheduleValidate();
+			} );
+
+			qs( '.rbw-var-remove', tr ).addEventListener( 'click', function () {
+				formulaState.variables.splice( index, 1 );
+				renderVariableRows();
+				renderTestInputs();
+				scheduleValidate();
+			} );
+
+			renderVariableExtra( extra, variable );
+			body.appendChild( tr );
+		} );
+
+		if ( ! formulaState.variables.length ) {
+			var empty = document.createElement( 'tr' );
+			empty.className = 'rbw-formula-vars-empty';
+			var cell = document.createElement( 'td' );
+			cell.colSpan = 5;
+			cell.className = 'rbw-muted';
+			cell.textContent = strings.noVarsYet || '—';
+			empty.appendChild( cell );
+			body.appendChild( empty );
+		}
+	}
+
+	/**
+	 * Render the type-specific fields of a variable row.
+	 *
+	 * @param {HTMLElement} cell     Target cell.
+	 * @param {Object}      variable Variable definition.
+	 */
+	function renderVariableExtra( cell, variable ) {
+		cell.innerHTML = '';
+
+		if ( 'currency' === variable.type ) {
+			var select = document.createElement( 'select' );
+			select.className = 'rbw-var-currency';
+
+			(config.currencyCodes || []).forEach( function ( item ) {
+				var option = document.createElement( 'option' );
+				option.value = item.code;
+				option.textContent = item.label;
+				if ( variable.currency_code === item.code ) {
+					option.selected = true;
+				}
+				select.appendChild( option );
+			} );
+
+			select.addEventListener( 'change', function () {
+				variable.currency_code = select.value;
+				renderTestInputs();
+				scheduleValidate();
+			} );
+
+			cell.appendChild( select );
+			return;
+		}
+
+		if ( 'product' === variable.type ) {
+			var fields = document.createElement( 'select' );
+			fields.className = 'rbw-var-product-field';
+
+			Object.keys( config.productFields || {} ).forEach( function ( key ) {
+				var option = document.createElement( 'option' );
+				option.value = key;
+				option.textContent = config.productFields[ key ];
+				if ( variable.product_field === key ) {
+					option.selected = true;
+				}
+				fields.appendChild( option );
+			} );
+
+			fields.addEventListener( 'change', function () {
+				variable.product_field = fields.value;
+			} );
+
+			cell.appendChild( fields );
+			return;
+		}
+
+		// Custom value: default, min, max, money flag.
+		var wrap = document.createElement( 'div' );
+		wrap.className = 'rbw-var-custom';
+
+		wrap.innerHTML =
+			'<label class="rbw-var-inline">' + esc( strings.defaultValue || 'Default' ) +
+			' <input type="number" step="any" class="rbw-var-default" /></label>' +
+			'<label class="rbw-var-inline">' + esc( strings.minValue || 'Min' ) +
+			' <input type="number" step="any" class="rbw-var-min" /></label>' +
+			'<label class="rbw-var-inline">' + esc( strings.maxValue || 'Max' ) +
+			' <input type="number" step="any" class="rbw-var-max" /></label>' +
+			'<label class="rbw-var-inline"><input type="checkbox" class="rbw-var-money" /> ' +
+			esc( strings.isMoney || 'Amount in store unit' ) + '</label>';
+
+		var defaultField = qs( '.rbw-var-default', wrap );
+		var minField = qs( '.rbw-var-min', wrap );
+		var maxField = qs( '.rbw-var-max', wrap );
+		var moneyField = qs( '.rbw-var-money', wrap );
+
+		defaultField.value = 'number' === typeof variable.default ? variable.default : '';
+		minField.value = 'number' === typeof variable.min ? variable.min : '';
+		maxField.value = 'number' === typeof variable.max ? variable.max : '';
+		moneyField.checked = !! variable.is_money;
+
+		defaultField.addEventListener( 'input', function () {
+			variable.default = '' === defaultField.value ? 0 : parseFloat( defaultField.value );
+			renderTestInputs();
+		} );
+
+		minField.addEventListener( 'input', function () {
+			variable.min = '' === minField.value ? null : parseFloat( minField.value );
+		} );
+
+		maxField.addEventListener( 'input', function () {
+			variable.max = '' === maxField.value ? null : parseFloat( maxField.value );
+		} );
+
+		moneyField.addEventListener( 'change', function () {
+			variable.is_money = moneyField.checked;
+		} );
+
+		cell.appendChild( wrap );
+	}
+
+	/**
+	 * Render the sample-value inputs of the test panel.
+	 */
+	function renderTestInputs() {
+		var box = qs( '#rbw-formula-test-vars' );
+
+		if ( ! box ) {
+			return;
+		}
+
+		box.innerHTML = '';
+
+		var seen = {};
+
+		collectVariables().forEach( function ( variable ) {
+			if ( ! variable.name || seen[ variable.name ] ) {
+				return;
+			}
+
+			seen[ variable.name ] = true;
+
+			var wrap = document.createElement( 'p' );
+			wrap.className = 'rbw-test-var';
+
+			var id = 'rbw-test-' + variable.name;
+			var label = document.createElement( 'label' );
+			label.setAttribute( 'for', id );
+			label.textContent = ( variable.label || variable.name ) + ' (' + variable.name + ')';
+
+			var input = document.createElement( 'input' );
+			input.type = 'number';
+			input.step = 'any';
+			input.id = id;
+			input.className = 'rbw-test-value';
+			input.setAttribute( 'data-name', variable.name );
+
+			if ( 'currency' === variable.type ) {
+				input.value = '';
+				input.placeholder = strings.liveRate || 'live rate';
+			} else if ( 'custom' === variable.type && 'number' === typeof variable.default ) {
+				input.value = String( variable.default );
+			}
+
+			wrap.appendChild( label );
+			wrap.appendChild( input );
+			box.appendChild( wrap );
+		} );
+	}
+
+	/**
+	 * Run the formula with the sample values.
+	 */
+	function runFormulaTest() {
+		var button = qs( '#rbw-test-formula' );
+		var result = qs( '#rbw-formula-test-result' );
+		var values = {};
+
+		qsa( '.rbw-test-value' ).forEach( function ( input ) {
+			if ( '' !== input.value ) {
+				values[ input.getAttribute( 'data-name' ) ] = input.value;
+			}
+		} );
+
+		if ( button ) {
+			button.disabled = true;
+			button.textContent = strings.working;
+		}
+
+		request( 'test_formula', {
+			expression: formulaField( 'expression' ),
+			variables: collectVariables(),
+			values: values
+		} )
+			.then( function ( response ) {
+				var data = response.data || {};
+
+				if ( ! result ) {
+					return;
+				}
+
+				result.hidden = false;
+
+				if ( ! response.success ) {
+					result.className = 'rbw-formula-test-result is-error';
+					result.textContent = data.message || strings.genericError;
+					return;
+				}
+
+				var lines = [];
+				lines.push( ( strings.testValue || 'Result' ) + ': ' + data.value_formatted + ' ' + ( data.unit || '' ) );
+
+				Object.keys( data.trace || {} ).forEach( function ( key ) {
+					lines.push( '  ' + key + ' = ' + data.trace[ key ] );
+				} );
+
+				result.className = 'rbw-formula-test-result is-success';
+				result.textContent = lines.join( '\n' );
+			} )
+			.catch( function ( error ) {
+				if ( result ) {
+					result.hidden = false;
+					result.className = 'rbw-formula-test-result is-error';
+					result.textContent = ( error && error.message ) || strings.genericError;
+				}
+			} )
+			.finally( function () {
+				if ( button ) {
+					button.disabled = false;
+					button.textContent = strings.calculate || 'Calculate';
+				}
+			} );
+	}
+
+	/**
+	 * Open the formula dialog, optionally for an existing formula.
+	 *
+	 * @param {Object|null} formula Formula payload.
+	 */
+	function openFormulaModal( formula ) {
+		var modal = qs( '#rbw-formula-modal' );
+		var form = formulaForm();
+
+		if ( ! modal || ! form ) {
+			return;
+		}
+
+		var isEdit = formula && formula.id;
+
+		qs( '#rbw-formula-title' ).textContent = isEdit ? strings.editFormula : strings.addFormula;
+
+		form.querySelector( '[name="id"]' ).value = isEdit ? formula.id : '0';
+		form.querySelector( '[name="name"]' ).value = isEdit ? formula.name : '';
+		form.querySelector( '[name="slug"]' ).value = isEdit ? formula.slug : '';
+		form.querySelector( '[name="description"]' ).value = isEdit ? ( formula.description || '' ) : '';
+		form.querySelector( '[name="expression"]' ).value = isEdit ? formula.expression : '';
+		form.querySelector( '[name="rounding_mode"]' ).value = isEdit ? ( formula.rounding_mode || '' ) : '';
+		form.querySelector( '[name="rounding_step"]' ).value = isEdit && formula.rounding_step ? formula.rounding_step : 0;
+		qs( '#rbw-formula-enabled' ).checked = isEdit ? !! formula.is_enabled : true;
+
+		formulaState.variables = isEdit && Array.isArray( formula.variables )
+			? formula.variables.map( function ( variable ) { return Object.assign( {}, variable ); } )
+			: [];
+
+		renderVariableRows();
+		renderTestInputs();
+		renderChips( [] );
+		setFormulaStatus( '', '' );
+
+		var result = qs( '#rbw-formula-test-result' );
+
+		if ( result ) {
+			result.hidden = true;
+			result.textContent = '';
+		}
+
+		showModalError( 'rbw-formula-error', '' );
+
+		modal.hidden = false;
+
+		( qs( '#rbw-formula-name' ) || {} ).focus && qs( '#rbw-formula-name' ).focus();
+
+		if ( isEdit ) {
+			scheduleValidate();
+		}
+	}
+
+	/**
+	 * Close the formula dialog.
+	 */
+	function closeFormulaModal() {
+		var modal = qs( '#rbw-formula-modal' );
+
+		if ( modal ) {
+			modal.hidden = true;
+		}
+	}
+
+	/**
+	 * Reload the formulas table from the server.
+	 */
+	function reloadFormulas() {
+		window.location.reload();
+	}
+
+	/**
+	 * Bind the whole formulas tab.
+	 */
+	function bindFormulas() {
+		var modal = qs( '#rbw-formula-modal' );
+
+		if ( ! modal ) {
+			return;
+		}
+
+		qsa( '[data-rbw-close]', modal ).forEach( function ( el ) {
+			el.addEventListener( 'click', closeFormulaModal );
+		} );
+
+		document.addEventListener( 'keydown', function ( event ) {
+			if ( 'Escape' === event.key && ! modal.hidden ) {
+				closeFormulaModal();
+			}
+		} );
+
+		var addButton = qs( '#rbw-add-formula' );
+
+		if ( addButton ) {
+			addButton.addEventListener( 'click', function () {
+				openFormulaModal( null );
+			} );
+		}
+
+		var sampleButton = qs( '#rbw-add-formula-samples' );
+
+		if ( sampleButton ) {
+			sampleButton.addEventListener( 'click', function () {
+				sampleButton.disabled = true;
+
+				request( 'add_formula_samples', {} )
+					.then( function ( response ) {
+						notify( messageFrom( response ), response.success ? 'success' : 'error' );
+
+						if ( response.success ) {
+							reloadFormulas();
+						}
+					} )
+					.catch( handleRequestError )
+					.finally( function () {
+						sampleButton.disabled = false;
+					} );
+			} );
+		}
+
+		var expression = qs( '#rbw-formula-expression' );
+
+		if ( expression ) {
+			expression.addEventListener( 'input', scheduleValidate );
+		}
+
+		qsa( '.rbw-insert' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				insertIntoExpression(
+					button.getAttribute( 'data-insert' ) || '',
+					parseInt( button.getAttribute( 'data-caret' ) || '0', 10 )
+				);
+			} );
+		} );
+
+		var addVar = qs( '#rbw-add-variable' );
+
+		if ( addVar ) {
+			addVar.addEventListener( 'click', function () {
+				formulaState.variables.push( {
+					name: '',
+					label: '',
+					type: 'custom',
+					default: 0,
+					is_money: false
+				} );
+
+				renderVariableRows();
+				renderTestInputs();
+			} );
+		}
+
+		var autoButton = qs( '#rbw-autocreate-vars' );
+
+		if ( autoButton ) {
+			autoButton.addEventListener( 'click', function () {
+				var missing = ( autoButton.getAttribute( 'data-missing' ) || '' ).split( ',' ).filter( Boolean );
+
+				missing.forEach( function ( name ) {
+					formulaState.variables.push( {
+						name: name,
+						label: name,
+						type: 'custom',
+						default: 0,
+						is_money: false
+					} );
+				} );
+
+				renderVariableRows();
+				renderTestInputs();
+				scheduleValidate();
+			} );
+		}
+
+		var testButton = qs( '#rbw-test-formula' );
+
+		if ( testButton ) {
+			testButton.addEventListener( 'click', runFormulaTest );
+		}
+
+		var form = formulaForm();
+
+		if ( form ) {
+			form.addEventListener( 'submit', function ( event ) {
+				event.preventDefault();
+
+				var button = qs( '#rbw-save-formula' );
+
+				if ( button ) {
+					button.disabled = true;
+					button.textContent = strings.saving;
+				}
+
+				request( 'save_formula', {
+					id: formulaField( 'id' ),
+					name: formulaField( 'name' ),
+					slug: formulaField( 'slug' ),
+					description: formulaField( 'description' ),
+					expression: formulaField( 'expression' ),
+					variables: collectVariables(),
+					rounding_mode: formulaField( 'rounding_mode' ),
+					rounding_step: formulaField( 'rounding_step' ),
+					is_enabled: qs( '#rbw-formula-enabled' ).checked ? '1' : '0'
+				} )
+					.then( function ( response ) {
+						if ( ! response.success ) {
+							var data = response.data || {};
+							showModalError( 'rbw-formula-error', data.message || strings.genericError );
+							return;
+						}
+
+						notify( messageFrom( response ), 'success' );
+						closeFormulaModal();
+						reloadFormulas();
+					} )
+					.catch( function ( error ) {
+						showModalError( 'rbw-formula-error', ( error && error.message ) || strings.genericError );
+					} )
+					.finally( function () {
+						if ( button ) {
+							button.disabled = false;
+							button.textContent = strings.saveFormula || 'Save formula';
+						}
+					} );
+			} );
+		}
+
+		// Row actions.
+		qsa( '.rbw-formula-toggle' ).forEach( function ( input ) {
+			input.addEventListener( 'change', function () {
+				var enabled = input.checked;
+
+				request( 'toggle_formula', { id: input.getAttribute( 'data-id' ), enabled: enabled ? '1' : '0' } )
+					.then( function ( response ) {
+						if ( ! response.success ) {
+							input.checked = ! enabled;
+						}
+
+						notify( messageFrom( response ), response.success ? 'success' : 'error' );
+					} )
+					.catch( function ( error ) {
+						input.checked = ! enabled;
+						handleRequestError( error );
+					} );
+			} );
+		} );
+
+		qsa( '.rbw-formula-edit' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				var id = button.getAttribute( 'data-id' );
+				var row = button.closest( 'tr' );
+
+				// Reuse the cached payload when available, otherwise reload it.
+				if ( row && row.getAttribute( 'data-payload' ) ) {
+					openFormulaModal( JSON.parse( row.getAttribute( 'data-payload' ) ) );
+					return;
+				}
+
+				openFormulaModalForId( id );
+			} );
+		} );
+
+		qsa( '.rbw-formula-duplicate' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				request( 'duplicate_formula', { id: button.getAttribute( 'data-id' ) } )
+					.then( function ( response ) {
+						notify( messageFrom( response ), response.success ? 'success' : 'error' );
+
+						if ( response.success ) {
+							reloadFormulas();
+						}
+					} )
+					.catch( handleRequestError );
+			} );
+		} );
+
+		qsa( '.rbw-formula-delete' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				var products = parseInt( button.getAttribute( 'data-products' ) || '0', 10 );
+				var detach = '0';
+
+				if ( products > 0 ) {
+					if ( ! window.confirm( ( strings.confirmDetach || 'Products use this formula. Detach and delete?' ) ) ) {
+						return;
+					}
+
+					detach = '1';
+				} else if ( ! window.confirm( strings.confirmDeleteFormula || strings.confirmDelete ) ) {
+					return;
+				}
+
+				request( 'delete_formula', { id: button.getAttribute( 'data-id' ), detach: detach } )
+					.then( function ( response ) {
+						notify( messageFrom( response ), response.success ? 'success' : 'error' );
+
+						if ( response.success ) {
+							reloadFormulas();
+						}
+					} )
+					.catch( handleRequestError );
+			} );
+		} );
+	}
+
+	/**
+	 * Open the dialog for an id by asking the server for the row payload.
+	 *
+	 * @param {string} id Formula id.
+	 */
+	function openFormulaModalForId( id ) {
+		var row = qs( 'tr[data-formula-id="' + id + '"]' );
+
+		if ( row && row.getAttribute( 'data-payload' ) ) {
+			openFormulaModal( JSON.parse( row.getAttribute( 'data-payload' ) ) );
+			return;
+		}
+
+		notify( strings.genericError, 'error' );
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		bindToolbar();
 		bindTable();
@@ -1530,5 +2367,6 @@
 		bindSymbolPicker();
 		bindPresets();
 		bindSources();
+		bindFormulas();
 	} );
 }() );

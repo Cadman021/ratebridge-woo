@@ -657,4 +657,57 @@ final class Frontend {
 
 		return $currency instanceof Currency ? $currency : null;
 	}
+
+	/**
+	 * Effective value of one formula variable for a product.
+	 *
+	 * Shared by `[rbw_formula_var]` and the Elementor “formula variable” widget.
+	 *
+	 * @param WC_Product $product Product.
+	 * @param string     $name    Variable name.
+	 * @return array{name:string,label:string,type:string,value:float,formatted:string}|null
+	 *         Null when the product has no formula or no such variable.
+	 */
+	public static function formula_variable_value( WC_Product $product, string $name ): ?array {
+		$pricer  = new \RateBridge\Pricing\FormulaPricer();
+		$formula = $pricer->formula_for( (int) $product->get_id() );
+
+		if ( ! $formula instanceof \RateBridge\Formula\FormulaModel ) {
+			return null;
+		}
+
+		$definition = null;
+
+		foreach ( $formula->variables as $variable ) {
+			if ( (string) $variable['name'] === $name ) {
+				$definition = $variable;
+				break;
+			}
+		}
+
+		if ( null === $definition ) {
+			return null;
+		}
+
+		$values = $pricer->resolve_variables( $formula, $product, false );
+
+		if ( ! is_array( $values ) || ! array_key_exists( $name, $values ) ) {
+			return null;
+		}
+
+		$value = (float) $values[ $name ];
+		$type  = (string) $definition['type'];
+
+		// Rates and money amounts use the store precision; plain numbers do not.
+		$is_amount = \RateBridge\Formula\FormulaModel::TYPE_CURRENCY === $type || ! empty( $definition['is_money'] );
+		$decimals  = $is_amount ? Settings::store_decimals() : ( abs( $value - round( $value ) ) < 0.000001 ? 0 : 2 );
+
+		return array(
+			'name'      => $name,
+			'label'     => (string) ( $definition['label'] ?? $name ),
+			'type'      => $type,
+			'value'     => $value,
+			'formatted' => self::format_number( $value, $decimals ),
+		);
+	}
 }

@@ -12,6 +12,8 @@ use RateBridge\Core\Settings;
 use RateBridge\Cron\Scheduler;
 use RateBridge\Currency\Currency;
 use RateBridge\Currency\CurrencyRepository;
+use RateBridge\Formula\FormulaModel;
+use RateBridge\Formula\FormulaRepository;
 use RateBridge\Providers\ProviderRegistry;
 defined( 'ABSPATH' ) || exit;
 
@@ -164,6 +166,18 @@ final class SettingsPage {
 				'symbols'     => ProviderRegistry::instance()->all_known_symbols(),
 				'providerLabels' => ProviderRegistry::instance()->choices(),
 				'providerEffMin' => $this->effective_minimums(),
+				'variableTypes'  => array(
+					\RateBridge\Formula\FormulaModel::TYPE_CURRENCY => __( 'Currency rate', 'ratebridge-woo' ),
+					\RateBridge\Formula\FormulaModel::TYPE_PRODUCT  => __( 'Product field', 'ratebridge-woo' ),
+					\RateBridge\Formula\FormulaModel::TYPE_CUSTOM   => __( 'Custom value', 'ratebridge-woo' ),
+				),
+				'productFields'  => array(
+					'weight' => __( 'Weight', 'ratebridge-woo' ),
+					'length' => __( 'Length', 'ratebridge-woo' ),
+					'width'  => __( 'Width', 'ratebridge-woo' ),
+					'height' => __( 'Height', 'ratebridge-woo' ),
+				),
+				'currencyCodes'  => $this->currency_codes_for_js(),
 				'strings'  => array(
 					'confirmDelete' => __( 'Delete this currency? This cannot be undone.', 'ratebridge-woo' ),
 					'confirmClear'  => __( 'Clear the update log?', 'ratebridge-woo' ),
@@ -197,12 +211,48 @@ final class SettingsPage {
 					'samplePrefix'  => __( 'Sample:', 'ratebridge-woo' ),
 					'intervalTooShort' => __( 'This interval (%1$d minutes) is shorter than the source allows (%2$d minutes). The row will only refresh when the source permits it.', 'ratebridge-woo' ),
 					'confirmUnitChange' => __( 'Changing the store unit multiplies or divides every stored rate and every fixed amount by 10, and all product prices will be recalculated. Continue?', 'ratebridge-woo' ),
-					'unitChangeWarning' => __( 'Attention: this converts every stored rate, every fixed profit/commission/extra amount, product minimum prices and fluctuation margins, then recalculates all product prices connected to currencies.', 'ratebridge-woo' ),
+					'unitChangeWarning' => __( 'Attention: this converts every stored rate, every fixed profit/commission/extra amount, product minimum prices, fluctuation margins and formula variables marked as money amounts, then recalculates all product prices. Numbers written directly inside a formula expression are NOT converted.', 'ratebridge-woo' ),
 					'percentLabel'      => __( 'Percent', 'ratebridge-woo' ),
 					'fixedLabel'        => __( 'Fixed amount', 'ratebridge-woo' ),
+					// Formulas.
+					'addFormula'        => __( 'Add formula', 'ratebridge-woo' ),
+					'editFormula'       => __( 'Edit formula', 'ratebridge-woo' ),
+					'saveFormula'       => __( 'Save formula', 'ratebridge-woo' ),
+					'calculate'         => __( 'Calculate', 'ratebridge-woo' ),
+					'formulaValid'      => __( 'The formula is valid.', 'ratebridge-woo' ),
+					'formulaInvalid'    => __( 'The formula is not valid.', 'ratebridge-woo' ),
+					'unusedVars'        => __( 'Unused variables: %s', 'ratebridge-woo' ),
+					'createMissing'     => __( 'Create missing variables', 'ratebridge-woo' ),
+					'noVarsYet'         => __( 'No variables declared yet.', 'ratebridge-woo' ),
+					'defaultValue'      => __( 'Default', 'ratebridge-woo' ),
+					'minValue'          => __( 'Min', 'ratebridge-woo' ),
+					'maxValue'          => __( 'Max', 'ratebridge-woo' ),
+					'isMoney'           => __( 'Amount in store unit', 'ratebridge-woo' ),
+					'liveRate'          => __( 'live rate', 'ratebridge-woo' ),
+					'testValue'         => __( 'Result', 'ratebridge-woo' ),
+					'confirmDeleteFormula' => __( 'Delete this formula?', 'ratebridge-woo' ),
+					'confirmDetach'     => __( 'Products use this formula. Detach them (they switch back to currency mode) and delete it?', 'ratebridge-woo' ),
 				),
 			)
 		);
+	}
+
+	/**
+	 * Currency codes + labels for the formula variable editor.
+	 *
+	 * @return array<int, array{code:string,label:string}>
+	 */
+	private function currency_codes_for_js(): array {
+		$out = array();
+
+		foreach ( ( new CurrencyRepository() )->get_all() as $currency ) {
+			$out[] = array(
+				'code'  => $currency->code,
+				'label' => sprintf( '%s — %s', $currency->code, $currency->name ),
+			);
+		}
+
+		return $out;
 	}
 
 	/**
@@ -233,7 +283,7 @@ final class SettingsPage {
 		}
 
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( (string) $_GET['tab'] ) ) : 'currencies'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$tab = in_array( $tab, array( 'currencies', 'sources', 'general' ), true ) ? $tab : 'currencies';
+		$tab = in_array( $tab, array( 'currencies', 'formulas', 'sources', 'general' ), true ) ? $tab : 'currencies';
 
 		$repo      = new CurrencyRepository();
 		$registry  = ProviderRegistry::instance();
@@ -244,9 +294,31 @@ final class SettingsPage {
 			$cards[ $provider->get_key() ] = $service->card_model( $provider );
 		}
 
+		$formula_repo = new FormulaRepository();
+		$formulas     = array();
+
+		foreach ( $formula_repo->get_all() as $formula ) {
+			$formulas[] = array(
+				'formula'  => $formula,
+				'products' => $formula_repo->count_products_using( $formula->id ),
+			);
+		}
+
 		// Templates receive $rbw_view in scope.
 		$rbw_view = array(
 			'currencies'   => $repo->get_all(),
+			'formulas'     => $formulas,
+			'variable_types' => array(
+				FormulaModel::TYPE_CURRENCY => __( 'Currency rate', 'ratebridge-woo' ),
+				FormulaModel::TYPE_PRODUCT  => __( 'Product field', 'ratebridge-woo' ),
+				FormulaModel::TYPE_CUSTOM   => __( 'Custom value', 'ratebridge-woo' ),
+			),
+			'product_fields' => array(
+				'weight' => __( 'Weight', 'ratebridge-woo' ),
+				'length' => __( 'Length', 'ratebridge-woo' ),
+				'width'  => __( 'Width', 'ratebridge-woo' ),
+				'height' => __( 'Height', 'ratebridge-woo' ),
+			),
 			'settings'     => Settings::all(),
 			'providers'    => $registry->choices(),
 			'symbols'      => $registry->all_known_symbols(),
@@ -274,6 +346,19 @@ final class SettingsPage {
 		$decimals = $currency->rate >= 1000 ? 0 : 4;
 
 		return number_format_i18n( $currency->rate, $decimals );
+	}
+
+	/**
+	 * Format a number for admin display (ASCII separators, store decimals).
+	 *
+	 * @param float $value    Value.
+	 * @param int   $decimals Decimals (defaults to the store precision).
+	 * @return string
+	 */
+	public static function format_number( float $value, int $decimals = -1 ): string {
+		$decimals = $decimals < 0 ? Settings::store_decimals() : $decimals;
+
+		return \RateBridge\Frontend\RateFormatter::number( $value, $decimals );
 	}
 
 	/**

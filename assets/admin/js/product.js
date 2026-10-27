@@ -93,6 +93,27 @@
 
 		// Native price inputs are controlled by the currency while managed.
 		lockPriceInputs( managed );
+
+		syncMode();
+	}
+
+	/**
+	 * Show the pricing-method panel that matches the selected mode.
+	 */
+	function syncMode() {
+		var select = qs( '#rbw_mode' );
+		var mode = select ? select.value : 'currency';
+
+		var currencyBox = qs( '.rbw-mode-currency' );
+		var formulaBox = qs( '.rbw-mode-formula' );
+
+		if ( currencyBox ) {
+			currencyBox.hidden = 'currency' !== mode;
+		}
+
+		if ( formulaBox ) {
+			formulaBox.hidden = 'formula' !== mode;
+		}
 	}
 
 	/**
@@ -146,6 +167,21 @@
 
 		body.append( 'action', 'rbw_' + config.action );
 		body.append( 'nonce', config.nonce );
+
+		// Formula mode sends its own fields; the preview endpoint understands both.
+		var mode = ( qs( '#rbw_mode' ) || {} ).value || 'currency';
+
+		body.append( 'mode', mode );
+
+		if ( 'formula' === mode ) {
+			var formulaSelect = qs( '#rbw_formula_id' );
+
+			body.append( 'formula_id', formulaSelect ? formulaSelect.value : '' );
+
+			qsa( '.rbw-formula-var-input' ).forEach( function ( input ) {
+				body.append( 'formula_vars[' + input.getAttribute( 'name' ).replace( /^rbw_formula_vars\[/, '' ).replace( /\]$/, '' ) + ']', input.value );
+			} );
+		}
 
 		var map = {
 			currency: 'rbw_currency',
@@ -298,6 +334,12 @@
 
 		if ( checkbox ) {
 			checkbox.addEventListener( 'change', syncSimple );
+		}
+
+		var modeSelect = qs( '#rbw_mode' );
+
+		if ( modeSelect ) {
+			modeSelect.addEventListener( 'change', syncMode );
 		}
 
 		qsa( '.rbw-rule-type' ).forEach( function ( select ) {

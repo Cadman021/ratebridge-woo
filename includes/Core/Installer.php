@@ -24,7 +24,7 @@ final class Installer {
 	/**
 	 * Current DB schema version.
 	 */
-	public const DB_VERSION = '1.1.0';
+	public const DB_VERSION = '1.2.0';
 
 	/**
 	 * Columns added by 1.1.0 (Phase 3 pricing settings).
@@ -143,6 +143,17 @@ final class Installer {
 	}
 
 	/**
+	 * Table name for formulas.
+	 *
+	 * @return string
+	 */
+	public static function formulas_table(): string {
+		global $wpdb;
+
+		return $wpdb->prefix . 'rbw_formulas';
+	}
+
+	/**
 	 * Create/upgrade the currencies table with dbDelta().
 	 *
 	 * @return void
@@ -179,6 +190,44 @@ final class Installer {
 			UNIQUE KEY code (code),
 			KEY is_enabled (is_enabled),
 			KEY provider (provider)
+		) {$charset_collate};";
+
+		dbDelta( $sql );
+
+		self::create_formulas_table();
+	}
+
+	/**
+	 * Create/upgrade the formulas table (schema 1.2.0).
+	 *
+	 * dbDelta() is idempotent, so this also runs on existing installs during the
+	 * upgrade path.
+	 *
+	 * @return void
+	 */
+	public static function create_formulas_table(): void {
+		global $wpdb;
+
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+		$table_name      = self::formulas_table();
+		$charset_collate = $wpdb->get_charset_collate();
+
+		$sql = "CREATE TABLE {$table_name} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			name varchar(190) NOT NULL DEFAULT '',
+			slug varchar(64) NOT NULL DEFAULT '',
+			expression text NULL,
+			description text NULL,
+			variables longtext NULL,
+			rounding_mode varchar(16) NOT NULL DEFAULT '',
+			rounding_step decimal(30,10) NOT NULL DEFAULT 0.0000000000,
+			is_enabled tinyint(1) NOT NULL DEFAULT 1,
+			created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			updated_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+			PRIMARY KEY  (id),
+			UNIQUE KEY slug (slug),
+			KEY is_enabled (is_enabled)
 		) {$charset_collate};";
 
 		dbDelta( $sql );

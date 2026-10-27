@@ -73,6 +73,36 @@ final class ProductData {
 	public const META_LAST_RATE  = '_rbw_last_rate';
 
 	/**
+	 * Human-readable reason why the last calculation failed ('' when fine).
+	 */
+	public const META_LAST_ERROR = '_rbw_last_error';
+
+	/**
+	 * Pricing mode: `currency` (base price × rate, the default) or `formula`.
+	 */
+	public const META_MODE = '_rbw_mode';
+
+	/**
+	 * Formula id used in formula mode.
+	 */
+	public const META_FORMULA_ID = '_rbw_formula_id';
+
+	/**
+	 * Per-product overrides for custom formula variables (JSON object).
+	 */
+	public const META_FORMULA_VARS = '_rbw_formula_vars';
+
+	/**
+	 * Pricing mode: currency.
+	 */
+	public const MODE_CURRENCY = 'currency';
+
+	/**
+	 * Pricing mode: formula.
+	 */
+	public const MODE_FORMULA = 'formula';
+
+	/**
 	 * All keys written by the plugin (used by uninstall.php).
 	 *
 	 * @return string[]
@@ -94,6 +124,10 @@ final class ProductData {
 			self::META_LAST_PRICE,
 			self::META_LAST_CALC,
 			self::META_LAST_RATE,
+			self::META_LAST_ERROR,
+			self::META_MODE,
+			self::META_FORMULA_ID,
+			self::META_FORMULA_VARS,
 		);
 	}
 
@@ -108,6 +142,88 @@ final class ProductData {
 			self::META_FLUCTUATION,
 			self::META_LAST_PRICE,
 		);
+	}
+
+	/**
+	 * Pricing mode of a product/variation.
+	 *
+	 * Products created before Phase 6 have no `_rbw_mode` meta and therefore keep
+	 * behaving exactly as before (`currency`).
+	 *
+	 * @param int $post_id Product or variation id.
+	 * @return string `currency` or `formula`.
+	 */
+	public static function mode( int $post_id ): string {
+		$mode = sanitize_key( (string) get_post_meta( $post_id, self::META_MODE, true ) );
+
+		return self::MODE_FORMULA === $mode ? self::MODE_FORMULA : self::MODE_CURRENCY;
+	}
+
+	/**
+	 * Whether a product is priced by a formula.
+	 *
+	 * @param int $post_id Product or variation id.
+	 * @return bool
+	 */
+	public static function is_formula_mode( int $post_id ): bool {
+		return self::MODE_FORMULA === self::mode( $post_id );
+	}
+
+	/**
+	 * Formula id assigned to a product (0 when none).
+	 *
+	 * @param int $post_id Product or variation id.
+	 * @return int
+	 */
+	public static function formula_id( int $post_id ): int {
+		return absint( get_post_meta( $post_id, self::META_FORMULA_ID, true ) );
+	}
+
+	/**
+	 * Per-product custom-variable overrides.
+	 *
+	 * @param int $post_id Product or variation id.
+	 * @return array<string, float>
+	 */
+	public static function formula_overrides( int $post_id ): array {
+		$raw = get_post_meta( $post_id, self::META_FORMULA_VARS, true );
+
+		if ( is_string( $raw ) && '' !== $raw ) {
+			$decoded = json_decode( $raw, true );
+			$raw     = is_array( $decoded ) ? $decoded : array();
+		}
+
+		if ( ! is_array( $raw ) ) {
+			return array();
+		}
+
+		$clean = array();
+
+		foreach ( $raw as $name => $value ) {
+			$name = (string) $name;
+
+			if ( ! \RateBridge\Formula\Formula::is_valid_variable_name( $name ) ) {
+				continue;
+			}
+
+			if ( ! is_numeric( $value ) ) {
+				continue;
+			}
+
+			$clean[ $name ] = (float) $value;
+		}
+
+		return $clean;
+	}
+
+	/**
+	 * Last failure reason for the products list / editor.
+	 *
+	 * @param int $post_id Product id.
+	 * @return string
+	 */
+	public static function last_error( int $post_id ): string {
+		return trim( (string) get_post_meta( $post_id, self::META_LAST_ERROR, true ) );
 	}
 
 	/**
@@ -187,6 +303,10 @@ final class ProductData {
 
 		return array(
 			'enabled'       => $enabled,
+			'mode'          => self::mode( $post_id ),
+			'formula_id'    => self::formula_id( $post_id ),
+			'formula_vars'  => self::formula_overrides( $post_id ),
+			'last_error'    => self::last_error( $post_id ),
 			'currency'      => self::currency_code( $post_id ),
 			'base_price'    => self::base_price( $post_id ),
 			'sale_price'    => self::sale_base_price( $post_id ),

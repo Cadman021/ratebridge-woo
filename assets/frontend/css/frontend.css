@@ -476,3 +476,22 @@ table.td .rbw-order-item-meta {
 	line-height: 1.7;
 	text-align: start;
 }
+
+/* ------------------------------------------------- Formula variables */
+
+.rbw-formula-var,
+.rbw-widget-formula-var {
+	font-variant-numeric: tabular-nums;
+}
+
+.rbw-formula-var-label {
+	color: var(--rbw-muted, #555);
+}
+
+.rbw-formula-var-value {
+	font-weight: 600;
+	color: var(--rbw-accent, inherit);
+	direction: ltr;
+	unicode-bidi: isolate;
+	display: inline-block;
+}

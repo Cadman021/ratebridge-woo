@@ -375,3 +375,200 @@
 	line-height: 1.6;
 	word-break: break-word;
 }
+
+/* Formulas tab */
+.rbw-modal-wide .rbw-modal-content {
+	width: min(920px, 94vw);
+}
+
+.rbw-formula-grid {
+	display: grid;
+	grid-template-columns: 2fr 1fr;
+	gap: 0 16px;
+}
+
+.rbw-formula-expression {
+	font-family: Consolas, Monaco, monospace;
+	font-size: 13px;
+	line-height: 1.7;
+	direction: ltr;
+	text-align: left;
+}
+
+.rbw-formula-error-line {
+	direction: ltr;
+	text-align: left;
+	background: #fcf0f1;
+	border-inline-start: 3px solid #d63638;
+	color: #b32d2e;
+	padding: 6px 10px;
+	margin: 6px 0 0;
+	font-family: Consolas, Monaco, monospace;
+	font-size: 12px;
+	line-height: 1.4;
+	white-space: pre;
+	overflow-x: auto;
+}
+
+.rbw-formula-status {
+	margin: 6px 0 0;
+	font-size: 12px;
+	line-height: 1.6;
+}
+
+.rbw-formula-status.is-success {
+	color: #007017;
+}
+
+.rbw-formula-status.is-error {
+	color: #b32d2e;
+}
+
+.rbw-formula-status.is-warning {
+	color: #7a5c00;
+}
+
+.rbw-formula-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+	margin-block: 8px;
+}
+
+.rbw-chips-label {
+	font-size: 12px;
+	color: #646970;
+	min-width: 68px;
+}
+
+.rbw-chip-list {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.rbw-chip-list .rbw-chip.button {
+	min-height: 24px;
+	line-height: 22px;
+	padding: 0 8px;
+	font-family: Consolas, Monaco, monospace;
+	font-size: 12px;
+}
+
+.rbw-formula-vars .rbw-var-name,
+.rbw-formula-vars .rbw-var-label {
+	width: 100%;
+}
+
+.rbw-formula-vars td {
+	vertical-align: top;
+}
+
+.rbw-var-custom {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 10px;
+	align-items: center;
+}
+
+.rbw-var-inline {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.rbw-var-inline input[type="number"] {
+	width: 90px;
+}
+
+.rbw-formula-test {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: 8px 16px;
+	margin-block: 8px;
+}
+
+.rbw-test-var {
+	margin: 0;
+}
+
+.rbw-test-var label {
+	display: block;
+	font-size: 12px;
+	margin-block-end: 2px;
+}
+
+.rbw-test-var input {
+	width: 100%;
+}
+
+.rbw-formula-test-result {
+	white-space: pre-wrap;
+	direction: ltr;
+	text-align: left;
+	font-family: Consolas, Monaco, monospace;
+	font-size: 12px;
+	line-height: 1.7;
+	padding: 8px 10px;
+	border-radius: 4px;
+	margin-block: 8px;
+}
+
+.rbw-formula-test-result.is-success {
+	background: #edfaef;
+	border-inline-start: 4px solid #00a32a;
+}
+
+.rbw-formula-test-result.is-error {
+	background: #fcf0f1;
+	border-inline-start: 4px solid #d63638;
+	color: #b32d2e;
+}
+
+.rbw-table .rbw-formula-expr {
+	font-size: 12px;
+	word-break: break-word;
+}
+
+.rbw-col-count {
+	width: 90px;
+	text-align: center;
+}
+
+/* Product editor: pricing method + formula panel */
+.rbw-mode-select {
+	min-width: 220px;
+}
+
+.rbw-mode-formula {
+	padding-inline-start: 12px;
+	border-inline-start: 3px solid #2271b1;
+	margin-block: 8px;
+}
+
+.rbw-formula-variable-table th {
+	width: 30%;
+	font-weight: 400;
+}
+
+.rbw-formula-variable-table code {
+	font-size: 12px;
+}
+
+.rbw-readonly-value {
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+}
+
+.rbw-formula-badge {
+	display: inline-block;
+	padding: 1px 6px;
+	border-radius: 8px;
+	background: #f0f6fc;
+	color: #0a4b78;
+	font-size: 11px;
+	font-weight: 600;
+}

@@ -604,6 +604,98 @@ $decimals = PriceCalculator::calculate(
 CalcAssert::price( 'decimals=2: 3 x 2.5 = 7.50', $decimals, 7.5 );
 
 /* ------------------------------------------------------------------------- */
+echo "\n[14] Formula mode post-processing (min price / rounding / fluctuation)\n";
+/* ------------------------------------------------------------------------- */
+/*
+ * Formula prices reuse the same three steps as the currency mode, in the same
+ * order: minimum price -> rounding -> fluctuation margin. PriceCalculator is
+ * the shared implementation (`round_to_step()`), so the steps are asserted
+ * here at the primitive level (FormulaPricer calls exactly these).
+ */
+
+// Step 6: minimum price raises a small result.
+CalcAssert::price(
+	'formula result 500,000 raised to min 1,000,000',
+	PriceCalculator::calculate(
+		1.0,
+		500000.0,
+		base_settings( array( 'min_price' => 1000000.0 ) )
+	),
+	1000000.0
+);
+
+// Step 7: rounding with step 1000 after the minimum.
+CalcAssert::price(
+	'formula 7,407,360 rounded nearest 1000',
+	PriceCalculator::calculate(
+		12.3456,
+		600000.0,
+		base_settings( array( 'rounding_mode' => 'nearest', 'rounding_step' => 1000.0 ) )
+	),
+	7407000.0
+);
+CalcAssert::price(
+	'formula 7,407,360 rounded up to 1000',
+	PriceCalculator::calculate(
+		12.3456,
+		600000.0,
+		base_settings( array( 'rounding_mode' => 'ceil', 'rounding_step' => 1000.0 ) )
+	),
+	7408000.0
+);
+
+// Step 8: fluctuation keeps the previous price when the move is small.
+CalcAssert::price(
+	'formula move 50,000 < margin 100,000 keeps previous',
+	PriceCalculator::calculate(
+		100.0,
+		600000.0,
+		base_settings(
+			array(
+				'previous_price' => 60000500.0,
+				'fluctuation'    => 100000.0,
+			)
+		)
+	),
+	60000500.0
+);
+
+// The rounding helper itself (used by FormulaPricer::post_process).
+CalcAssert::check(
+	'round_to_step(nearest, 1000) on 2,564,512.61 -> 2,565,000',
+	2565000.0 === PriceCalculator::round_to_step( 2564512.61, 'nearest', 1000.0 ),
+	(string) PriceCalculator::round_to_step( 2564512.61, 'nearest', 1000.0 )
+);
+CalcAssert::check(
+	'round_to_step(floor, 1000) on 2,564,512.61 -> 2,564,000',
+	2564000.0 === PriceCalculator::round_to_step( 2564512.61, 'floor', 1000.0 ),
+	(string) PriceCalculator::round_to_step( 2564512.61, 'floor', 1000.0 )
+);
+CalcAssert::check(
+	'round_to_step(none) leaves the value alone',
+	2564512.61 === PriceCalculator::round_to_step( 2564512.61, 'none', 1000.0 )
+);
+CalcAssert::check(
+	'a formula result <= 0 must never become a price',
+	! PriceCalculator::calculate(
+		1.0,
+		0.0,
+		base_settings()
+	)['ok']
+);
+
+// The gold reference case, end to end with step 1000 (the store default).
+CalcAssert::price(
+	'gold 256,451,261.32 rounded to the nearest 1000 = 256,450,000',
+	PriceCalculator::calculate(
+		1.0,
+		256451261.32,
+		base_settings( array( 'rounding_mode' => 'nearest', 'rounding_step' => 1000.0 ) )
+	),
+	256451000.0
+);
+
+/* ------------------------------------------------------------------------- */
 echo "\n", str_repeat( '=', 60 ), "\n";
 printf( "RESULT: %d passed, %d failed\n", CalcAssert::$passed, CalcAssert::$failed );
 

@@ -50,6 +50,13 @@ final class RepriceJob {
 	public function register(): void {
 		add_action( self::HOOK, array( $this, 'run' ), 10, 4 );
 		add_action( self::CRON_HOOK, array( $this, 'run_cron_queue' ) );
+
+		/*
+		 * Formula dependencies: a formula that references a currency must reprice
+		 * its products when that rate changes, and every product using a formula
+		 * must be repriced when the formula itself is saved.
+		 */
+		add_action( 'rbw_formula_saved', array( $this, 'on_formula_saved' ), 10, 1 );
 	}
 
 	/**
@@ -161,7 +168,7 @@ final class RepriceJob {
 			)
 		);
 
-		$batch = $this->process_page( $code, $page );
+		$batch = $this->process_page_for( $code, $page );
 
 		foreach ( $batch['summary'] as $key => $value ) {
 			$summary[ $key ] = (int) ( $summary[ $key ] ?? 0 ) + (int) $value;
@@ -201,6 +208,155 @@ final class RepriceJob {
 		);
 
 		update_option( self::QUEUE_OPTION, $queue, false );
+	}
+
+	/**
+	 * Enqueue repricing for the products using a formula (deduplicated).
+	 *
+	 * @param int    $formula_id Formula id.
+	 * @param string $reason     created|updated (for the log).
+	 * @return bool Whether a job was enqueued.
+	 */
+	public function enqueue_formula( int $formula_id, string $reason = 'updated' ): bool {
+		if ( $formula_id <= 0 ) {
+			return false;
+		}
+
+		$key = 'formula:' . $formula_id;
+
+		if ( $this->has_pending( $key ) ) {
+			return false;
+		}
+
+		if ( function_exists( 'as_enqueue_async_action' ) && function_exists( 'as_has_scheduled_action' ) ) {
+			as_enqueue_async_action(
+				self::HOOK,
+				array(
+					'code'    => $key,
+					'page'    => 1,
+					'summary' => array(),
+					'round'   => 0,
+				),
+				self::GROUP
+			);
+
+			return true;
+		}
+
+		$this->queue_cron( $key );
+
+		unset( $reason );
+
+		return true;
+	}
+
+	/**
+	 * React to a saved/created formula.
+	 *
+	 * @param int $formula_id Formula id.
+	 * @return void
+	 */
+	public function on_formula_saved( $formula_id ): void {
+		$this->enqueue_formula( (int) $formula_id );
+	}
+
+	/**
+	 * Enqueue repricing for the formulas that reference a currency.
+	 *
+	 * Called by the rate-change listener so formula products follow rates they
+	 * actually use.
+	 *
+	 * @param string $currency_code Currency code.
+	 * @return int Number of formula jobs enqueued.
+	 */
+	public function enqueue_for_currency_formulas( string $currency_code ): int {
+		$code = strtoupper( trim( $currency_code ) );
+
+		if ( '' === $code ) {
+			return 0;
+		}
+
+		$repository = new \RateBridge\Formula\FormulaRepository();
+		$enqueued   = 0;
+
+		foreach ( $repository->find_using_currency( $code ) as $formula ) {
+			if ( $this->enqueue_formula( $formula->id ) ) {
+				++$enqueued;
+			}
+		}
+
+		return $enqueued;
+	}
+
+	/**
+	 * Process one batch for a job key (`USD` or `formula:12`).
+	 *
+	 * @param string $key  Currency code or `formula:<id>`.
+	 * @param int    $page Page number.
+	 * @return array{summary:array<string,int>,done:bool,counts:int}
+	 */
+	public function process_page_for( string $key, int $page ): array {
+		if ( str_starts_with( $key, 'formula:' ) ) {
+			return $this->process_formula_page( (int) substr( $key, 8 ), $page );
+		}
+
+		return $this->process_page( $key, $page );
+	}
+
+	/**
+	 * Process one batch of products using a formula.
+	 *
+	 * @param int $formula_id Formula id.
+	 * @param int $page       Page number (1-based over an id slice).
+	 * @return array{summary:array<string,int>,done:bool,counts:int}
+	 */
+	public function process_formula_page( int $formula_id, int $page ): array {
+		$repository = new \RateBridge\Formula\FormulaRepository();
+		$empty      = array(
+			'repriced'  => 0,
+			'skipped'   => 0,
+			'unchanged' => 0,
+			'failed'    => 0,
+		);
+
+		$ids = $repository->reprice_target_ids( $formula_id );
+
+		if ( empty( $ids ) ) {
+			return array(
+				'summary' => $empty,
+				'done'    => true,
+				'counts'  => 0,
+			);
+		}
+
+		$slice = array_slice( $ids, ( max( 1, $page ) - 1 ) * self::BATCH_SIZE, self::BATCH_SIZE );
+		$summary = $empty;
+		$repricer = new Repricer();
+
+		foreach ( $slice as $product_id ) {
+			$product = wc_get_product( (int) $product_id );
+
+			if ( ! $product instanceof WC_Product ) {
+				continue;
+			}
+
+			$result = $repricer->reprice_product( $product );
+
+			$key = match ( $result['status'] ) {
+				'repriced'  => 'repriced',
+				'failed'    => 'failed',
+				'unchanged' => 'unchanged',
+				default     => 'skipped',
+			};
+
+			++$summary[ $key ];
+		}
+
+		return array(
+			'summary' => $summary,
+			'done'    => count( $slice ) < self::BATCH_SIZE,
+			'counts'  => count( $slice ),
+		);
 	}
 
 	/**
@@ -275,7 +431,7 @@ final class RepriceJob {
 		foreach ( $queue as $code => $state ) {
 			$code  = strtoupper( (string) $code );
 			$page  = max( 1, (int) ( $state['page'] ?? 1 ) );
-			$batch = $this->process_page( $code, $page );
+			$batch = $this->process_page_for( $code, $page );
 
 			$summary = wp_parse_args(
 				is_array( $state['summary'] ?? null ) ? $state['summary'] : array(),

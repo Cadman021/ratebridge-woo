@@ -97,6 +97,7 @@ final class UnitMigration {
 			'posts'      => 0,
 			'codes'      => array(),
 			'step'       => 1.0,
+			'formulas'   => 0,
 		);
 
 		if ( $old === $new ) {
@@ -122,7 +123,10 @@ final class UnitMigration {
 
 		$result['step'] = $new_step;
 
-		// 3. Product-level store amounts (batched over all `_rbw_*` products).
+		// 3. Formula custom variables marked as money (defaults + overrides).
+		$result['formulas'] = $this->migrate_formulas( $factor );
+
+		// 4. Product-level store amounts (batched over all `_rbw_*` products).
 		$counts              = $this->migrate_products( $factor );
 		$result['products']  = $counts['products'];
 		$result['posts']     = $counts['posts'];
@@ -132,13 +136,14 @@ final class UnitMigration {
 			array(
 				'status'     => 'success',
 				'message'    => sprintf(
-					/* translators: 1: old unit, 2: new unit, 3: currency rows, 4: products */
-					__( 'Store unit changed from %1$s to %2$s. Converted %3$d currencies and %4$d products; rounding step is now %5$s.', 'ratebridge-woo' ),
+					/* translators: 1: old unit, 2: new unit, 3: currency rows, 4: products, 5: rounding step, 6: formula count */
+					__( 'Store unit changed from %1$s to %2$s. Converted %3$d currencies, %4$d products and %6$d formulas; rounding step is now %5$s.', 'ratebridge-woo' ),
 					$old,
 					$new,
 					$result['currencies'],
 					$result['products'],
-					(string) $new_step
+					(string) $new_step,
+					(int) $result['formulas']
 				),
 				'currencies' => $result['codes'],
 				'trigger'    => 'unit',
@@ -146,6 +151,49 @@ final class UnitMigration {
 		);
 
 		return $result;
+	}
+
+	/**
+	 * Convert money-type custom variable defaults in every formula.
+	 *
+	 * Only variables flagged `is_money` are amounts in the store unit; plain
+	 * numbers inside an expression (literals) are NOT converted — that
+	 * limitation is documented in the README and in the confirmation text.
+	 *
+	 * @param float $factor Multiplier.
+	 * @return int Number of formulas whose variables changed.
+	 */
+	private function migrate_formulas( float $factor ): int {
+		$repository = new \RateBridge\Formula\FormulaRepository();
+		$changed    = 0;
+
+		foreach ( $repository->get_all() as $formula ) {
+			$variables = $formula->variables;
+			$touched   = false;
+
+			foreach ( $variables as $index => $variable ) {
+				if ( \RateBridge\Formula\FormulaModel::TYPE_CUSTOM !== ( $variable['type'] ?? '' ) ) {
+					continue;
+				}
+
+				if ( empty( $variable['is_money'] ) ) {
+					continue;
+				}
+
+				foreach ( array( 'default', 'min', 'max' ) as $key ) {
+					if ( isset( $variable[ $key ] ) && is_numeric( $variable[ $key ] ) ) {
+						$variables[ $index ][ $key ] = round( (float) $variable[ $key ] * $factor, 4 );
+						$touched = true;
+					}
+				}
+			}
+
+			if ( $touched && $repository->update( $formula->id, array( 'variables' => $variables ) ) ) {
+				++$changed;
+			}
+		}
+
+		return $changed;
 	}
 
 	/**
@@ -234,6 +282,13 @@ final class UnitMigration {
 			++$updated;
 		}
 
+		/*
+		 * Per-product formula overrides: only the variables flagged `is_money`
+		 * are store amounts. The formula definition is the only place that knows
+		 * which names those are, so the products are walked afterwards by
+		 * migrate_formula_overrides().
+		 */
+
 		// Extra amount is always a fixed store amount.
 		$extra = get_post_meta( $post_id, ProductData::META_EXTRA_AMOUNT, true );
 
@@ -245,7 +300,63 @@ final class UnitMigration {
 		// Clear the fluctuation baseline: it is in the old unit.
 		delete_post_meta( $post_id, ProductData::META_LAST_PRICE );
 
+		$updated += $this->convert_formula_overrides( $post_id, $factor );
+
 		return $updated;
+	}
+
+	/**
+	 * Convert a product's formula-variable overrides that are money amounts.
+	 *
+	 * @param int   $post_id Product id.
+	 * @param float $factor  Multiplier.
+	 * @return int Number of overrides changed.
+	 */
+	private function convert_formula_overrides( int $post_id, float $factor ): int {
+		$overrides = ProductData::formula_overrides( $post_id );
+
+		if ( empty( $overrides ) ) {
+			return 0;
+		}
+
+		$formula_id = ProductData::formula_id( $post_id );
+
+		if ( 0 === $formula_id ) {
+			$parent = (int) wp_get_post_parent_id( $post_id );
+			$formula_id = $parent > 0 ? ProductData::formula_id( $parent ) : 0;
+		}
+
+		if ( 0 === $formula_id ) {
+			return 0;
+		}
+
+		$formula = ( new \RateBridge\Formula\FormulaRepository() )->get( $formula_id );
+
+		if ( null === $formula ) {
+			return 0;
+		}
+
+		$money_names = array();
+		$changed     = 0;
+
+		foreach ( $formula->variables_of_type( \RateBridge\Formula\FormulaModel::TYPE_CUSTOM ) as $variable ) {
+			if ( ! empty( $variable['is_money'] ) ) {
+				$money_names[] = (string) $variable['name'];
+			}
+		}
+
+		foreach ( $money_names as $name ) {
+			if ( isset( $overrides[ $name ] ) ) {
+				$overrides[ $name ] = round( $overrides[ $name ] * $factor, 4 );
+				++$changed;
+			}
+		}
+
+		if ( $changed > 0 ) {
+			update_post_meta( $post_id, ProductData::META_FORMULA_VARS, wp_json_encode( $overrides ) );
+		}
+
+		return $changed;
 	}
 
 	/**
