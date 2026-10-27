@@ -12,6 +12,12 @@ use RateBridge\Core\Logger;
 use RateBridge\Core\Settings;
 use RateBridge\Currency\Currency;
 use RateBridge\Currency\CurrencyRepository;
+use RateBridge\ImportExport\AdminController;
+use RateBridge\ImportExport\Importer;
+use RateBridge\ImportExport\ImportPlan;
+use RateBridge\ImportExport\Package;
+use RateBridge\ImportExport\ProductCsv;
+use RateBridge\ImportExport\ProductsCsvService;
 use RateBridge\Formula\Formula;
 use RateBridge\Formula\FormulaModel;
 use RateBridge\Formula\FormulaRepository;
@@ -89,6 +95,13 @@ final class AjaxController
 			'duplicate_formula',
 			'toggle_formula',
 			'add_formula_samples',
+			'export_info',
+			'import_package_dry_run',
+			'import_package_execute',
+			'list_backups',
+			'restore_backup',
+			'import_products_csv',
+			'import_products_chunk',
 		);
 	}
 
@@ -126,6 +139,9 @@ final class AjaxController
 			'rbw_save_formula'               => 'save_formula',
 			'rbw_delete_formula'             => 'delete_formula',
 			'rbw_toggle_formula'             => 'toggle_formula',
+			'rbw_import_package_dry_run'     => 'import_package_dry_run',
+			'rbw_import_package_execute'     => 'import_package_execute',
+			'rbw_restore_backup'             => 'restore_backup',
 		);
 	}
 
@@ -243,6 +259,27 @@ final class AjaxController
 				break;
 			case 'add_formula_samples':
 				$this->add_formula_samples();
+				break;
+			case 'export_info':
+				$this->export_info();
+				break;
+			case 'import_package_dry_run':
+				$this->import_package_dry_run();
+				break;
+			case 'import_package_execute':
+				$this->import_package_execute();
+				break;
+			case 'list_backups':
+				$this->list_backups();
+				break;
+			case 'restore_backup':
+				$this->restore_backup();
+				break;
+			case 'import_products_csv':
+				$this->import_products_csv();
+				break;
+			case 'import_products_chunk':
+				$this->import_products_chunk();
 				break;
 		}
 	}
@@ -1851,6 +1888,517 @@ final class AjaxController
 				'products' => (new FormulaRepository())->count_products_using($formula->id),
 			)
 		);
+	}
+
+	/**
+	 * Import/Export tab bootstrap data (download URLs, backups, unit).
+	 *
+	 * @return void
+	 */
+	private function export_info(): void
+	{
+		$importer = new Importer();
+
+		wp_send_json_success(
+			array(
+				'package_url' => AdminController::package_url(),
+				'products_url' => AdminController::products_url(),
+				'store_unit' => Settings::store_unit(),
+				'unit_label' => SettingsPage::unit_label(),
+				'sections' => array(
+					'settings' => __('Settings', 'ratebridge-woo'),
+					'currencies' => __('Currencies', 'ratebridge-woo'),
+					'formulas' => __('Formulas', 'ratebridge-woo'),
+				),
+				'backups' => $importer->backup_summaries(),
+			)
+		);
+	}
+
+	/**
+	 * Validate an uploaded JSON package and return the dry-run report.
+	 *
+	 * @return void
+	 */
+	private function import_package_dry_run(): void
+	{
+		$file = $this->read_uploaded_json();
+
+		if (is_wp_error($file)) {
+			wp_send_json_error(array('message' => $file->get_error_message()), 400);
+		}
+
+		$validated = Package::validate_json((string) $file);
+
+		if (! $validated['ok']) {
+			wp_send_json_error(
+				array(
+					'message' => $this->package_error_message($validated['error']->code),
+					'code' => $validated['error']->code,
+				),
+				400
+			);
+		}
+
+		$policy = ImportPlan::policy(isset($_POST['policy']) ? sanitize_key(wp_unslash((string) $_POST['policy'])) : ImportPlan::POLICY_SKIP);
+		$convert = ! isset($_POST['convert']) || '1' === sanitize_text_field(wp_unslash((string) $_POST['convert']));
+
+		$plan = (new Importer())->analyse($validated['data'], $policy, $convert);
+
+		// The already-validated payload is stored server-side; the browser only
+		// gets an opaque token.
+		$token = $this->store_import_token(
+			array(
+				'kind' => 'package',
+				'data' => $validated['data'],
+				'policy' => $policy,
+				'convert' => $convert,
+			)
+		);
+
+		$counts = array();
+
+		foreach ((array) ($plan['counts'] ?? array()) as $section => $values) {
+			$counts[$section] = array(
+				'create' => (int) ($values['create'] ?? 0),
+				'update' => (int) ($values['update'] ?? 0),
+				'skip' => (int) ($values['skip'] ?? 0),
+				'invalid' => (int) ($values['invalid'] ?? 0),
+			);
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => __('Validation finished. Review the report, then confirm the import.', 'ratebridge-woo'),
+				'token' => $token,
+				'counts' => $counts,
+				'messages' => array_slice($this->normalise_messages((array) ($plan['messages'] ?? array())), 0, 50),
+				'sample' => array_slice((array) ($plan['sample'] ?? array()), 0, 5),
+				'meta' => (array) ($plan['meta'] ?? array()),
+				'unit_label' => SettingsPage::unit_label(),
+			)
+		);
+	}
+
+	/**
+	 * Execute a previously validated package import.
+	 *
+	 * @return void
+	 */
+	private function import_package_execute(): void
+	{
+		$payload = $this->consume_import_token(isset($_POST['token']) ? sanitize_text_field(wp_unslash((string) $_POST['token'])) : '');
+
+		if (null === $payload || 'package' !== ($payload['kind'] ?? '')) {
+			wp_send_json_error(array('message' => __('The import session expired. Please upload the file again.', 'ratebridge-woo')), 400);
+		}
+
+		// Re-validate from scratch: the stored payload is trusted only after this.
+		$validated = Package::validate($payload['data'] ?? array());
+
+		if (! $validated['ok']) {
+			wp_send_json_error(array('message' => $this->package_error_message($validated['error']->code)), 400);
+		}
+
+		$importer = new Importer();
+		$plan = $importer->analyse(
+			$validated['data'],
+			(string) ($payload['policy'] ?? ImportPlan::POLICY_SKIP),
+			(bool) ($payload['convert'] ?? true)
+		);
+
+		$result = $importer->execute($plan);
+
+		// Reprice everything the import could have touched.
+		$job = new \RateBridge\Pricing\RepriceJob();
+
+		foreach ((array) ($result['currencies'] ?? array()) as $currency_id) {
+			$currency = (new CurrencyRepository())->get((int) $currency_id);
+
+			if ($currency instanceof Currency) {
+				$job->enqueue($currency->code);
+			}
+		}
+
+		foreach ((array) ($result['formulas'] ?? array()) as $formula_id) {
+			$job->enqueue_formula((int) $formula_id);
+		}
+
+		$currencies = new CurrencyRepository();
+		$pending = array();
+
+		foreach ((array) ($result['currencies'] ?? array()) as $currency_id) {
+			$currency = $currencies->get((int) $currency_id);
+
+			if ($currency instanceof Currency && ! $currency->has_rate()) {
+				$pending[] = $currency->code;
+			}
+		}
+
+		$counts = (array) ($result['counts'] ?? array());
+
+		wp_send_json_success(
+			array(
+				'message' => sprintf(
+					/* translators: 1: created, 2: updated, 3: invalid */
+					__('Import finished: %1$d created, %2$d updated, %3$d invalid. Prices are being recalculated in the background.', 'ratebridge-woo'),
+					(int) ($counts['create'] ?? 0),
+					(int) ($counts['update'] ?? 0),
+					(int) ($counts['invalid'] ?? 0)
+				),
+				'counts' => $counts,
+				'messages' => array_slice($this->normalise_messages((array) ($result['messages'] ?? array())), 0, 50),
+				'pending_currencies' => $pending,
+				'backups' => $importer->backup_summaries(),
+			)
+		);
+	}
+
+	/**
+	 * Stored backups.
+	 *
+	 * @return void
+	 */
+	private function list_backups(): void
+	{
+		wp_send_json_success(array('backups' => (new Importer())->backup_summaries(), 'expires_in_minutes' => 60));
+	}
+
+	/**
+	 * Restore the newest backup (or a given id).
+	 *
+	 * @return void
+	 */
+	private function restore_backup(): void
+	{
+		$id = isset($_POST['id']) ? sanitize_text_field(wp_unslash((string) $_POST['id'])) : '';
+		$importer = new Importer();
+		$result = $importer->restore($id);
+
+		if (null === $result) {
+			wp_send_json_error(array('message' => __('The backup could not be restored.', 'ratebridge-woo')), 400);
+		}
+
+		$job = new \RateBridge\Pricing\RepriceJob();
+
+		foreach ((array) ($result['currencies'] ?? array()) as $currency_id) {
+			$currency = (new CurrencyRepository())->get((int) $currency_id);
+
+			if ($currency instanceof Currency) {
+				$job->enqueue($currency->code);
+			}
+		}
+
+		foreach ((array) ($result['formulas'] ?? array()) as $formula_id) {
+			$job->enqueue_formula((int) $formula_id);
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => __('The backup was restored. Prices are being recalculated in the background.', 'ratebridge-woo'),
+				'backups' => $importer->backup_summaries(),
+			)
+		);
+	}
+
+	/**
+	 * Validate an uploaded products CSV and create a chunked session.
+	 *
+	 * @return void
+	 */
+	private function import_products_csv(): void
+	{
+		if (! current_user_can('edit_products')) {
+			wp_send_json_error(array('message' => __('You are not allowed to do this.', 'ratebridge-woo')), 403);
+		}
+
+		if (! isset($_FILES['file']) || ! is_array($_FILES['file'])) {
+			wp_send_json_error(array('message' => __('Choose a CSV file first.', 'ratebridge-woo')), 400);
+		}
+
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- validated below.
+		$file = $_FILES['file'];
+		$error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+
+		if (UPLOAD_ERR_OK !== $error) {
+			wp_send_json_error(array('message' => __('The upload failed. Check the file size and try again.', 'ratebridge-woo')), 400);
+		}
+
+		if (! is_uploaded_file((string) $file['tmp_name'])) {
+			wp_send_json_error(array('message' => __('The upload could not be verified.', 'ratebridge-woo')), 400);
+		}
+
+		if ((int) $file['size'] > ProductCsv::MAX_BYTES) {
+			wp_send_json_error(array('message' => __('The file is larger than 5 MB.', 'ratebridge-woo')), 400);
+		}
+
+		$name = sanitize_file_name((string) ($file['name'] ?? ''));
+
+		if (! str_ends_with(strtolower($name), '.csv')) {
+			wp_send_json_error(array('message' => __('Only .csv files are accepted.', 'ratebridge-woo')), 400);
+		}
+
+		$unit = isset($_POST['file_unit']) ? Package::unit(sanitize_key(wp_unslash((string) $_POST['file_unit']))) : Settings::store_unit();
+
+		$service = new ProductsCsvService();
+		$session = $service->prepare_session((string) $file['tmp_name'], $unit);
+
+		if (null === $session) {
+			wp_send_json_error(array('message' => __('The CSV file could not be read. Check the encoding (UTF-8) and the size.', 'ratebridge-woo')), 400);
+		}
+
+		if (isset($session['error'])) {
+			$message = 'missing_columns' === $session['error']
+				? sprintf(
+					/* translators: %s: comma separated column list */
+					__('Required columns are missing: %s', 'ratebridge-woo'),
+					implode(', ', (array) ($session['missing'] ?? array()))
+				)
+				: __('The CSV needs a “mode” column and an identifier column (“id” or “sku”).', 'ratebridge-woo');
+
+			wp_send_json_error(array('message' => $message, 'code' => $session['error']), 400);
+		}
+
+		$token = $this->store_import_token(
+			array(
+				'kind' => 'csv',
+				'rows' => $session['rows'],
+				'map' => $session['map'],
+				'file_unit' => $session['file_unit'],
+				'delimiter' => $session['delimiter'],
+			)
+		);
+
+		$plan = $service->plan_chunk(
+			array_slice((array) $session['rows'], 0, ProductCsv::IMPORT_CHUNK),
+			(array) $session['map'],
+			(string) $session['file_unit'],
+			0
+		);
+
+		wp_send_json_success(
+			array(
+				'message' => __('The file was read. Review the result, then start the import.', 'ratebridge-woo'),
+				'token' => $token,
+				'rows' => count((array) $session['rows']),
+				'chunk' => ProductCsv::IMPORT_CHUNK,
+				'delimiter' => $session['delimiter'],
+				'file_unit' => $session['file_unit'],
+				'store_unit' => Settings::store_unit(),
+				'dry_run' => array(
+					'valid' => (int) $plan['valid'],
+					'invalid' => (int) $plan['invalid'],
+					'messages' => array_slice((array) $plan['messages'], 0, 50),
+					'sample' => array_slice((array) $plan['sample'], 0, 5),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Apply one chunk of a validated products CSV session.
+	 *
+	 * @return void
+	 */
+	private function import_products_chunk(): void
+	{
+		if (! current_user_can('edit_products')) {
+			wp_send_json_error(array('message' => __('You are not allowed to do this.', 'ratebridge-woo')), 403);
+		}
+
+		$payload = $this->consume_import_token(
+			isset($_POST['token']) ? sanitize_text_field(wp_unslash((string) $_POST['token'])) : '',
+			false
+		);
+
+		if (null === $payload || 'csv' !== ($payload['kind'] ?? '')) {
+			wp_send_json_error(array('message' => __('The import session expired. Please upload the file again.', 'ratebridge-woo')), 400);
+		}
+
+		$offset = isset($_POST['offset']) ? absint($_POST['offset']) : 0;
+		$rows = (array) ($payload['rows'] ?? array());
+		$chunk = array_slice($rows, $offset, ProductCsv::IMPORT_CHUNK);
+
+		$service = new ProductsCsvService();
+		$plan = $service->plan_chunk($chunk, (array) ($payload['map'] ?? array()), (string) ($payload['file_unit'] ?? 'toman'), $offset);
+		$touched = $service->apply_chunk((array) $plan['apply']);
+
+		if (! empty($touched)) {
+			(new \RateBridge\Pricing\RepriceJob())->enqueue_ids($touched);
+		}
+
+		$next = $offset + ProductCsv::IMPORT_CHUNK;
+		$done = $next >= count($rows);
+
+		if ($done) {
+			$this->consume_import_token((string) ($_POST['token'] ?? ''), true);
+
+			\RateBridge\Core\Logger::add(
+				array(
+					'status' => (int) $plan['invalid'] > 0 ? 'error' : 'success',
+					'message' => sprintf(
+						/* translators: 1: touched products, 2: invalid rows */
+						__('Products CSV import finished: %1$d products updated, %2$d rows skipped in the last chunk.', 'ratebridge-woo'),
+						count($touched),
+						(int) $plan['invalid']
+					),
+					'currencies' => array(),
+					'trigger' => 'import',
+				)
+			);
+		}
+
+		wp_send_json_success(
+			array(
+				'message' => $done
+					? __('Import finished. Prices are being recalculated in the background.', 'ratebridge-woo')
+					: __('Chunk applied.', 'ratebridge-woo'),
+				'offset' => $next,
+				'total' => count($rows),
+				'percent' => count($rows) > 0 ? (int) min(100, round($next / count($rows) * 100)) : 100,
+				'done' => $done,
+				'valid' => (int) $plan['valid'],
+				'invalid' => (int) $plan['invalid'],
+				'messages' => array_slice((array) $plan['messages'], 0, 50),
+			)
+		);
+	}
+
+	/**
+	 * Read and validate the uploaded JSON file.
+	 *
+	 * @return string|\WP_Error Raw JSON text.
+	 */
+	private function read_uploaded_json(): string|\WP_Error
+	{
+		if (! isset($_FILES['file']) || ! is_array($_FILES['file'])) {
+			return new \WP_Error('no_file', __('Choose a JSON file first.', 'ratebridge-woo'));
+		}
+
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- validated below.
+		$file = $_FILES['file'];
+
+		if (UPLOAD_ERR_OK !== (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE)) {
+			return new \WP_Error('upload_failed', __('The upload failed. Check the file size and try again.', 'ratebridge-woo'));
+		}
+
+		if (! is_uploaded_file((string) $file['tmp_name'])) {
+			return new \WP_Error('bad_upload', __('The upload could not be verified.', 'ratebridge-woo'));
+		}
+
+		if ((int) $file['size'] > Package::MAX_BYTES) {
+			return new \WP_Error('too_large', __('The file is larger than 2 MB.', 'ratebridge-woo'));
+		}
+
+		$name = sanitize_file_name((string) ($file['name'] ?? ''));
+
+		if (! str_ends_with(strtolower($name), '.json')) {
+			return new \WP_Error('bad_extension', __('Only .json files are accepted.', 'ratebridge-woo'));
+		}
+
+		$raw = @file_get_contents((string) $file['tmp_name']); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local temp upload.
+
+		if (! is_string($raw) || '' === $raw) {
+			return new \WP_Error('unreadable', __('The uploaded file could not be read.', 'ratebridge-woo'));
+		}
+
+		return $raw;
+	}
+
+	/**
+	 * Persian message for a package validation code.
+	 *
+	 * @param string $code Code.
+	 * @return string
+	 */
+	private function package_error_message(string $code): string
+	{
+		$map = array(
+			'too_large' => __('The package is larger than 2 MB.', 'ratebridge-woo'),
+			'not_utf8' => __('The package is not valid UTF-8.', 'ratebridge-woo'),
+			'invalid_json' => __('The file is not valid JSON.', 'ratebridge-woo'),
+			'too_deep' => __('The JSON is nested too deeply.', 'ratebridge-woo'),
+			'not_an_object' => __('The package must be a JSON object.', 'ratebridge-woo'),
+			'bad_format' => __('This is not a RateBridge package.', 'ratebridge-woo'),
+			'bad_schema' => __('The package schema is not recognised.', 'ratebridge-woo'),
+			'unsupported_schema' => __('The package was created by a newer version of the plugin. Update the plugin first.', 'ratebridge-woo'),
+			'no_sections' => __('The package contains no settings, currencies or formulas.', 'ratebridge-woo'),
+			'bad_section' => __('A package section is malformed.', 'ratebridge-woo'),
+		);
+
+		return $map[ $code ] ?? __('The package is not valid.', 'ratebridge-woo');
+	}
+
+	/**
+	 * Store an import payload for the confirm step (1 hour, bound to the user).
+	 *
+	 * @param array<string, mixed> $payload Payload.
+	 * @return string Token.
+	 */
+	private function store_import_token(array $payload): string
+	{
+		$token = wp_generate_password(32, false, false);
+
+		set_transient(
+			'rbw_import_' . get_current_user_id() . '_' . $token,
+			$payload,
+			HOUR_IN_SECONDS
+		);
+
+		return $token;
+	}
+
+	/**
+	 * Read (and optionally delete) a stored import payload.
+	 *
+	 * @param string $token  Token.
+	 * @param bool   $delete Whether to delete it.
+	 * @return array<string, mixed>|null
+	 */
+	private function consume_import_token(string $token, bool $delete = false): ?array
+	{
+		if ('' === $token || ! preg_match('/^[A-Za-z0-9]+$/', $token)) {
+			return null;
+		}
+
+		$key = 'rbw_import_' . get_current_user_id() . '_' . $token;
+		$payload = get_transient($key);
+
+		if (! is_array($payload)) {
+			return null;
+		}
+
+		if ($delete) {
+			delete_transient($key);
+		}
+
+		return $payload;
+	}
+
+	/**
+	 * Normalise message rows for JSON (level/section/item/message).
+	 *
+	 * @param array<int, mixed> $messages Messages.
+	 * @return array<int, array<string, string>>
+	 */
+	private function normalise_messages(array $messages): array
+	{
+		$out = array();
+
+		foreach ($messages as $message) {
+			if (! is_array($message)) {
+				continue;
+			}
+
+			$out[] = array(
+				'level' => (string) ($message['level'] ?? 'info'),
+				'section' => (string) ($message['section'] ?? ''),
+				'item' => (string) ($message['item'] ?? ''),
+				'message' => (string) ($message['message'] ?? ''),
+			);
+		}
+
+		return $out;
 	}
 
 	/**

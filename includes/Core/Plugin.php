@@ -135,6 +135,15 @@ final class Plugin {
 
 		AdminNotices::register();
 
+		// Phase 7: package/CSV import-export downloads + bulk edit.
+		$io = new \RateBridge\ImportExport\AdminController();
+		$io->register();
+
+		// Daily housekeeping for the private temp directory.
+		if ( ! wp_next_scheduled( 'rbw_cleanup_tmp' ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'rbw_cleanup_tmp' );
+		}
+
 		// Phase 4: order rate records + frontend output.
 		$orders = new OrderRates();
 		$orders->register();

@@ -9,18 +9,19 @@ the plugin recalculate the store-currency price (Iranian Toman or Rial) from liv
 - **Namespace / prefix:** `RateBridge\` / `rbw_`
 - **Requirements:** PHP 8.1+, WordPress 6.4+, WooCommerce 8+ (HPOS compatible)
 
-> **Status – Phase 6.** Currency management, real price sources (Navasan + AlanChand),
+> **Status – Phase 7.** Currency management, real price sources (Navasan + AlanChand),
 > per-provider settings, request-quota protection, **product pricing by currency**
 > (simple + variable products, classic editor), **automatic repricing when a rate
 > changes**, store-unit migration, **order rate records on every line item**,
-> **shortcodes** (single rate, currencies table, ticker, product info), an optional
-> **product page info block**, **8 Elementor widgets**, a safe **formula builder** with
-> typed variables and formula pricing, and full Persian UI.
+> **shortcodes**, an optional **product page info block**, **8 Elementor widgets**, a safe
+> **formula builder**, **JSON package + products CSV import/export with backups and undo**,
+> **bulk edit of pricing settings** from the products list, and full Persian UI.
 >
-> Still out of scope: Elementor dynamic tags and Pro features, import/export,
-> bulk/quick edit integration, new providers, Gutenberg blocks, modifying WooCommerce's
-> price HTML, Persian digits inside WooCommerce's own price output, user-defined
-> functions, loops, string values and automatic sale-price formulas.
+> Still out of scope: Elementor dynamic tags and Pro features, quick edit, creating
+> products from CSV, WP-CLI, WooCommerce's own CSV importer, cloud storage, new providers,
+> Gutenberg blocks, modifying WooCommerce's price HTML, Persian digits inside
+> WooCommerce's own price output, user-defined functions, loops, string values and
+> automatic sale-price formulas.
 
 ---
 
@@ -40,6 +41,8 @@ ratebridge-woo/
 │   ├── price-calculator.php    CLI test for the calculation engine (no WordPress)
 │   ├── rate-formatter.php      CLI test for the frontend formatter (no WordPress)
 │   ├── formula-engine.php      Formula engine: grammar, functions, injection (No WP)
+│   ├── import-export.php       Package envelope, credential guard, unit conversion (No WP)
+│   ├── csv.php                 CSV round trips, injection guard, bulk edit (No WP)
 │   ├── elementor-contracts.php Static contract test for the Elementor widgets
 │   ├── ajax-actions.php        JS request() slugs vs registered wp_ajax hooks
 │   └── scrub-secrets.php       Credentials never leak into messages
@@ -90,6 +93,14 @@ ratebridge-woo/
 │   │   ├── ElementorIntegration.php  Bootstrap, «نرخ ساز» category, version guard
 │   │   ├── CacheInvalidator.php      Flushes Elementor's document cache on rate changes
 │   │   └── Widgets/                  8 widgets + AbstractWidget (shared controls/helpers)
+│   ├── ImportExport/
+│   │   ├── Csv.php                   RFC 4180 reader/writer + injection guard (WP-free)
+│   │   ├── Package.php               envelope validation + credential guard
+│   │   ├── ImportPlan.php            conflict policy + unit conversion maths
+│   │   ├── BulkChange.php            bulk-edit arithmetic (WP-free)
+│   │   ├── Exporter.php / Importer.php / ProductCsv.php
+│   │   ├── ProductsCsvService.php    streaming export + chunked import
+│   │   └── AdminController.php       downloads + bulk-edit panel
 │   ├── Formula/
 │   │   ├── Normalizer.php            Digits/operators/separators -> ASCII
 │   │   ├── Lexer.php, Node.php, Parser.php   Tokenizer + AST (precedence climbing)
@@ -410,8 +421,10 @@ php tests/parse-fixtures.php    # parsing + cross-source consistency (82 asserti
 php tests/price-calculator.php  # calculation engine + formula post-processing (72)
 php tests/rate-formatter.php    # frontend formatter + templates, no WordPress (85)
 php tests/formula-engine.php    # formula engine + injection suite, no WordPress (165)
+php tests/import-export.php     # package validation + unit conversion, no WordPress (54)
+php tests/csv.php               # CSV + bulk-edit arithmetic, no WordPress (74)
 php tests/elementor-contracts.php # widget structure/delegation rules, no WordPress (137)
-php tests/ajax-actions.php      # JS request() slugs vs registered wp_ajax hooks (138)
+php tests/ajax-actions.php      # JS request() slugs vs registered wp_ajax hooks (161)
 php tests/scrub-secrets.php     # credentials never leak into messages (11)
 ```
 
@@ -1142,6 +1155,198 @@ tests/formula-engine.php             165 engine assertions
 
 ---
 
+## Import / Export (Phase 7)
+
+Tab **«درون‌ریزی / برون‌بری»** with three cards: JSON package, products CSV and backups.
+
+### JSON package — schema 1
+
+```json
+{
+  "format": "ratebridge-woo-package",
+  "schema": 1,
+  "plugin_version": "0.7.0",
+  "exported_at": "2026-10-27T12:00:00+00:00",
+  "store_unit": "toman",
+  "site": "example.com",
+  "sections": {
+    "settings": { "store_currency_unit": "toman", "rounding_mode": "nearest", "rounding_step": 1000 },
+    "currencies": [
+      {
+        "code": "GOLD18", "name": "طلای ۱۸ عیار", "symbol": "g",
+        "provider": "alanchand", "provider_symbol": "gold:18ayar",
+        "update_interval_minutes": 366, "is_enabled": 1, "sort_order": 40,
+        "profit_type": "percent", "profit_value": 10,
+        "commission_type": "fixed", "commission_value": 50000, "extra_amount": 2000
+      }
+    ],
+    "formulas": [
+      {
+        "slug": "gold-price", "name": "قیمت طلا",
+        "expression": "weight * gold18 * (1 + wage / 100)",
+        "variables": [
+          { "name": "weight", "type": "product", "product_field": "weight" },
+          { "name": "gold18", "type": "currency", "currency_code": "GOLD18" },
+          { "name": "wage",   "type": "custom",  "default": 15, "is_money": false }
+        ],
+        "rounding_mode": "", "rounding_step": 0, "is_enabled": 1
+      }
+    ]
+  }
+}
+```
+
+**What is never exported:** provider settings (API keys, tokens), request-budget counters, the update
+log, caches, rates, `last_updated`, `last_error`, order data and product usage. `Package::clean_settings()`
+keeps only the known general settings and a unit test fails if a key matching
+`/key|token|secret|password|auth|credential|budget|log/i` appears anywhere in a package.
+
+### Importing a package
+
+1. **Dry run** uploads the file (≤ 2 MB, `.json`, valid UTF-8, `json_decode` depth 16) and returns a
+   report: per section `create / update / skip / invalid` plus the first 50 messages and 5
+   before → after samples.
+2. **Execute** uses an opaque **token** for the already-validated payload (transient, 1 hour, bound to
+   the current user). The browser never sends the payload again and the server **re-validates from
+   scratch** before applying.
+
+| Option | Values | Default |
+| --- | --- | --- |
+| Conflict policy | `skip` (keep existing code/slug) / `update` | `skip` |
+| Store unit differs | convert money amounts / import as is | convert |
+
+- **Store unit conversion** multiplies (or divides by 10) only *money* values: fixed
+  profit/commission, `extra_amount`, formula variables flagged `is_money` (`default`, `min`, `max`).
+  Percent values are never converted.
+- **Formulas** are re-compiled during the dry run; an invalid expression or an undeclared variable
+  is reported and the formula is **skipped**, never imported broken. A currency variable pointing at
+  a code that exists neither on the site nor in the package produces a warning.
+- **Currencies** with an unknown provider key are imported **disabled** with the manual source and a
+  warning. Rates are **not** imported: an imported/updated currency is reset to the pending state
+  (`rate = 0`, `last_updated = NULL`) exactly like a provider change, and one update is requested
+  through `RateUpdater` + `RequestBudget` (never a burst).
+- After a successful import one async repricing job is enqueued per touched currency and per touched
+  formula; a summary line is written to the `Logger`.
+
+### Backups and undo
+
+Before **every** import or restore the current configuration is snapshotted into the
+**non-autoloaded** option `rbw_backups` (same package format, last **3** kept). The Backups card lists
+date, reason and counts; **«بازگردانی»** restores one (with confirmation). A restore itself takes a
+backup first, so it is undoable, and it enqueues repricing for the affected products.
+
+### Products CSV
+
+Export (`admin-post`, nonce + `manage_woocommerce` + `edit_products`) streams **page by page**
+(`_rbw_enabled = yes`, 200 rows per page, never the whole catalogue in memory), UTF-8 **with BOM**,
+`,` delimiter, RFC 4180 quoting, **CRLF**.
+
+| Column | Notes |
+| --- | --- |
+| `id` | product or variation id |
+| `parent_id` | variation parent (0 for products) |
+| `sku` | used as a fallback matcher on import |
+| `name` | human reference only, ignored on import |
+| `type` | `simple` / `variable` / `variation` |
+| `mode` | `currency` / `formula` (**required** on import) |
+| `currency` | currency code |
+| `base_price`, `sale_base_price` | in the foreign unit |
+| `min_price`, `fluctuation` | store unit |
+| `profit_mode` | `none` / `add` / `replace` |
+| `profit_type`, `profit_value` | |
+| `commission_type`, `commission_value` | |
+| `extra_amount` | store unit |
+| `formula_slug` | formula used in formula mode |
+| `formula_vars` | JSON object of **custom** variable overrides only |
+
+Example row:
+
+```csv
+27,0,POCO-512,گوشی پوکو,simple,currency,USD,510,503,1000000,50000,none,percent,0,percent,0,0,,
+```
+
+- **CSV injection guard:** a text cell starting with `=`, `+`, `@`, tab or CR (or `-` followed by
+  something that is not a number) is exported with a leading apostrophe and the importer strips
+  exactly that prefix. Negative numbers keep their sign.
+- **Import limits:** ≤ 5 MB, ≤ 20,000 rows, `.csv`, UTF-8 required (invalid encoding is rejected),
+  delimiter auto-detected (`,` `;` tab), headers case/space-insensitive, Persian digits and `٫`
+  normalised in numeric cells, at least `mode` plus `id` or `sku` required.
+- **Matching:** by `id`, then by unique `sku`. Rows that match nothing are skipped with a reason —
+  **the importer never creates products**. Every row is checked with `current_user_can('edit_post')`.
+- **Validation per row:** the currency must exist, the formula must exist and be enabled, numbers
+  numeric and ≥ 0, enums whitelisted, `formula_vars` a JSON object of declared custom variables only.
+  Invalid rows are reported (row number + Persian reason) and skipped; valid rows still apply.
+- **Chunking:** dry run first (counts, first 50 messages, 5 before → after samples), then the browser
+  drives chunks of 100 rows against the token with a progress bar. The uploaded file lives in
+  `wp-content/uploads/ratebridge-woo/tmp/` with `.htaccess` + `index.php` deny rules, is never
+  executable and is deleted after completion and by a daily job for files older than 1 hour.
+- **Unit choice:** the CSV has no header comments, so the UI asks «واحد مبالغ در فایل» (default = the
+  current store unit) and converts money cells when it differs. Percentages are never converted.
+- Applying a row writes the same `_rbw_*` keys through the same helpers as the editor; repricing is
+  queued asynchronously — never calculated inside the import request.
+
+### Bulk edit (products list)
+
+A collapsible **«نرخ ساز»** section in WooCommerce's native Bulk Edit panel, every control defaulting
+to **«بدون تغییر»**:
+
+| Control | Options |
+| --- | --- |
+| Pricing method | no change / currency / formula / **turn currency pricing off** (removes all `_rbw_*` meta, WooCommerce price untouched) |
+| Currency | no change / one of the currencies |
+| Formula | no change / one of the enabled formulas |
+| Base price | no change / set / +% / +amount / −% / −amount (simple products only — a variable parent has no base price) |
+| Min price | no change / set / clear |
+| Fluctuation margin | no change / set / clear |
+| Profit/commission/extra | mode (none/add/replace), type + value |
+
+Semantics:
+
+- Only the controls you touch are applied; a "currency mode without a currency" or "formula mode
+  without a formula" leaves **that product** unchanged.
+- `+%`/`−%` are computed from the product's current value; results are **never negative** and are
+  rounded to 4 decimals (`BulkChange::apply()`).
+- Only `simple` and `variable` products are processed; other types are skipped.
+- Nothing is repriced synchronously: the touched ids are collected during the request and **one**
+  de-duplicated async job (`RepriceJob::enqueue_ids()`, group `ratebridge-woo`) runs on `shutdown`.
+  A notice then reports «X محصول به‌روزرسانی شد؛ قیمت‌ها در پس‌زمینه محاسبه می‌شوند».
+- Quick edit is intentionally not integrated.
+
+### Limits and security
+
+| Limit | Value |
+| --- | --- |
+| Package size / JSON depth | 2 MB / 16 |
+| Package schema | 1 (newer schemas refused) |
+| CSV size / rows | 5 MB / 20,000 |
+| Import token lifetime | 1 hour, per user |
+| Backups kept | 3 |
+| Temp files | deleted after completion, and after 1 hour by `rbw_cleanup_tmp` |
+
+Every AJAX endpoint checks the nonce + a capability, returns JSON with Persian messages and never
+echoes uploaded content unescaped. Downloads use `admin-post.php` with the nonce in the URL, correct
+`Content-Type` / `Content-Disposition` headers, `nocache_headers()` and flushed output buffers.
+
+### Files
+
+```
+includes/ImportExport/
+├── Compat.php              sanitize_key() replacement (WP-free)
+├── Csv.php                 RFC 4180 reader/writer, BOM, delimiters, injection guard
+├── Package.php             envelope + credential guard + settings cleaning
+├── ImportPlan.php          conflict policy + unit conversion maths
+├── BulkChange.php          bulk-edit arithmetic (set/±%/±amount, never negative)
+├── Exporter.php            builds the package from live data
+├── Importer.php            analyse (dry run) / execute / backups / restore
+├── ProductCsv.php          column map, row serialise, row validation
+├── ProductsCsvService.php  streaming export, chunked import, temp-dir guard
+└── AdminController.php     admin-post downloads, bulk-edit panel + async enqueue
+templates/tab-import-export.php
+tests/csv.php, tests/import-export.php
+```
+
+---
+
 ## Adding a new provider
 
 1. Create `includes/Providers/MyApiProvider.php`:
@@ -1308,6 +1513,9 @@ Rules for provider implementations:
 - deletes **every `_rbw_*` post meta** row with one prepared `DELETE` (the 15 keys listed in
   `ProductData::all_meta_keys()`);
 - deletes the per-user `rbw_dismiss_stale_notice` meta.
+
+It also removes the import/export artefacts: the `rbw_backups` and `rbw_csv_sessions` options and the
+private `uploads/ratebridge-woo/tmp/` directory.
 
 Order item meta (`_rbw_currency`, `_rbw_rate`, …) is **deliberately kept**: an order is
 financial history and must stay auditable after the plugin is gone. The Phase-4 settings

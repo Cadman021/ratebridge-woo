@@ -1853,3 +1853,427 @@ msgstr "نرخ روز"
 
 msgid "min %1$s, max %2$s"
 msgstr "حداقل %1$s، حداکثر %2$s"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 7 — import/export package + products CSV + bulk edit
+# ─────────────────────────────────────────────────────────────────────────────
+
+msgid "%1$d products updated (%2$d had currency pricing turned off); prices are being recalculated in the background."
+msgstr "%1$d محصول به‌روزرسانی شد (%2$d محصول قیمت‌گذاری ارزی‌شان خاموش شد)؛ قیمت‌ها در پس‌زمینه محاسبه می‌شوند."
+
+msgid "%d rows read."
+msgstr "%d ردیف خوانده شد."
+
+msgid "A backup is created automatically before every import or restore. The last %d are kept."
+msgstr "پیش از هر درون‌ریزی یا بازگردانی، به‌صورت خودکار یک نسخه پشتیبان ساخته می‌شود. %d نسخه آخر نگه داشته می‌شود."
+
+msgid "A package section is malformed."
+msgstr "یکی از بخش‌های بسته ناقص است."
+
+msgid "Action"
+msgstr "عملیات"
+
+msgid "Add to the currency values"
+msgstr "افزودن به مقدار ارز"
+
+msgid "After"
+msgstr "بعد"
+
+msgid "Amounts are converted when this differs from the site unit (%s). Percentages are never converted."
+msgstr "اگر این گزینه با واحد سایت (%s) متفاوت باشد، مبالغ تبدیل می‌شوند. درصدها هرگز تبدیل نمی‌شوند."
+
+msgid "An identifier from the product’s formula, for example wage or weight."
+msgstr "یک شناسه از فرمول محصول، مثلاً wage یا weight."
+
+msgid "Attention: this converts every stored rate, every fixed profit/commission/extra amount, product minimum prices, fluctuation margins and formula variables marked as money amounts, then recalculates all product prices. Numbers written directly inside a formula expression are NOT converted."
+msgstr "توجه: این کار همه نرخ‌های ذخیره‌شده، همه مبالغ ثابت سود/کارمزد/مقدار اضافه، حداقل قیمت محصولات، حاشیه نوسان و متغیرهای فرمولی که به‌عنوان مبلغ علامت خورده‌اند را تبدیل می‌کند و سپس قیمت همه محصولات را دوباره محاسبه می‌کند. اعدادی که مستقیماً داخل عبارت فرمول نوشته شده‌اند تبدیل نمی‌شوند."
+
+msgid "Backups"
+msgstr "نسخه‌های پشتیبان"
+
+msgid "Base price"
+msgstr "قیمت پایه"
+
+msgid "Before"
+msgstr "قبل"
+
+msgid "CSV file (max 5 MB, 20,000 rows)"
+msgstr "فایل CSV (حداکثر ۵ مگابایت، ۲۰٬۰۰۰ ردیف)"
+
+msgid "Calculated with the formula “%s”"
+msgstr "محاسبه با فرمول «%s»"
+
+msgid "Check the file (dry run)"
+msgstr "بررسی فایل (اجرای آزمایشی)"
+
+msgid "Choose a CSV file first."
+msgstr "ابتدا یک فایل CSV انتخاب کنید."
+
+msgid "Choose a JSON file first."
+msgstr "ابتدا یک فایل JSON انتخاب کنید."
+
+msgid "Choose a file first."
+msgstr "ابتدا یک فایل انتخاب کنید."
+
+msgid "Chunk applied."
+msgstr "بخش اعمال شد."
+
+msgid "Clear"
+msgstr "پاک کردن"
+
+msgid "Column “%s” has an invalid value."
+msgstr "ستون «%s» مقدار نامعتبر دارد."
+
+msgid "Column “%s” is not a number."
+msgstr "ستون «%s» عدد نیست."
+
+msgid "Column “%s” must not be negative."
+msgstr "ستون «%s» نباید منفی باشد."
+
+msgid "Convert money amounts to the site unit"
+msgstr "تبدیل مبالغ به واحد سایت"
+
+msgid "Could not create the currency."
+msgstr "ساخت ارز انجام نشد."
+
+msgid "Could not update the currency."
+msgstr "به‌روزرسانی ارز انجام نشد."
+
+msgid "Currency mode needs a currency."
+msgstr "حالت ارز به یک ارز نیاز دارد."
+
+msgid "Decrease by %"
+msgstr "کاهش به درصد"
+
+msgid "Decrease by amount"
+msgstr "کاهش به مبلغ"
+
+msgid "Do not convert (import as is)"
+msgstr "تبدیل نکن (همان‌طور وارد کن)"
+
+msgid "Download package"
+msgstr "دریافت بسته"
+
+msgid "Download products CSV"
+msgstr "دریافت CSV محصولات"
+
+msgid "Enter a valid variable name (letters, digits and underscore)."
+msgstr "یک نام متغیر معتبر وارد کنید (حروف، ارقام و زیرخط)."
+
+msgid "Exports the plugin configuration only. API keys, tokens, request counters, logs and caches are never included. Rates are not exported: imported currencies wait for their first update."
+msgstr "فقط تنظیمات افزونه صادر می‌شود. کلیدهای API، توکن‌ها، شمارنده‌های درخواست، گزارش‌ها و کش‌ها هرگز صادر نمی‌شوند. نرخ‌ها صادر نمی‌شوند: ارزهای واردشده منتظر اولین به‌روزرسانی می‌مانند."
+
+msgid "Formula mode needs a formula slug."
+msgstr "حالت فرمول به نامک فرمول نیاز دارد."
+
+msgid "Formula “%1$s” is invalid (%2$s at position %3$d) and was skipped."
+msgstr "فرمول «%1$s» نامعتبر است (%2$s در موقعیت %3$d) و رد شد."
+
+msgid "Formula “%1$s” references currencies that do not exist yet: %2$s. Its prices will not be calculated until they are created."
+msgstr "فرمول «%1$s» به ارزهایی اشاره می‌کند که هنوز وجود ندارند: %2$s. تا ساخته‌شدن آن‌ها قیمت محاسبه نمی‌شود."
+
+msgid "Formula “%1$s” uses undeclared variables (%2$s) and was skipped."
+msgstr "فرمول «%1$s» از متغیرهای تعریف‌نشده (%2$s) استفاده می‌کند و رد شد."
+
+msgid "If an item already exists"
+msgstr "اگر مورد از قبل وجود دارد"
+
+msgid "Import / Export"
+msgstr "درون‌ریزی / برون‌بری"
+
+msgid "Import a package"
+msgstr "درون‌ریزی بسته"
+
+msgid "Import a products CSV"
+msgstr "درون‌ریزی CSV محصولات"
+
+msgid "Import finished. Prices are being recalculated in the background."
+msgstr "درون‌ریزی تمام شد. قیمت‌ها در پس‌زمینه محاسبه می‌شوند."
+
+msgid "Import finished: %1$d created, %2$d updated, %3$d invalid. Prices are being recalculated in the background."
+msgstr "درون‌ریزی تمام شد: %1$d ساخته شد، %2$d به‌روزرسانی شد، %3$d نامعتبر. قیمت‌ها در پس‌زمینه محاسبه می‌شوند."
+
+msgid "Import now"
+msgstr "اکنون درون‌ریزی کن"
+
+msgid "Import this package now? A backup is created first."
+msgstr "این بسته اکنون درون‌ریزی شود؟ ابتدا یک نسخه پشتیبان ساخته می‌شود."
+
+msgid "Increase by %"
+msgstr "افزایش به درصد"
+
+msgid "Increase by amount"
+msgstr "افزایش به مبلغ"
+
+msgid "Invalid"
+msgstr "نامعتبر"
+
+msgid "Item"
+msgstr "مورد"
+
+msgid "JSON file (max 2 MB)"
+msgstr "فایل JSON (حداکثر ۲ مگابایت)"
+
+msgid "Keep the existing item (skip)"
+msgstr "مورد موجود حفظ شود (رد کردن)"
+
+msgid "Missing currency code."
+msgstr "کد ارز خالی است."
+
+msgid "Missing formula slug."
+msgstr "نامک فرمول خالی است."
+
+msgid "Money unit in the file"
+msgstr "واحد مبالغ در فایل"
+
+msgid "New"
+msgstr "جدید"
+
+msgid "No backups yet."
+msgstr "هنوز نسخه پشتیبانی وجود ندارد."
+
+msgid "No product matches this id or SKU (the importer never creates products)."
+msgstr "هیچ محصولی با این شناسه یا کد کالا مطابقت ندارد (درون‌ریز هرگز محصول نمی‌سازد)."
+
+msgid "Nothing to import."
+msgstr "چیزی برای درون‌ریزی نیست."
+
+msgid "One row per product that is priced by the plugin. Columns: id, parent_id, sku, name, type, mode, currency, base_price, sale_base_price, min_price, fluctuation, profit_mode, profit_type, profit_value, commission_type, commission_value, extra_amount, formula_slug, formula_vars."
+msgstr "یک ردیف برای هر محصولی که با افزونه قیمت‌گذاری شده است. ستون‌ها: id، parent_id، sku، name، type، mode، currency، base_price، sale_base_price، min_price، fluctuation، profit_mode، profit_type، profit_value، commission_type، commission_value، extra_amount، formula_slug، formula_vars."
+
+msgid "Only .csv files are accepted."
+msgstr "فقط فایل‌های ‎.csv پذیرفته می‌شوند."
+
+msgid "Only .json files are accepted."
+msgstr "فقط فایل‌های ‎.json پذیرفته می‌شوند."
+
+msgid "Only the fields you change are applied. Variation prices are never touched by bulk edit."
+msgstr "فقط فیلدهایی که تغییر می‌دهید اعمال می‌شوند. ویرایش گروهی هرگز قیمت تنوع‌ها را تغییر نمی‌دهد."
+
+msgid "Package exported (%s)."
+msgstr "بسته صادر شد (%s)."
+
+msgid "Package format: ratebridge-woo-package, schema %d. Downloads are UTF-8; the CSV starts with a BOM so Excel opens it correctly."
+msgstr "قالب بسته: ratebridge-woo-package، اسکیمای %d. دانلودها UTF-8 هستند؛ فایل CSV با BOM شروع می‌شود تا اکسل آن را درست باز کند."
+
+msgid "Package import: %1$d created, %2$d updated, %3$d skipped, %4$d invalid."
+msgstr "درون‌ریزی بسته: %1$d ساخته شد، %2$d به‌روزرسانی شد، %3$d رد شد، %4$d نامعتبر."
+
+msgid "Percent values are never converted. The site unit is %s."
+msgstr "درصدها هرگز تبدیل نمی‌شوند. واحد سایت %s است."
+
+msgid "Product formula variable"
+msgstr "متغیر فرمول محصول"
+
+msgid "Product pricing (CSV)"
+msgstr "قیمت‌گذاری محصولات (CSV)"
+
+msgid "Products CSV import finished: %1$d products updated, %2$d rows skipped in the last chunk."
+msgstr "درون‌ریزی CSV محصولات تمام شد: %1$d محصول به‌روزرسانی شد، %2$d ردیف در آخرین بخش رد شد."
+
+msgid "Profit/commission mode"
+msgstr "حالت سود/کارمزد"
+
+msgid "Read the file (dry run)"
+msgstr "خواندن فایل (اجرای آزمایشی)"
+
+msgid "Reason"
+msgstr "دلیل"
+
+msgid "Replace the currency values"
+msgstr "جایگزینی مقدار ارز"
+
+msgid "Required columns are missing: %s"
+msgstr "ستون‌های الزامی وجود ندارند: %s"
+
+msgid "Restore"
+msgstr "بازگردانی"
+
+msgid "Restore this backup? The current settings, currencies and formulas are replaced (and backed up first)."
+msgstr "این نسخه پشتیبان بازگردانی شود؟ تنظیمات، ارزها و فرمول‌های فعلی جایگزین می‌شوند (و ابتدا از آن‌ها نسخه پشتیبان گرفته می‌شود)."
+
+msgid "Restoring replaces the current settings, currencies and formulas with the backup, then recalculates prices. The current state is backed up first, so a restore can be undone."
+msgstr "بازگردانی، تنظیمات، ارزها و فرمول‌های فعلی را با نسخه پشتیبان جایگزین و سپس قیمت‌ها را دوباره محاسبه می‌کند. از وضعیت فعلی ابتدا نسخه پشتیبان گرفته می‌شود، بنابراین بازگردانی هم قابل بازگشت است."
+
+msgid "Row"
+msgstr "ردیف"
+
+msgid "Section"
+msgstr "بخش"
+
+msgid "Sections to export"
+msgstr "بخش‌های قابل صدور"
+
+msgid "Select at least one section to export."
+msgstr "حداقل یک بخش را برای صدور انتخاب کنید."
+
+msgid "Set (amount)"
+msgstr "تعیین (مبلغ)"
+
+msgid "Set to"
+msgstr "تعیین به"
+
+msgid "Settings, currencies and formulas (JSON package)"
+msgstr "تنظیمات، ارزها و فرمول‌ها (بسته JSON)"
+
+msgid "Show the variable label"
+msgstr "نمایش برچسب متغیر"
+
+msgid "Skip"
+msgstr "رد کردن"
+
+msgid "Start import"
+msgstr "شروع درون‌ریزی"
+
+msgid "Store unit"
+msgstr "واحد فروشگاه"
+
+msgid "Store unit changed from %1$s to %2$s. Converted %3$d currencies, %4$d products and %6$d formulas; rounding step is now %5$s."
+msgstr "واحد فروشگاه از %1$s به %2$s تغییر کرد. %3$d ارز، %4$d محصول و %6$d فرمول تبدیل شد؛ گام گرد کردن اکنون %5$s است."
+
+msgid "The CSV file could not be read. Check the encoding (UTF-8) and the size."
+msgstr "فایل CSV خوانده نشد. رمزگذاری (UTF-8) و حجم فایل را بررسی کنید."
+
+msgid "The CSV needs a “mode” column and an identifier column (“id” or “sku”)."
+msgstr "CSV به ستون «mode» و یک ستون شناسه («id» یا «sku») نیاز دارد."
+
+msgid "The JSON is nested too deeply."
+msgstr "JSON بیش از حد تودرتو است."
+
+msgid "The [rbw_formula_var] shortcode needs a name attribute, for example name=\"wage\"."
+msgstr "شورت‌کد [rbw_formula_var] به ویژگی name نیاز دارد، مثلاً name=\"wage\"."
+
+msgid "The backup could not be restored."
+msgstr "بازگردانی نسخه پشتیبان انجام نشد."
+
+msgid "The backup was restored. Prices are being recalculated in the background."
+msgstr "نسخه پشتیبان بازگردانی شد. قیمت‌ها در پس‌زمینه محاسبه می‌شوند."
+
+msgid "The currency code does not exist on this site."
+msgstr "کد ارز در این سایت وجود ندارد."
+
+msgid "The file is larger than 2 MB."
+msgstr "حجم فایل بیش از ۲ مگابایت است."
+
+msgid "The file is larger than 5 MB."
+msgstr "حجم فایل بیش از ۵ مگابایت است."
+
+msgid "The file is not valid JSON."
+msgstr "فایل JSON معتبر نیست."
+
+msgid "The file was read. Review the result, then start the import."
+msgstr "فایل خوانده شد. نتیجه را بررسی کنید و سپس درون‌ریزی را شروع کنید."
+
+msgid "The formula failed validation and was skipped."
+msgstr "فرمول اعتبارسنجی را رد کرد و نادیده گرفته شد."
+
+msgid "The formula is disabled."
+msgstr "فرمول غیرفعال است."
+
+msgid "The formula slug does not exist on this site."
+msgstr "نامک فرمول در این سایت وجود ندارد."
+
+msgid "The formula “%2$s” has no variable named “%1$s”."
+msgstr "فرمول «%2$s» متغیری با نام «%1$s» ندارد."
+
+msgid "The import session expired. Please upload the file again."
+msgstr "نشست درون‌ریزی منقضی شد. لطفاً فایل را دوباره بارگذاری کنید."
+
+msgid "The importer matches rows by id, then by SKU. It never creates products. Only the fields present in the file are applied, in chunks, and prices are recalculated in the background."
+msgstr "درون‌ریز ابتدا با شناسه و سپس با کد کالا تطبیق می‌دهد و هرگز محصول نمی‌سازد. فقط فیلدهای موجود در فایل، به‌صورت بخش‌بخش اعمال می‌شوند و قیمت‌ها در پس‌زمینه دوباره محاسبه می‌شوند."
+
+msgid "The mode must be “currency” or “formula”."
+msgstr "حالت باید «currency» یا «formula» باشد."
+
+msgid "The package contains no settings, currencies or formulas."
+msgstr "بسته شامل تنظیمات، ارز یا فرمولی نیست."
+
+msgid "The package is larger than 2 MB."
+msgstr "حجم بسته بیش از ۲ مگابایت است."
+
+msgid "The package is not valid UTF-8."
+msgstr "بسته UTF-8 معتبر نیست."
+
+msgid "The package is not valid."
+msgstr "بسته معتبر نیست."
+
+msgid "The package must be a JSON object."
+msgstr "بسته باید یک شیء JSON باشد."
+
+msgid "The package schema is not recognised."
+msgstr "اسکیمای بسته شناسایی نشد."
+
+msgid "The package was created by a newer version of the plugin. Update the plugin first."
+msgstr "این بسته با نسخه جدیدتری از افزونه ساخته شده است. ابتدا افزونه را به‌روزرسانی کنید."
+
+msgid "The package was exported in a different store unit (%s). Money amounts are converted when you keep the conversion option on."
+msgstr "بسته با واحد فروشگاه دیگری صادر شده است (%s). اگر گزینه تبدیل روشن بماند، مبالغ تبدیل می‌شوند."
+
+msgid "The product could not be loaded."
+msgstr "محصول بارگذاری نشد."
+
+msgid "The product has no formula variable named “%s”."
+msgstr "این محصول متغیر فرمولی با نام «%s» ندارد."
+
+msgid "The row is not an object."
+msgstr "این ردیف شیء نیست."
+
+msgid "The row is not valid."
+msgstr "این ردیف معتبر نیست."
+
+msgid "The upload could not be verified."
+msgstr "بارگذاری تأیید نشد."
+
+msgid "The upload failed. Check the file size and try again."
+msgstr "بارگذاری انجام نشد. حجم فایل را بررسی و دوباره تلاش کنید."
+
+msgid "The uploaded file could not be read."
+msgstr "فایل بارگذاری‌شده خوانده نشد."
+
+msgid "The value of “%s” must be a non-negative number."
+msgstr "مقدار «%s» باید عددی نامنفی باشد."
+
+msgid "This is not a RateBridge package."
+msgstr "این یک بسته نرخ ساز نیست."
+
+msgid "This product is not priced by a formula."
+msgstr "این محصول با فرمول قیمت‌گذاری نشده است."
+
+msgid "Turn currency pricing off"
+msgstr "خاموش کردن قیمت‌گذاری ارزی"
+
+msgid "Unknown or credential-like settings keys were ignored."
+msgstr "کلیدهای ناشناخته یا شبیه به اطلاعات محرمانه نادیده گرفته شدند."
+
+msgid "Unknown price source “%s”: the currency is imported disabled with the manual source."
+msgstr "منبع قیمت ناشناخته «%s»: ارز به‌صورت غیرفعال و با منبع دستی وارد شد."
+
+msgid "Update"
+msgstr "به‌روزرسانی"
+
+msgid "Update the existing item"
+msgstr "به‌روزرسانی مورد موجود"
+
+msgid "Valid: %1$d, invalid: %2$d."
+msgstr "معتبر: %1$d، نامعتبر: %2$d."
+
+msgid "Validation finished. Review the report, then confirm the import."
+msgstr "اعتبارسنجی تمام شد. گزارش را بررسی و سپس درون‌ریزی را تأیید کنید."
+
+msgid "Value"
+msgstr "مقدار"
+
+msgid "Variable name"
+msgstr "نام متغیر"
+
+msgid "You are not allowed to edit this product."
+msgstr "شما اجازه ویرایش این محصول را ندارید."
+
+msgid "formula_vars must be a JSON object."
+msgstr "formula_vars باید یک شیء JSON باشد."
+
+msgid "— No change —"
+msgstr "— بدون تغییر —"
+
+msgid "“%s” is not a custom variable of this formula."
+msgstr "«%s» متغیر دلخواه این فرمول نیست."

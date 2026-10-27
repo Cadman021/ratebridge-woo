@@ -38,6 +38,16 @@ final class RepriceJob {
 	public const CRON_HOOK = 'rbw_reprice_cron';
 
 	/**
+	 * Job key used for an explicit id list.
+	 */
+	public const IDS_KEY = 'ids';
+
+	/**
+	 * Option holding the pending id list (non-autoloaded).
+	 */
+	public const IDS_OPTION = 'rbw_reprice_ids';
+
+	/**
 	 * Option holding the cron-fallback queue: code => array( 'page' => int, 'summary' => array ).
 	 */
 	public const QUEUE_OPTION = 'rbw_reprice_queue';
@@ -251,6 +261,66 @@ final class RepriceJob {
 	}
 
 	/**
+	 * Enqueue repricing for an explicit list of post ids (bulk edit, CSV import).
+	 *
+	 * The ids are stored in a short-lived option and processed by ONE job, so a
+	 * bulk operation never fires hundreds of separate actions.
+	 *
+	 * @param int[] $ids Post ids (variations are mapped to their parent).
+	 * @return bool Whether a job was enqueued.
+	 */
+	public function enqueue_ids( array $ids ): bool {
+		$clean = array();
+
+		foreach ( $ids as $id ) {
+			$id = (int) $id;
+
+			if ( $id <= 0 ) {
+				continue;
+			}
+
+			$parent = (int) wp_get_post_parent_id( $id );
+
+			$clean[] = $parent > 0 ? $parent : $id;
+		}
+
+		$clean = array_values( array_unique( array_filter( $clean ) ) );
+
+		if ( empty( $clean ) ) {
+			return false;
+		}
+
+		// Merge with anything already queued for this batch.
+		$existing = get_option( self::IDS_OPTION, array() );
+		$merged   = array_values( array_unique( array_merge( is_array( $existing ) ? array_map( 'intval', $existing ) : array(), $clean ) ) );
+
+		update_option( self::IDS_OPTION, $merged, false );
+
+		if ( function_exists( 'as_enqueue_async_action' ) && function_exists( 'as_has_scheduled_action' ) ) {
+			if ( as_has_scheduled_action( self::HOOK, array( 'code' => self::IDS_KEY, 'page' => 1, 'summary' => array(), 'round' => 0 ), self::GROUP ) ) {
+				return false;
+			}
+
+			as_enqueue_async_action(
+				self::HOOK,
+				array(
+					'code'    => self::IDS_KEY,
+					'page'    => 1,
+					'summary' => array(),
+					'round'   => 0,
+				),
+				self::GROUP
+			);
+
+			return true;
+		}
+
+		$this->queue_cron( self::IDS_KEY );
+
+		return true;
+	}
+
+	/**
 	 * React to a saved/created formula.
 	 *
 	 * @param int $formula_id Formula id.
@@ -296,11 +366,78 @@ final class RepriceJob {
 	 * @return array{summary:array<string,int>,done:bool,counts:int}
 	 */
 	public function process_page_for( string $key, int $page ): array {
+		if ( self::IDS_KEY === $key ) {
+			return $this->process_ids_page( $page );
+		}
+
 		if ( str_starts_with( $key, 'formula:' ) ) {
 			return $this->process_formula_page( (int) substr( $key, 8 ), $page );
 		}
 
 		return $this->process_page( $key, $page );
+	}
+
+	/**
+	 * Process one page of an explicit id list.
+	 *
+	 * @param int $page Page number.
+	 * @return array{summary:array<string,int>,done:bool,counts:int}
+	 */
+	public function process_ids_page( int $page ): array {
+		$ids = get_option( self::IDS_OPTION, array() );
+		$ids = is_array( $ids ) ? array_map( 'intval', $ids ) : array();
+
+		$empty = array(
+			'repriced'  => 0,
+			'skipped'   => 0,
+			'unchanged' => 0,
+			'failed'    => 0,
+		);
+
+		if ( empty( $ids ) ) {
+			delete_option( self::IDS_OPTION );
+
+			return array(
+				'summary' => $empty,
+				'done'    => true,
+				'counts'  => 0,
+			);
+		}
+
+		$slice    = array_slice( $ids, ( max( 1, $page ) - 1 ) * self::BATCH_SIZE, self::BATCH_SIZE );
+		$summary  = $empty;
+		$repricer = new Repricer();
+
+		foreach ( $slice as $product_id ) {
+			$product = wc_get_product( (int) $product_id );
+
+			if ( ! $product instanceof WC_Product ) {
+				continue;
+			}
+
+			$result = $repricer->reprice_product( $product );
+
+			$key = match ( $result['status'] ) {
+				'repriced'  => 'repriced',
+				'failed'    => 'failed',
+				'unchanged' => 'unchanged',
+				default     => 'skipped',
+			};
+
+			++$summary[ $key ];
+		}
+
+		$done = count( $slice ) < self::BATCH_SIZE;
+
+		if ( $done ) {
+			delete_option( self::IDS_OPTION );
+		}
+
+		return array(
+			'summary' => $summary,
+			'done'    => $done,
+			'counts'  => count( $slice ),
+		);
 	}
 
 	/**

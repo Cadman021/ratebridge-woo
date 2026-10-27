@@ -127,3 +127,22 @@
 .rbw-formula-test {
 	direction: rtl;
 }
+
+/* Import / Export + bulk edit */
+.rbw-io-fieldset,
+.rbw-io-messages,
+.rbw-io-table th,
+.rbw-bulk-row {
+	direction: rtl;
+	text-align: right;
+}
+
+.rbw-bulk-label {
+	text-align: right;
+}
+
+.rbw-bulk-number,
+.rbw-io-table td[dir="ltr"] {
+	direction: ltr;
+	text-align: left;
+}

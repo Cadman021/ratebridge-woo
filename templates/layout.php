@@ -15,6 +15,7 @@ $rbw_tabs       = array(
 	'formulas'   => __( 'Formulas', 'ratebridge-woo' ),
 	'sources'    => __( 'Price sources', 'ratebridge-woo' ),
 	'general'    => __( 'General settings', 'ratebridge-woo' ),
+	'import-export' => __( 'Import / Export', 'ratebridge-woo' ),
 );
 ?>
 <div class="wrap rbw-wrap">
@@ -44,6 +45,12 @@ $rbw_tabs       = array(
 	<div class="rbw-tab-panel" id="rbw-panel-formulas">
 		<?php if ( 'formulas' === $rbw_active_tab ) : ?>
 			<?php require RBW_PLUGIN_DIR . 'templates/tab-formulas.php'; ?>
+		<?php endif; ?>
+	</div>
+
+	<div class="rbw-tab-panel" id="rbw-panel-import-export">
+		<?php if ( 'import-export' === $rbw_active_tab ) : ?>
+			<?php require RBW_PLUGIN_DIR . 'templates/tab-import-export.php'; ?>
 		<?php endif; ?>
 	</div>
 

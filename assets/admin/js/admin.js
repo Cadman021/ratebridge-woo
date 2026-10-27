@@ -2357,6 +2357,439 @@
 		notify( strings.genericError, 'error' );
 	}
 
+	/* ------------------------------------------------------------------ */
+	/* Import / Export                                                    */
+	/* ------------------------------------------------------------------ */
+
+	/**
+	 * Build the package download URL with the ticked sections.
+	 */
+	function bindPackageExport() {
+		var button = qs( '#rbw-export-package' );
+
+		if ( ! button ) {
+			return;
+		}
+
+		button.addEventListener( 'click', function () {
+			var base = button.getAttribute( 'data-base-url' ) || '';
+			var sections = qsa( '#rbw-package-export-form input[name="sections[]"]:checked' ).map( function ( input ) {
+				return encodeURIComponent( input.value );
+			} );
+
+			if ( ! sections.length ) {
+				notify( strings.selectOneSection || strings.genericError, 'error' );
+				return;
+			}
+
+			// `sections[]=a&sections[]=b`
+			var query = sections.map( function ( value ) {
+				return 'sections%5B%5D=' + value;
+			} ).join( '&' );
+
+			window.location.href = base + '&' + query;
+		} );
+	}
+
+	/**
+	 * Render the package dry-run report.
+	 *
+	 * @param {Object} data Response payload.
+	 */
+	function renderPackageReport( data ) {
+		var box = qs( '#rbw-package-report' );
+
+		if ( ! box ) {
+			return;
+		}
+
+		var html = '';
+		var counts = data.counts || {};
+
+		if ( Object.keys( counts ).length ) {
+			html += '<table class="widefat striped rbw-io-table"><thead><tr>' +
+				'<th>' + esc( strings.section || 'Section' ) + '</th>' +
+				'<th>' + esc( strings.create || 'New' ) + '</th>' +
+				'<th>' + esc( strings.update || 'Update' ) + '</th>' +
+				'<th>' + esc( strings.skip || 'Skip' ) + '</th>' +
+				'<th>' + esc( strings.invalid || 'Invalid' ) + '</th>' +
+				'</tr></thead><tbody>';
+
+			Object.keys( counts ).forEach( function ( section ) {
+				var row = counts[ section ] || {};
+
+				html += '<tr><th scope="row">' + esc( section ) + '</th>' +
+					'<td>' + esc( row.create || 0 ) + '</td>' +
+					'<td>' + esc( row.update || 0 ) + '</td>' +
+					'<td>' + esc( row.skip || 0 ) + '</td>' +
+					'<td>' + esc( row.invalid || 0 ) + '</td></tr>';
+			} );
+
+			html += '</tbody></table>';
+		}
+
+		if ( data.meta && data.meta.unit_differs ) {
+			html += '<p class="rbw-warning">' + esc(
+				( strings.unitDiffers || 'The package was exported in a different store unit (%s).' )
+					.replace( '%s', ( data.meta.store_unit_from || '' ) + ' → ' + ( data.meta.store_unit_to || '' ) )
+			) + '</p>';
+		}
+
+		var messages = data.messages || [];
+
+		if ( messages.length ) {
+			html += '<ul class="rbw-io-messages">';
+
+			messages.forEach( function ( message ) {
+				html += '<li class="is-' + esc( message.level || 'info' ) + '">' +
+					'<strong>' + esc( message.section || '' ) + '</strong> ' +
+					esc( message.item || '' ) + ': ' + esc( message.message || '' ) + '</li>';
+			} );
+
+			html += '</ul>';
+		}
+
+		var sample = data.sample || [];
+
+		if ( sample.length ) {
+			html += '<table class="widefat striped rbw-io-table"><thead><tr>' +
+				'<th>' + esc( strings.item || 'Item' ) + '</th>' +
+				'<th>' + esc( strings.action || 'Action' ) + '</th>' +
+				'<th>' + esc( strings.oldValue || 'Before' ) + '</th>' +
+				'<th>' + esc( strings.newValue || 'After' ) + '</th>' +
+				'</tr></thead><tbody>';
+
+			sample.forEach( function ( row ) {
+				html += '<tr><td><code dir="ltr">' + esc( row.item ) + '</code></td>' +
+					'<td>' + esc( row.action ) + '</td>' +
+					'<td dir="ltr">' + esc( ( row.old || [] ).join( ' · ' ) ) + '</td>' +
+					'<td dir="ltr">' + esc( ( row.new || [] ).join( ' · ' ) ) + '</td></tr>';
+			} );
+
+			html += '</tbody></table>';
+		}
+
+		box.innerHTML = html || '<p class="rbw-muted">' + esc( strings.nothingToDo || '—' ) + '</p>';
+		box.hidden = false;
+	}
+
+	/**
+	 * Bind the package import (dry run + execute).
+	 */
+	function bindPackageImport() {
+		var dryRun = qs( '#rbw-package-dry-run' );
+		var execute = qs( '#rbw-package-execute' );
+		var token = '';
+
+		if ( ! dryRun || ! execute ) {
+			return;
+		}
+
+		dryRun.addEventListener( 'click', function () {
+			var fileInput = qs( '#rbw-package-file' );
+
+			if ( ! fileInput || ! fileInput.files || ! fileInput.files.length ) {
+				notify( strings.chooseFile || strings.genericError, 'error' );
+				return;
+			}
+
+			var body = new FormData();
+			body.append( 'action', 'rbw_import_package_dry_run' );
+			body.append( 'rbw_action', 'import_package_dry_run' );
+			body.append( 'nonce', config.nonce );
+			body.append( 'file', fileInput.files[ 0 ] );
+			body.append( 'policy', ( qs( '#rbw-package-policy' ) || {} ).value || 'skip' );
+			body.append( 'convert', ( qs( '#rbw-package-convert' ) || {} ).value || '1' );
+
+			dryRun.disabled = true;
+			var previous = dryRun.textContent;
+			dryRun.textContent = strings.working;
+			execute.disabled = true;
+
+			window.fetch( config.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: body } )
+				.then( function ( response ) { return response.json(); } )
+				.then( function ( response ) {
+					if ( ! response.success ) {
+						notify( messageFrom( response ), 'error' );
+						return;
+					}
+
+					token = ( response.data || {} ).token || '';
+					renderPackageReport( response.data || {} );
+					execute.disabled = ! token;
+					notify( messageFrom( response ), 'success' );
+				} )
+				.catch( handleRequestError )
+				.finally( function () {
+					dryRun.disabled = false;
+					dryRun.textContent = previous;
+				} );
+		} );
+
+		execute.addEventListener( 'click', function () {
+			if ( ! token ) {
+				return;
+			}
+
+			if ( ! window.confirm( strings.confirmImport || strings.genericError ) ) {
+				return;
+			}
+
+			execute.disabled = true;
+			var previous = execute.textContent;
+			execute.textContent = strings.working;
+
+			request( 'import_package_execute', { token: token } )
+				.then( function ( response ) {
+					notify( messageFrom( response ), response.success ? 'success' : 'error' );
+
+					if ( ! response.success ) {
+						return;
+					}
+
+					token = '';
+					refreshBackups( ( response.data || {} ).backups );
+				} )
+				.catch( handleRequestError )
+				.finally( function () {
+					execute.disabled = true;
+					execute.textContent = previous;
+				} );
+		} );
+	}
+
+	/**
+	 * Re-render the backups table.
+	 *
+	 * @param {Array} backups Backups payload.
+	 */
+	function refreshBackups( backups ) {
+		var table = qs( '#rbw-backups-table' );
+
+		if ( ! table || ! Array.isArray( backups ) ) {
+			return;
+		}
+
+		var tbody = table.querySelector( 'tbody' );
+
+		if ( ! tbody ) {
+			return;
+		}
+
+		if ( ! backups.length ) {
+			tbody.innerHTML = '<tr class="rbw-empty-row"><td colspan="5">' + esc( strings.noBackups || '—' ) + '</td></tr>';
+			return;
+		}
+
+		tbody.innerHTML = backups.map( function ( backup ) {
+			var counts = backup.counts || {};
+
+			return '<tr data-backup-id="' + esc( backup.id ) + '">' +
+				'<td>' + esc( backup.date || '—' ) + '</td>' +
+				'<td><code>' + esc( backup.reason || '' ) + '</code></td>' +
+				'<td>' + esc( counts.currencies || 0 ) + '</td>' +
+				'<td>' + esc( counts.formulas || 0 ) + '</td>' +
+				'<td class="rbw-actions"><button type="button" class="button button-small rbw-restore-backup" data-id="' +
+				esc( backup.id ) + '">' + esc( strings.restore || 'Restore' ) + '</button></td></tr>';
+		} ).join( '' );
+
+		bindRestoreButtons();
+	}
+
+	/**
+	 * Bind the restore buttons (also after a re-render).
+	 */
+	function bindRestoreButtons() {
+		qsa( '.rbw-restore-backup' ).forEach( function ( button ) {
+			if ( button.getAttribute( 'data-rbw-bound' ) ) {
+				return;
+			}
+
+			button.setAttribute( 'data-rbw-bound', '1' );
+
+			button.addEventListener( 'click', function () {
+				if ( ! window.confirm( strings.confirmRestore || strings.genericError ) ) {
+					return;
+				}
+
+				button.disabled = true;
+
+				request( 'restore_backup', { id: button.getAttribute( 'data-id' ) } )
+					.then( function ( response ) {
+						notify( messageFrom( response ), response.success ? 'success' : 'error' );
+
+						if ( response.success ) {
+							refreshBackups( ( response.data || {} ).backups );
+						}
+					} )
+					.catch( handleRequestError )
+					.finally( function () {
+						button.disabled = false;
+					} );
+			} );
+		} );
+	}
+
+	/**
+	 * Bind the products CSV import (upload, dry run, chunked progress).
+	 */
+	function bindCsvImport() {
+		var upload = qs( '#rbw-csv-upload' );
+		var execute = qs( '#rbw-csv-execute' );
+		var progress = qs( '#rbw-csv-progress' );
+		var fill = qs( '#rbw-csv-progress-fill' );
+		var label = qs( '#rbw-csv-progress-label' );
+		var report = qs( '#rbw-csv-report' );
+		var token = '';
+
+		if ( ! upload || ! execute ) {
+			return;
+		}
+
+		upload.addEventListener( 'click', function () {
+			var fileInput = qs( '#rbw-csv-file' );
+
+			if ( ! fileInput || ! fileInput.files || ! fileInput.files.length ) {
+				notify( strings.chooseFile || strings.genericError, 'error' );
+				return;
+			}
+
+			var body = new FormData();
+			body.append( 'action', 'rbw_import_products_csv' );
+			body.append( 'rbw_action', 'import_products_csv' );
+			body.append( 'nonce', config.nonce );
+			body.append( 'file', fileInput.files[ 0 ] );
+			body.append( 'file_unit', ( qs( '#rbw-csv-unit' ) || {} ).value || 'toman' );
+
+			upload.disabled = true;
+			var previous = upload.textContent;
+			upload.textContent = strings.working;
+
+			window.fetch( config.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: body } )
+				.then( function ( response ) { return response.json(); } )
+				.then( function ( response ) {
+					if ( ! response.success ) {
+						notify( messageFrom( response ), 'error' );
+						return;
+					}
+
+					var data = response.data || {};
+					token = data.token || '';
+					execute.disabled = ! token;
+
+					if ( report ) {
+						var dry = data.dry_run || {};
+						var html = '<p><strong>' + esc(
+							( strings.rowsRead || '%d rows read.' ).replace( '%d', String( data.rows || 0 ) )
+						) + '</strong> ' + esc(
+							( strings.validInvalid || 'Valid: %1$d, invalid: %2$d.' )
+								.replace( '%1$d', String( dry.valid || 0 ) )
+								.replace( '%2$d', String( dry.invalid || 0 ) )
+						) + '</p>';
+
+						var messages = dry.messages || [];
+
+						if ( messages.length ) {
+							html += '<ul class="rbw-io-messages">';
+
+							messages.forEach( function ( message ) {
+								html += '<li class="is-error">' + esc(
+									( strings.row || 'Row' ) + ' ' + ( message.row || '' ) + ': ' + ( message.message || '' )
+								) + '</li>';
+							} );
+
+							html += '</ul>';
+						}
+
+						report.innerHTML = html;
+						report.hidden = false;
+					}
+
+					if ( progress ) {
+						progress.hidden = false;
+						if ( fill ) {
+							fill.style.width = '0%';
+						}
+						if ( label ) {
+							label.textContent = '0%';
+						}
+					}
+
+					notify( messageFrom( response ), 'success' );
+				} )
+				.catch( handleRequestError )
+				.finally( function () {
+					upload.disabled = false;
+					upload.textContent = previous;
+				} );
+		} );
+
+		execute.addEventListener( 'click', function () {
+			if ( ! token ) {
+				return;
+			}
+
+			execute.disabled = true;
+
+			/**
+			 * Import one chunk, then continue until done.
+			 *
+			 * @param {number} offset Row offset.
+			 */
+			function step( offset ) {
+				request( 'import_products_chunk', { token: token, offset: offset } )
+					.then( function ( response ) {
+						if ( ! response.success ) {
+							notify( messageFrom( response ), 'error' );
+							execute.disabled = false;
+							return;
+						}
+
+						var data = response.data || {};
+
+						if ( fill ) {
+							fill.style.width = ( data.percent || 0 ) + '%';
+						}
+
+						if ( label ) {
+							label.textContent = ( data.percent || 0 ) + '% (' + ( data.offset || 0 ) + '/' + ( data.total || 0 ) + ')';
+						}
+
+						if ( data.done ) {
+							notify( messageFrom( response ), 'success' );
+							refreshBackups();
+							window.setTimeout( function () {
+								window.location.reload();
+							}, 1200 );
+							return;
+						}
+
+						step( data.offset || 0 );
+					} )
+					.catch( function ( error ) {
+						handleRequestError( error );
+						execute.disabled = false;
+					} );
+			}
+
+			step( 0 );
+		} );
+	}
+
+	/**
+	 * Bind the whole Import/Export tab.
+	 */
+	function bindImportExport() {
+		if ( ! qs( '#rbw-package-export-form' ) && ! qs( '#rbw-csv-import-form' ) ) {
+			return;
+		}
+
+		bindPackageExport();
+		bindPackageImport();
+		bindCsvImport();
+		bindRestoreButtons();
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		bindToolbar();
 		bindTable();
@@ -2368,5 +2801,6 @@
 		bindPresets();
 		bindSources();
 		bindFormulas();
+		bindImportExport();
 	} );
 }() );

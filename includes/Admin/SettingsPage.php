@@ -232,6 +232,27 @@ final class SettingsPage {
 					'testValue'         => __( 'Result', 'ratebridge-woo' ),
 					'confirmDeleteFormula' => __( 'Delete this formula?', 'ratebridge-woo' ),
 					'confirmDetach'     => __( 'Products use this formula. Detach them (they switch back to currency mode) and delete it?', 'ratebridge-woo' ),
+					// Import / export.
+					'selectOneSection'  => __( 'Select at least one section to export.', 'ratebridge-woo' ),
+					'chooseFile'        => __( 'Choose a file first.', 'ratebridge-woo' ),
+					'section'           => __( 'Section', 'ratebridge-woo' ),
+					'create'            => __( 'New', 'ratebridge-woo' ),
+					'update'            => __( 'Update', 'ratebridge-woo' ),
+					'skip'              => __( 'Skip', 'ratebridge-woo' ),
+					'invalid'           => __( 'Invalid', 'ratebridge-woo' ),
+					'item'              => __( 'Item', 'ratebridge-woo' ),
+					'action'            => __( 'Action', 'ratebridge-woo' ),
+					'oldValue'          => __( 'Before', 'ratebridge-woo' ),
+					'newValue'          => __( 'After', 'ratebridge-woo' ),
+					'nothingToDo'       => __( 'Nothing to import.', 'ratebridge-woo' ),
+					'unitDiffers'       => __( 'The package was exported in a different store unit (%s). Money amounts are converted when you keep the conversion option on.', 'ratebridge-woo' ),
+					'confirmImport'     => __( 'Import this package now? A backup is created first.', 'ratebridge-woo' ),
+					'confirmRestore'    => __( 'Restore this backup? The current settings, currencies and formulas are replaced (and backed up first).', 'ratebridge-woo' ),
+					'restore'           => __( 'Restore', 'ratebridge-woo' ),
+					'noBackups'         => __( 'No backups yet.', 'ratebridge-woo' ),
+					'rowsRead'          => __( '%d rows read.', 'ratebridge-woo' ),
+					'validInvalid'      => __( 'Valid: %1$d, invalid: %2$d.', 'ratebridge-woo' ),
+					'row'               => __( 'Row', 'ratebridge-woo' ),
 				),
 			)
 		);
@@ -283,7 +304,7 @@ final class SettingsPage {
 		}
 
 		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( (string) $_GET['tab'] ) ) : 'currencies'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$tab = in_array( $tab, array( 'currencies', 'formulas', 'sources', 'general' ), true ) ? $tab : 'currencies';
+		$tab = in_array( $tab, array( 'currencies', 'formulas', 'sources', 'general', 'import-export' ), true ) ? $tab : 'currencies';
 
 		$repo      = new CurrencyRepository();
 		$registry  = ProviderRegistry::instance();

@@ -572,3 +572,125 @@
 	font-size: 11px;
 	font-weight: 600;
 }
+
+/* Import / Export tab */
+.rbw-io-card {
+	margin-block-end: 20px;
+}
+
+.rbw-io-card h3 {
+	margin-block-start: 0;
+}
+
+.rbw-io-fieldset {
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	padding: 8px 12px;
+	margin-block: 8px 12px;
+}
+
+.rbw-io-fieldset legend {
+	padding-inline: 4px;
+	font-weight: 600;
+}
+
+.rbw-io-report {
+	margin-block-start: 16px;
+}
+
+.rbw-io-table {
+	margin-block: 8px 12px;
+}
+
+.rbw-io-table th {
+	text-align: start;
+}
+
+.rbw-io-messages {
+	margin: 8px 0;
+	padding-inline-start: 18px;
+	list-style: disc;
+	font-size: 12px;
+	line-height: 1.8;
+}
+
+.rbw-io-messages li.is-error {
+	color: #b32d2e;
+}
+
+.rbw-io-messages li.is-warning {
+	color: #7a5c00;
+}
+
+.rbw-io-messages li.is-info {
+	color: #50575e;
+}
+
+.rbw-progress {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-block-start: 12px;
+}
+
+.rbw-progress-bar {
+	flex: 1 1 auto;
+	height: 12px;
+	background: #f0f0f1;
+	border-radius: 6px;
+	overflow: hidden;
+}
+
+.rbw-progress-fill {
+	display: block;
+	height: 100%;
+	width: 0;
+	background: #2271b1;
+	transition: width 0.2s linear;
+}
+
+.rbw-progress-label {
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+/* Bulk edit panel */
+.rbw-bulk-title {
+	margin-block: 8px 4px;
+	padding-block-start: 8px;
+	border-block-start: 1px solid #dcdcde;
+}
+
+.rbw-bulk-note {
+	color: #646970;
+	font-size: 11px;
+	margin-block: 0 8px;
+}
+
+.rbw-bulk-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+	margin-block-end: 6px;
+}
+
+.rbw-bulk-label {
+	min-width: 120px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.rbw-bulk-row select {
+	min-width: 150px;
+}
+
+.rbw-bulk-number {
+	width: 100px;
+	direction: ltr;
+}
+
+.rbw-bulk-group {
+	width: 100%;
+}

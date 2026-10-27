@@ -36,6 +36,9 @@ delete_option( 'rbw_provider_settings' );
 delete_option( 'rbw_request_budget' );
 delete_option( 'rbw_reprice_queue' );
 delete_option( 'rbw_unit_migration' );
+delete_option( 'rbw_backups' );
+delete_option( 'rbw_csv_sessions' );
+delete_option( 'rbw_reprice_ids' );
 
 // Remove transients created by providers (rate cache) and the Phase-4
 // rendered frontend fragments (prefix `rbw_html_`).
@@ -92,6 +95,22 @@ $wpdb->query( // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, 
 		$rbw_meta_keys
 	)
 );
+
+// Remove the private import/export temp directory.
+$rbw_uploads = wp_upload_dir();
+
+if ( empty( $rbw_uploads['error'] ) ) {
+	$rbw_tmp = trailingslashit( $rbw_uploads['basedir'] ) . 'ratebridge-woo/tmp';
+
+	foreach ( (array) glob( $rbw_tmp . '/*' ) as $rbw_file ) {
+		if ( is_string( $rbw_file ) && is_file( $rbw_file ) ) {
+			@unlink( $rbw_file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
+		}
+	}
+
+	@rmdir( $rbw_tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+	@rmdir( dirname( $rbw_tmp ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+}
 
 // Per-user notice dismissals.
 $wpdb->query( // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching
