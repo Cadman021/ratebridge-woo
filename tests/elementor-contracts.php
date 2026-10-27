@@ -295,6 +295,47 @@ el_check(
 	(bool) preg_match( '/public function render_rate_item\(/', $shortcodes )
 );
 
+/* ------------------------------------------------------------------------- */
+echo "\n[7] Icon rendering (Phase 5.1 regression guard)\n";
+/* ------------------------------------------------------------------------- */
+/*
+ * Icons_Manager is a CLASS. Checking it with function_exists() always returned
+ * false, so every icon control silently rendered nothing.
+ */
+el_check(
+	'icon rendering checks Icons_Manager with class_exists()',
+	str_contains( $base, 'class_exists' ) && str_contains( $base, 'Icons_Manager' )
+);
+el_check(
+	'icon markup is emitted as-is (SVG viewBox must keep its case)',
+	! str_contains( $base, 'return wp_kses(' ),
+	'wp_kses() lowercases viewBox and breaks SVG scaling'
+);
+el_check(
+	'icon markup is validated before output',
+	str_contains( $base, 'is_safe_icon_markup' )
+);
+el_check(
+	'icon size + colour controls exist',
+	str_contains( $base, 'rbw_icon_size' ) && str_contains( $base, 'rbw_icon_color' )
+);
+
+/* ------------------------------------------------------------------------- */
+echo "\n[8] Mobile table separators\n";
+/* ------------------------------------------------------------------------- */
+$frontend_css = el_test_read( $root . '/assets/frontend/css/frontend.css' );
+
+el_check(
+	'mobile block draws the row separator as a pseudo-element',
+	str_contains( $frontend_css, '.rbw-rates tr:not(:last-child)::after' ),
+	'a border on a display:block <tr> collapses and does not paint'
+);
+el_check(
+	'separator has a physical offset fallback',
+	(bool) preg_match( '/tr:not\(:last-child\)::after\s*\{[^}]*bottom:\s*0;/s', $frontend_css )
+);
+
+/* ------------------------------------------------------------------------- */
 echo "\n", str_repeat( '=', 60 ), "\n";
 printf( "RESULT: %d passed, %d failed\n", $el_passed, $el_failed );
 

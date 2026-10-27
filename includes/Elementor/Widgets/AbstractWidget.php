@@ -253,14 +253,57 @@ abstract class AbstractWidget extends Widget_Base {
 	 * @return string Escaped icon markup ('' when unset).
 	 */
 	protected function render_icon( mixed $icon ): string {
-		if ( ! is_array( $icon ) || empty( $icon['value'] ) || ! function_exists( '\Elementor\Icons_Manager' ) ) {
+		if ( ! is_array( $icon ) || empty( $icon['value'] ) ) {
+			return '';
+		}
+
+		/*
+		 * Icons_Manager is a *class*, so this must be class_exists() — using
+		 * function_exists() silently disabled every icon control.
+		 */
+		if ( ! class_exists( '\Elementor\Icons_Manager' ) ) {
 			return '';
 		}
 
 		ob_start();
 		\Elementor\Icons_Manager::render_icon( $icon, array( 'aria-hidden' => 'true' ) );
 
-		return (string) ob_get_clean();
+		$rendered = (string) ob_get_clean();
+
+		/*
+		 * The markup comes from Elementor's own Icons_Manager (not user input),
+		 * so it is emitted as-is: `wp_kses()` lowercases SVG attribute names and
+		 * would turn `viewBox` into `viewbox`, which breaks SVG scaling. The
+		 * value in the control is only ever read, never echoed by this class.
+		 */
+		return self::is_safe_icon_markup( $rendered ) ? $rendered : '';
+	}
+
+	/**
+	 * Belt-and-braces check on Elementor's icon markup.
+	 *
+	 * Rejects anything that is not a single `<svg>`/`<i>` fragment, so a
+	 * tampered control value can never inject a script tag through the icon slot.
+	 *
+	 * @param string $markup Rendered icon markup.
+	 * @return bool
+	 */
+	private static function is_safe_icon_markup( string $markup ): bool {
+		$markup = trim( $markup );
+
+		if ( '' === $markup ) {
+			return false;
+		}
+
+		// No scripts, styles, event handlers or foreign objects.
+		if ( preg_match( '/<\s*(script|style|iframe|object|embed|foreignObject)\b/i', $markup )
+			|| preg_match( '/\son[a-z]+\s*=/i', $markup )
+			|| preg_match( '/javascript\s*:/i', $markup ) ) {
+			return false;
+		}
+
+		// Exactly one root element.
+		return 1 === preg_match_all( '/<(svg|i)\b/i', $markup );
 	}
 
 	/**
@@ -381,13 +424,46 @@ abstract class AbstractWidget extends Widget_Base {
 			)
 		);
 
+		$this->add_responsive_control(
+			'rbw_icon_size',
+			array(
+				'label'      => __( 'Icon size', 'ratebridge-woo' ),
+				'type'       => Controls_Manager::SLIDER,
+				'size_units' => array( 'px', 'em', 'rem' ),
+				'range'      => array(
+					'px' => array(
+						'min'  => 8,
+						'max'  => 96,
+						'step' => 1,
+					),
+				),
+				'selectors'  => array(
+					$selector . ' .rbw-widget-icon'     => 'font-size: {{SIZE}}{{UNIT}};',
+					$selector . ' .rbw-widget-icon svg' => 'width: {{SIZE}}{{UNIT}}; height: {{SIZE}}{{UNIT}};',
+				),
+			)
+		);
+
+		$this->add_control(
+			'rbw_icon_color',
+			array(
+				'label'     => __( 'Icon colour', 'ratebridge-woo' ),
+				'type'      => Controls_Manager::COLOR,
+				'selectors' => array(
+					$selector . ' .rbw-widget-icon'     => 'color: {{VALUE}};',
+					$selector . ' .rbw-widget-icon svg' => 'fill: {{VALUE}};',
+				),
+			)
+		);
+
 		$this->add_control(
 			'rbw_text_color',
 			array(
 				'label'     => __( 'Text colour', 'ratebridge-woo' ),
 				'type'      => Controls_Manager::COLOR,
 				'selectors' => array(
-					$inner => 'color: {{VALUE}};',
+					$inner                          => 'color: {{VALUE}};',
+					$selector . ' .rbw-widget-icon' => 'color: {{VALUE}};',
 				),
 			)
 		);

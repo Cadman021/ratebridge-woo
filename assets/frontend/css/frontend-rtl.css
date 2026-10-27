@@ -74,3 +74,8 @@
 	border-inline-end: 0;
 	text-align: right;
 }
+
+/* Elementor widgets: the icon sits before the text in both directions. */
+.rbw-widget > .rbw-widget-icon {
+	order: -1;
+}

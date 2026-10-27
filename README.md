@@ -797,6 +797,18 @@ colour (writes `--rbw-accent`), border, padding, background, box shadow. Extra p
 
 - **جدول ارزها** — header text/background, row text/background, odd-row background, row line
   colour, cell padding (responsive), table typography.
+- **Every widget** — icon size (responsive) and icon colour, in addition to the shared text
+  colour.
+
+> On screens narrower than 600 px the table switches to a stacked label/value layout. The row
+> separator is drawn as an `::after` pseudo-element on the row: `display: block` on `<tr>`
+> disables `border-collapse`, so a plain bottom border is not guaranteed to paint.
+
+> **Icons** are rendered with `Elementor\Icons_Manager::render_icon()`, guarded by
+> `class_exists()`. That guard must not become `function_exists()` — `Icons_Manager` is a class,
+> and the wrong check silently renders no icon at all. The markup is emitted verbatim because
+> `wp_kses()` lowercases SVG attribute names and would turn `viewBox` into `viewbox`, breaking
+> scaling; a small validator rejects scripts, event handlers and multi-root fragments instead.
 - **نوار متحرک** — item gap (responsive), separator colour, strip background.
 
 All selectors target the existing `.rbw-*` classes, so the shortcode output and the widget output

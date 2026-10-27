@@ -101,6 +101,14 @@
 
 /* Narrow screens: stack the cells as label/value pairs. */
 @media screen and (max-width: 600px) {
+	/*
+	 * Stacked layout.
+	 *
+	 * `display: block` on <tr>/<td> disables `border-collapse`, so a
+	 * `border-block-end` on the row is not guaranteed to paint (it collapses
+	 * with the cells' own borders). The separator is therefore drawn as a
+	 * pseudo-element on the row, which always renders.
+	 */
 	.rbw-rates {
 		min-width: 0;
 	}
@@ -114,22 +122,49 @@
 		white-space: nowrap;
 	}
 
-	.rbw-rates tr {
+	.rbw-rates tbody {
 		display: block;
-		padding-block: 0.5em;
-		border-block-end: 1px solid var(--rbw-border, #e5e7eb);
+	}
+
+	.rbw-rates tr {
+		position: relative;
+		display: block;
+		padding-block: 0.6em;
+		border: 0;
+	}
+
+	/*
+	 * The visible row separator.
+	 *
+	 * Physical offsets are set first and the logical ones after, so very old
+	 * browsers still get a line and modern ones get correct RTL behaviour.
+	 */
+	.rbw-rates tr:not(:last-child)::after {
+		content: "";
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 2px;
+		inset-inline: 0;
+		inset-block-end: 0;
+		block-size: 2px;
+		border-radius: 2px;
+		background: var(--rbw-border, #e5e7eb);
 	}
 
 	.rbw-rates td {
 		display: flex;
+		align-items: baseline;
 		justify-content: space-between;
 		gap: 1em;
 		border: 0;
-		padding: 0.2em 0;
+		padding: 0.25em 0;
 	}
 
 	.rbw-rates td::before {
 		content: attr(data-label);
+		flex: 0 0 auto;
 		font-weight: 600;
 		font-size: 0.9em;
 		color: var(--rbw-muted, #555);
@@ -331,14 +366,31 @@ table.td .rbw-order-item-meta {
 .rbw-widget-icon {
 	display: inline-flex;
 	align-items: center;
+	justify-content: center;
 	flex: 0 0 auto;
 	line-height: 1;
+	font-size: 1.15em;
+	/* Icon fonts (Font Awesome, custom sets) inherit the text colour. */
+	color: inherit;
 }
 
 .rbw-widget-icon svg {
+	/* Elementor renders SVG icons with no intrinsic size: give them one. */
+	display: block;
 	width: 1em;
 	height: 1em;
 	fill: currentColor;
+	vertical-align: middle;
+}
+
+.rbw-widget-icon i {
+	display: inline-block;
+	line-height: 1;
+}
+
+/* Vertically centre the icon with the text baseline. */
+.rbw-widget > .rbw-widget-icon {
+	align-self: center;
 }
 
 .rbw-widget-before,
