@@ -804,6 +804,21 @@ colour (writes `--rbw-accent`), border, padding, background, box shadow. Extra p
 > separator is drawn as an `::after` pseudo-element on the row: `display: block` on `<tr>`
 > disables `border-collapse`, so a plain bottom border is not guaranteed to paint.
 
+> **Style controls target real elements.** Every widget renders one block box
+> (`.rbw-widget-box`, emitted by `Frontend::wrap()` / the ProductPrice wrapper) that owns the
+> background, border, padding and shadow controls, plus the `--rbw-accent` variable. The icon
+> lives inside that box, so "Icon colour" can reach it. Three rules keep this working:
+>
+> 1. **Padding is one physical shorthand** (`padding: top right bottom left`). The earlier
+>    logical `padding-block`/`padding-inline` pair inside a single declaration was invalid CSS, so
+>    the control silently applied nothing and looked like it moved the outer margins.
+> 2. **The accent colour writes the variable *and* colours its consumers** (`.rbw-widget-accent`,
+>    `.rbw-rate`, `.rbw-value`, `.rbw-ticker-rate`, `.rbw-product-currency-rate`, the product
+>    notice's inline-start border). A widget with no rate in its markup still has a visible
+>    target, because `ProductCurrency` wraps its value in `.rbw-widget-accent`.
+> 3. **The icon colour is forced** with `!important`, because the icon otherwise inherits the
+>    colour of the box it sits in and a plain declaration would lose.
+>
 > **Icons** are rendered with `Elementor\Icons_Manager::render_icon()`, guarded by
 > `class_exists()`. That guard must not become `function_exists()` — `Icons_Manager` is a class,
 > and the wrong check silently renders no icon at all. The markup is emitted verbatim because

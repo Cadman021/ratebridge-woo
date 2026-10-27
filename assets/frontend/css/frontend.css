@@ -285,6 +285,10 @@
 
 /* -------------------------------------------------------- Product block */
 
+.rbw-widget-box > .rbw-widget-icon {
+	margin-inline-end: 0.35em;
+}
+
 .rbw-product-notice {
 	margin-block: 0.75em;
 	padding: 0.6em 0.8em;
@@ -361,6 +365,43 @@ table.td .rbw-order-item-meta {
 	gap: 0.35em;
 	line-height: 1.7;
 	vertical-align: middle;
+}
+
+/*
+ * The widget box.
+ *
+ * Block-level so Elementor's padding/background/border/shadow controls affect
+ * the box itself rather than pushing the surrounding layout. The inner content
+ * stays an inline flex line so icon + labels + value keep their alignment.
+ */
+.rbw-widget-box {
+	display: block;
+	box-sizing: border-box;
+	max-width: 100%;
+}
+
+.rbw-widget-box > .rbw-widget-icon,
+.rbw-widget-box > .rbw-widget-before,
+.rbw-widget-box > .rbw-widget-value,
+.rbw-widget-box > .rbw-widget-after {
+	vertical-align: middle;
+}
+
+/* Keep the line itself flexible even though the box is a block. */
+.rbw-widget-box.rbw-widget {
+	display: block;
+}
+
+.rbw-widget-box.rbw-widget > .rbw-widget-value {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.25em;
+}
+
+/* Accent hook used by widgets whose value has no rate. */
+.rbw-widget-accent {
+	color: var(--rbw-accent, inherit);
 }
 
 .rbw-widget-icon {

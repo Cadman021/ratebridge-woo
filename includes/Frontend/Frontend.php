@@ -558,7 +558,13 @@ final class Frontend {
 			$classes .= ' is-align-' . $align;
 		}
 
-		$html = sprintf( '<span class="%s">', esc_attr( $classes ) );
+		/*
+		 * The outer element carries `rbw-widget-box`: a block-level box that owns
+		 * the Elementor style controls (padding, background, border, shadow) and
+		 * the `--rbw-accent` variable. Without it the padding was applied to an
+		 * inline-flex wrapper and only shifted the surrounding layout.
+		 */
+		$html = sprintf( '<span class="%s rbw-widget-box">', esc_attr( $classes ) );
 
 		if ( '' !== $icon ) {
 			$html .= sprintf( '<span class="rbw-widget-icon" aria-hidden="true">%s</span>', $icon );

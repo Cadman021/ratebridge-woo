@@ -84,7 +84,17 @@ final class ProductPrice extends AbstractWidget {
 
 		$this->end_controls_section();
 
-		$this->add_base_style_controls( '{{WRAPPER}} .rbw-product-notice', '{{WRAPPER}} .rbw-product-notice' );
+		/*
+		 * The widget renders one box (`.rbw-widget-box`) that contains the icon
+		 * and the notice, so the box controls, the icon controls and the accent
+		 * variable all target the same element.
+		 */
+		$this->add_base_style_controls(
+			'{{WRAPPER}} .rbw-widget-box',
+			'{{WRAPPER}} .rbw-product-notice',
+			'{{WRAPPER}} .rbw-widget-box'
+		);
+
 	}
 
 	/**
@@ -135,6 +145,6 @@ final class ProductPrice extends AbstractWidget {
 			$html = sprintf( '<span class="rbw-widget-icon" aria-hidden="true">%s</span>%s', $icon, $html );
 		}
 
-		echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built with esc_html/wp_kses upstream.
+		echo '<div class="rbw-widget-box">' . $html . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built with esc_html/wp_kses upstream.
 	}
 }

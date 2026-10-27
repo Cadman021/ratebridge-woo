@@ -184,9 +184,13 @@ final class ProductCurrency extends AbstractWidget {
 				break;
 		}
 
+		// Wrap the plain name/code in the accent hook so the accent colour control
+		// has a visible effect even without the rate.
+		$inner = '<span class="rbw-widget-accent">' . $inner . '</span>';
+
 		if ( 'yes' === ( $settings['rbw_show_rate'] ?? '' ) ) {
 			$inner .= sprintf(
-				' <span class="rbw-product-currency-rate" dir="ltr">%s</span> <span class="rbw-product-currency-unit">%s</span>',
+				' <span class="rbw-product-currency-rate rbw-widget-accent" dir="ltr">%s</span> <span class="rbw-product-currency-unit">%s</span>',
 				esc_html( Frontend::format_rate( $currency->rate ) ),
 				esc_html( Frontend::unit_label() )
 			);

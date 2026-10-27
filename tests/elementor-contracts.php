@@ -243,7 +243,9 @@ foreach ( $widget_files as $file ) {
 		$is_allowed = str_starts_with( $expression, '$html' )
 			|| str_starts_with( $expression, '$this->placeholder(' )
 			|| str_starts_with( $expression, '$this->apply_labels(' )
-			|| str_starts_with( $expression, 'Frontend::wrap(' );
+			|| str_starts_with( $expression, 'Frontend::wrap(' )
+			// A static wrapper around the already-built $html fragment.
+			|| str_starts_with( $expression, "'<div class=\"rbw-widget-box\">'" );
 
 		// A justified inline echo (esc_html/wp_kses in the expression) also passes.
 		if ( ! $is_allowed && ! preg_match( '/esc_html|wp_kses|esc_attr/', $expression ) ) {
@@ -333,6 +335,83 @@ el_check(
 el_check(
 	'separator has a physical offset fallback',
 	(bool) preg_match( '/tr:not\(:last-child\)::after\s*\{[^}]*bottom:\s*0;/s', $frontend_css )
+);
+
+/* ------------------------------------------------------------------------- */
+echo "\n[9] Style controls address real elements (Phase 5.2 regression guard)\n";
+/* ------------------------------------------------------------------------- */
+/*
+ * Four defects were reported by the user:
+ *  - Product currency: accent colour did nothing, padding moved outer margins;
+ *  - Product price:    icon colour and accent colour did nothing.
+ *
+ * Causes: the accent variable had no consumer in the widget markup, padding was
+ * written as an invalid logical shorthand pair, and the ProductPrice icon lived
+ * OUTSIDE the element its selectors targeted.
+ */
+
+// Padding must be a single valid shorthand (one declaration, four values).
+el_check(
+	'padding control uses one physical shorthand',
+	(bool) preg_match( '/rbw_padding[\s\S]{0,400}?padding:\s*\{\{TOP\}\}\{\{UNIT\}\}\s+\{\{RIGHT\}\}/', $base ),
+	'logical padding-block/padding-inline inside one declaration is invalid CSS'
+);
+el_check(
+	'padding does not use the invalid logical pair',
+	! str_contains( $base, 'padding-block: {{TOP}}' )
+);
+
+// The accent variable must be consumed by real elements.
+el_check(
+	'accent control also colours the accent hook',
+	str_contains( $base, "'.rbw-widget-accent'" ) || str_contains( $base, '.rbw-widget-accent\'' )
+);
+el_check(
+	'accent control reaches the notice border',
+	str_contains( $base, 'border-inline-start-color: {{VALUE}}' )
+);
+el_check(
+	'accent variable is set on the inner element too',
+	(bool) preg_match( '/\$inner\s*=>\s*\'--rbw-accent: \{\{VALUE\}\};\'/', $base )
+);
+
+// Icon controls must target the scope that actually contains the icon.
+el_check(
+	'icon controls take an explicit scope',
+	(bool) preg_match( '/function add_base_style_controls\([^)]*\$scope/s', $base )
+);
+el_check(
+	'icon colour wins over the inherited colour',
+	str_contains( $base, 'color: {{VALUE}} !important' )
+);
+
+// Product currency: the accent hook must exist in its markup.
+$product_currency = el_test_read( $widget_dir . '/ProductCurrency.php' );
+el_check(
+	'ProductCurrency wraps its value in the accent hook',
+	str_contains( $product_currency, 'rbw-widget-accent' )
+);
+
+// Product price: icon and notice must share one box element.
+$product_price = el_test_read( $widget_dir . '/ProductPrice.php' );
+el_check(
+	'ProductPrice renders one rbw-widget-box wrapper',
+	str_contains( $product_price, 'rbw-widget-box' )
+);
+el_check(
+	'ProductPrice passes a box scope to the style controls',
+	(bool) preg_match( '/add_base_style_controls\(\s*\'\{\{WRAPPER\}\} \.rbw-widget-box\'/', $product_price )
+);
+
+// The shared wrapper must produce that box class.
+$frontend_php = el_test_read( $root . '/includes/Frontend/Frontend.php' );
+el_check(
+	'Frontend::wrap() emits the rbw-widget-box class',
+	str_contains( $frontend_php, 'rbw-widget-box' )
+);
+el_check(
+	'the box is block-level in CSS',
+	(bool) preg_match( '/\.rbw-widget-box\s*\{[^}]*display:\s*block/s', $frontend_css )
 );
 
 /* ------------------------------------------------------------------------- */

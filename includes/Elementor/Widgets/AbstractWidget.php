@@ -380,7 +380,18 @@ abstract class AbstractWidget extends Widget_Base {
 	 * @param string $inner    Selector for the value text.
 	 * @return void
 	 */
-	protected function add_base_style_controls( string $selector = '{{WRAPPER}} .rbw-widget', string $inner = '{{WRAPPER}} .rbw-widget-value' ): void {
+	protected function add_base_style_controls( string $selector = '{{WRAPPER}} .rbw-widget', string $inner = '{{WRAPPER}} .rbw-widget-value', string $scope = '' ): void {
+		/*
+		 * `$selector` is the element that owns the *box* (background, border,
+		 * padding, shadow) and the accent variable.
+		 * `$inner` is the element that owns the text typography/colour.
+		 * `$scope` is the element that *contains* both (the outer wrapper). The
+		 * icon lives in the scope, not inside the box, so without it the icon
+		 * controls could never match (that was the "product price icon colour
+		 * does nothing" bug).
+		 */
+		$scope = '' !== $scope ? $scope : $selector;
+
 		$this->start_controls_section(
 			'rbw_style_section',
 			array(
@@ -408,9 +419,8 @@ abstract class AbstractWidget extends Widget_Base {
 						'icon'  => 'eicon-text-align-right',
 					),
 				),
-				// Logical values keep the control direction-aware.
 				'selectors' => array(
-					$selector => 'text-align: {{VALUE}};',
+					$scope => 'text-align: {{VALUE}};',
 				),
 			)
 		);
@@ -438,8 +448,8 @@ abstract class AbstractWidget extends Widget_Base {
 					),
 				),
 				'selectors'  => array(
-					$selector . ' .rbw-widget-icon'     => 'font-size: {{SIZE}}{{UNIT}};',
-					$selector . ' .rbw-widget-icon svg' => 'width: {{SIZE}}{{UNIT}}; height: {{SIZE}}{{UNIT}};',
+					$scope . ' .rbw-widget-icon'     => 'font-size: {{SIZE}}{{UNIT}};',
+					$scope . ' .rbw-widget-icon svg' => 'width: {{SIZE}}{{UNIT}}; height: {{SIZE}}{{UNIT}};',
 				),
 			)
 		);
@@ -449,9 +459,12 @@ abstract class AbstractWidget extends Widget_Base {
 			array(
 				'label'     => __( 'Icon colour', 'ratebridge-woo' ),
 				'type'      => Controls_Manager::COLOR,
+				// !important: the icon inherits `color` from the box/notice, so a
+				// plain declaration would lose to the inherited value.
 				'selectors' => array(
-					$selector . ' .rbw-widget-icon'     => 'color: {{VALUE}};',
-					$selector . ' .rbw-widget-icon svg' => 'fill: {{VALUE}};',
+					$scope . ' .rbw-widget-icon'     => 'color: {{VALUE}} !important;',
+					$scope . ' .rbw-widget-icon svg' => 'fill: {{VALUE}} !important;',
+					$scope . ' .rbw-widget-icon i'   => 'color: {{VALUE}} !important;',
 				),
 			)
 		);
@@ -462,19 +475,34 @@ abstract class AbstractWidget extends Widget_Base {
 				'label'     => __( 'Text colour', 'ratebridge-woo' ),
 				'type'      => Controls_Manager::COLOR,
 				'selectors' => array(
-					$inner                          => 'color: {{VALUE}};',
-					$selector . ' .rbw-widget-icon' => 'color: {{VALUE}};',
+					$inner => 'color: {{VALUE}};',
 				),
 			)
 		);
 
+		/*
+		 * Accent colour: set the variable on the scope AND colour the elements
+		 * that read it, so the control works even for a widget whose own markup
+		 * has no `--rbw-accent` consumer yet (the "product currency accent
+		 * does nothing" bug).
+		 */
 		$this->add_control(
 			'rbw_accent_color',
 			array(
-				'label'     => __( 'Accent colour (values)', 'ratebridge-woo' ),
-				'type'      => Controls_Manager::COLOR,
-				'selectors' => array(
-					$selector => '--rbw-accent: {{VALUE}};',
+				'label'       => __( 'Accent colour (values)', 'ratebridge-woo' ),
+				'type'        => Controls_Manager::COLOR,
+				'description' => __( 'Applies to rates and other highlighted values.', 'ratebridge-woo' ),
+				'selectors'   => array(
+					$scope                                              => '--rbw-accent: {{VALUE}};',
+					// The variable must also land on the inner element: notices and
+					// tables read it for their own borders/values.
+					$inner                                              => '--rbw-accent: {{VALUE}};',
+					$scope . ' .rbw-widget-accent'                      => 'color: {{VALUE}};',
+					$scope . ' .rbw-rate'                               => 'color: {{VALUE}};',
+					$scope . ' .rbw-value'                              => 'color: {{VALUE}};',
+					$scope . ' .rbw-ticker-rate'                        => 'color: {{VALUE}};',
+					$scope . ' .rbw-product-currency-rate'              => 'color: {{VALUE}};',
+					$scope . ' .rbw-product-notice'                     => 'border-inline-start-color: {{VALUE}};',
 				),
 			)
 		);
@@ -488,6 +516,12 @@ abstract class AbstractWidget extends Widget_Base {
 			)
 		);
 
+		/*
+		 * Padding must be written with a single physical shorthand on the box
+		 * element. The old logical `padding-block`/`padding-inline` pair was
+		 * invalid inside one declaration and therefore applied nothing, which
+		 * made the control look like it moved the outer margins instead.
+		 */
 		$this->add_responsive_control(
 			'rbw_padding',
 			array(
@@ -495,7 +529,7 @@ abstract class AbstractWidget extends Widget_Base {
 				'type'       => Controls_Manager::DIMENSIONS,
 				'size_units' => array( 'px', 'em', 'rem' ),
 				'selectors'  => array(
-					$selector => 'padding-block: {{TOP}}{{UNIT}} {{BOTTOM}}{{UNIT}}; padding-inline: {{RIGHT}}{{UNIT}} {{LEFT}}{{UNIT}};',
+					$selector => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}};',
 				),
 			)
 		);
