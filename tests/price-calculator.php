@@ -686,7 +686,7 @@ CalcAssert::check(
 
 // The gold reference case, end to end with step 1000 (the store default).
 CalcAssert::price(
-	'gold 256,451,261.32 rounded to the nearest 1000 = 256,450,000',
+	'gold 256,451,261.32 rounded to the nearest 1000 = 256,451,000',
 	PriceCalculator::calculate(
 		1.0,
 		256451261.32,

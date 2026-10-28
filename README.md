@@ -134,6 +134,10 @@ ratebridge-woo/
     └── README.md               How to regenerate translations
 ```
 
+Release files: `LICENSE` (GPL-2.0 full text), `readme.txt` (WordPress.org style: description,
+installation, FAQ, changelog) and `languages/ratebridge-woo.pot` generated with
+`php bin/i18n-strings.php --pot` (includes plural entries).
+
 There is **no Composer and no JS build step**. A small `spl_autoload_register()` maps
 `RateBridge\Foo\Bar` → `includes/Foo/Bar.php`.
 
@@ -757,7 +761,23 @@ provider API) and caches its HTML in a 60-second transient keyed by the attribut
 
 `Frontend::cached()` stores the rendered fragment in `_transient_rbw_html_*` (60 s) and enqueues
 the stylesheet from inside the rendering callback, so pages without a shortcode load no extra
-CSS. The cache is flushed by `Frontend::flush_cache()` on:
+CSS.
+
+**Invalidation uses a generation counter**, not a `DELETE … LIKE` on `wp_options`: every fragment
+key and every provider cache key ends with `_g{generation}`, and flushing increments
+`rbw_cache_gen` (frontend) or `rbw_cache_gen_provider_{key}` (per provider). That is the only way
+to invalidate reliably when transients live in Redis/Memcached, where there are no option rows to
+delete. The `LIKE` purge is kept as a best-effort extra so a site without an object cache also
+frees the rows. Call sites:
+
+| Call site | Scope | What it does |
+| --- | --- | --- |
+| `Frontend::cached()` | frontend | builds the key with the current generation |
+| `Frontend::flush_cache()` | frontend | bumps `rbw_cache_gen` (+ best-effort `LIKE` purge) |
+| `AbstractProvider::request()` | provider | appends `_g{generation}` to every provider cache key |
+| `AbstractProvider::flush_cache()` | provider | bumps `rbw_cache_gen_provider_{key}` (+ best-effort purge) |
+
+The cache is flushed by `Frontend::flush_cache()` on:
 
 - `rbw_rate_updated` (a rate really changed),
 - `rbw_currency_changed` (a currency row was created/updated/deleted),
@@ -1012,6 +1032,8 @@ Documented consequences:
 - `10 % 3` = 1; the sign follows the dividend (`-10 % 3` = -1, PHP `fmod`)
 - `round()` is PHP's half-away-from-zero: `round(2.5)` = 3, `round(-2.5)` = -3
 - `true` = 1, `false` = 0; comparisons return 1/0; `==`/`!=` use a 1e-9 tolerance
+- **Chained comparisons are rejected at compile time** (`1 < 2 < 3` → `chained_comparison`). Write
+  `(1 < 2) and (2 < 3)` instead. The same applies to `1 == 2 == 3`.
 
 ### Numbers
 
@@ -1031,10 +1053,10 @@ Documented consequences:
 | Function | Arity | Notes |
 | --- | --- | --- |
 | `min(a, …)` / `max(a, …)` | 1+ | variadic |
-| `round(x [, decimals])` | 1–2 | decimals clamped to 0–10 |
+| `round(x [, decimals])` | 1–2 | decimals may be negative (`round(1234567, -3)` = 1235000); \|decimals\| must be 0–10, otherwise `invalid_decimals` |
 | `ceil(x)`, `floor(x)`, `abs(x)` | 1 | |
 | `pow(a, b)`, `sqrt(x)` | 2 / 1 | `sqrt` of a negative number is an error |
-| `clamp(x, min, max)` | 3 | reversed bounds are normalised |
+| `clamp(x, min, max)` | 3 | `min > max` is an error (`invalid_range`), never a silent swap |
 | `if(cond, a, b)` | 3 | **lazy**: the unused branch is not evaluated |
 | `percent(value, p)` | 2 | `value * p / 100` |
 
@@ -1238,8 +1260,12 @@ backup first, so it is undoable, and it enqueues repricing for the affected prod
 ### Products CSV
 
 Export (`admin-post`, nonce + `manage_woocommerce` + `edit_products`) streams **page by page**
-(`_rbw_enabled = yes`, 200 rows per page, never the whole catalogue in memory), UTF-8 **with BOM**,
+(200 rows per page, stable `ORDER BY ID`, never the whole catalogue in memory), UTF-8 **with BOM**,
 `,` delimiter, RFC 4180 quoting, **CRLF**.
+
+Included rows: products and variations that carry `_rbw_enabled = yes` themselves, **plus every
+variation whose parent carries it** (a managed variable product owns its variations). Trashed items
+and orphan variations are excluded.
 
 | Column | Notes |
 | --- | --- |
@@ -1277,9 +1303,17 @@ Example row:
   numeric and ≥ 0, enums whitelisted, `formula_vars` a JSON object of declared custom variables only.
   Invalid rows are reported (row number + Persian reason) and skipped; valid rows still apply.
 - **Chunking:** dry run first (counts, first 50 messages, 5 before → after samples), then the browser
-  drives chunks of 100 rows against the token with a progress bar. The uploaded file lives in
-  `wp-content/uploads/ratebridge-woo/tmp/` with `.htaccess` + `index.php` deny rules, is never
-  executable and is deleted after completion and by a daily job for files older than 1 hour.
+  drives chunks of 100 rows against the token with a progress bar.
+- **Session storage:** the normalised rows are written to a private **JSON Lines** file
+  (`uploads/ratebridge-woo/tmp/import-{token}.jsonl`, random 32-hex token, never derived from user
+  input) and read back **by byte offset**, so neither the upload nor a chunk ever loads the whole
+  file into memory. The transient holds only metadata (`map`, `file_unit`, `delimiter`, `total`,
+  `offset`, `rows_done`) — never the rows.
+- **Cleanup:** the file is deleted when the import finishes or fails, and by the daily
+  `rbw_cleanup_tmp` job for files older than 1 hour (`import-*.jsonl`, plus legacy `import-*.csv`).
+  The directory has `.htaccess` + `index.php` deny rules and is never executable.
+- **Not writable ⇒ hard error:** if the temp directory rejects writes the import stops with a
+  Persian message; there is no fallback to storing rows in a transient.
 - **Unit choice:** the CSV has no header comments, so the UI asks «واحد مبالغ در فایل» (default = the
   current store unit) and converts money cells when it differs. Percentages are never converted.
 - Applying a row writes the same `_rbw_*` keys through the same helpers as the editor; repricing is
@@ -1482,8 +1516,15 @@ Rules for provider implementations:
 
 ## Security
 
-- Every AJAX call checks `check_ajax_referer( 'rbw_admin', 'nonce' )` **and**
-  `current_user_can( 'manage_woocommerce' )` centrally in `AjaxController::handle()`.
+- Every AJAX call checks `check_ajax_referer( 'rbw_admin', 'nonce' )` centrally, then a
+  **per-action capability** from `AjaxController::capabilities()` (single source of truth):
+
+  | Capability | Actions |
+  | --- | --- |
+  | `edit_products` | `preview_price`, `import_products_csv`, `import_products_chunk` |
+  | `manage_woocommerce` | everything else (default) |
+
+  Handlers keep their own per-object checks (`current_user_can( 'edit_post', $id )`).
 - All DB access goes through `$wpdb->prepare()` / `$wpdb->insert()` / `$wpdb->update()` with
   explicit formats; identifiers are only ever built from `$wpdb->prefix`.
 - Input is sanitised (`sanitize_key`, `sanitize_text_field`, `absint`, per-field-type whitelists),

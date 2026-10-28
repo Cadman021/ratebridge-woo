@@ -270,7 +270,7 @@ FAssert::value( 'pow(2,10)', 1024.0 );
 FAssert::value( 'sqrt(81)', 9.0 );
 FAssert::value( 'clamp(15,0,10)', 10.0 );
 FAssert::value( 'clamp(-5,0,10)', 0.0 );
-FAssert::value( 'clamp(5,10,0)', 5.0 );     // reversed bounds are normalised
+FAssert::eval_error( 'clamp(5,10,0)', 'invalid_range' );   // reversed bounds are an error
 FAssert::value( 'percent(200,15)', 30.0 );
 FAssert::value( 'percent(1000,2.5)', 25.0 );
 FAssert::value( 'MIN(3,4)', 3.0 );          // case insensitive
@@ -507,6 +507,38 @@ if ( $gold_fa instanceof CompiledFormula ) {
 		$out instanceof Result ? (string) $out->value : 'error'
 	);
 }
+
+/* ------------------------------------------------------------------------- */
+echo "\n[11b] Corner cases: negative decimals, clamp range, chained comparisons\n";
+/* ------------------------------------------------------------------------- */
+
+// round() with negative decimals rounds to tens/hundreds/thousands.
+FAssert::value( 'round(1234567, -3)', 1235000.0 );
+FAssert::value( 'round(1234567, -2)', 1234600.0 );
+FAssert::value( 'round(1234567, -1)', 1234570.0 );
+FAssert::value( 'round(15, -1)', 20.0 );
+FAssert::value( 'round(-15, -1)', -20.0 );
+FAssert::value( 'round(1234567, 0)', 1234567.0 );
+FAssert::value( 'round(1234.5678, 2)', 1234.57 );
+
+// |decimals| beyond 10 is an explicit error, not a silent clamp.
+FAssert::eval_error( 'round(1, 11)', 'invalid_decimals' );
+FAssert::eval_error( 'round(1, -11)', 'invalid_decimals' );
+FAssert::eval_error( 'round(1, 2.5)', 'invalid_decimals' );
+FAssert::value( 'round(1, 10)', 1.0 );
+FAssert::value( 'round(1, -10)', 0.0 );
+
+// clamp(): a reversed range is an explicit error.
+FAssert::eval_error( 'clamp(5, 10, 0)', 'invalid_range' );
+FAssert::value( 'clamp(3,7,7)', 7.0 );
+
+// Chained comparisons are rejected at compile time.
+FAssert::error( '1 < 2 < 3', 'chained_comparison' );
+FAssert::error( '1 <= 2 <= 3', 'chained_comparison' );
+FAssert::error( '3 > 2 > 1', 'chained_comparison' );
+FAssert::value( '(1 < 2) and (2 < 3)', 1.0 );
+FAssert::value( '1 < 2', 1.0 );
+FAssert::value( '2 >= 2', 1.0 );
 
 /* ------------------------------------------------------------------------- */
 echo "\n[12] Determinism and re-use\n";

@@ -1,0 +1,2967 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: RateBridge Woo\n"
+"Report-Msgid-Bugs-To: https://example.com/ratebridge-woo\n"
+"POT-Creation-Date: 2026-10-28T20:50:16+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Domain: ratebridge-woo\n"
+
+#: ratebridge-woo
+msgid " and "
+msgstr ""
+
+#: ratebridge-woo
+msgid "%1$d minutes configured, %2$d minutes effective"
+msgstr ""
+
+#: ratebridge-woo
+msgid "%1$d of %2$d"
+msgstr ""
+
+#: ratebridge-woo
+msgid "%1$d products updated (%2$d had currency pricing turned off); prices are being recalculated in the background."
+msgstr ""
+
+#: ratebridge-woo
+msgid "%1$s failed recently. To protect the quota, the next request is allowed in %2$d minutes."
+msgstr ""
+
+#: ratebridge-woo
+msgid "%1$s may only be queried every so often. The next request is allowed in %2$d minutes."
+msgstr ""
+
+#: ratebridge-woo
+msgid "%1$s: repriced %2$d, skipped %3$d, unchanged-by-fluctuation %4$d, failed %5$d."
+msgstr ""
+
+#: ratebridge-woo
+msgid "%d (no limit set)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "%d currency updated."
+msgid_plural "%d currencies updated."
+msgstr[0] ""
+msgstr[1] ""
+
+#: ratebridge-woo
+msgid "%d preset symbols available."
+msgstr ""
+
+#: ratebridge-woo
+msgid "%d product uses this formula. Confirm detaching them to delete it."
+msgid_plural "%d products use this formula. Confirm detaching them to delete it."
+msgstr[0] ""
+msgstr[1] ""
+
+#: ratebridge-woo
+msgid "%d rows read."
+msgstr ""
+
+#: ratebridge-woo
+msgid "%d sample formula created (disabled)."
+msgid_plural "%d sample formulas created (disabled)."
+msgstr[0] ""
+msgstr[1] ""
+
+#: ratebridge-woo
+msgid "%s (copy)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "%s day ago"
+msgid_plural "%s days ago"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ratebridge-woo
+msgid "%s hour ago"
+msgid_plural "%s hours ago"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ratebridge-woo
+msgid "%s is missing"
+msgstr ""
+
+#: ratebridge-woo
+msgid "%s is required."
+msgstr ""
+
+#: ratebridge-woo
+msgid "%s minute ago"
+msgid_plural "%s minutes ago"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ratebridge-woo
+msgid "%s month ago"
+msgid_plural "%s months ago"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ratebridge-woo
+msgid "%s year ago"
+msgid_plural "%s years ago"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ratebridge-woo
+msgid "%s: could not persist the new rate."
+msgstr ""
+
+#: ratebridge-woo
+msgid "%s: repricing stopped after too many batches."
+msgstr ""
+
+#: ratebridge-woo
+msgid "0 = use the global step."
+msgstr ""
+
+#: ratebridge-woo
+msgid "18K Gold (gram)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "18K gold (gram)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "24K Gold (gram)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "A backup is created automatically before every import or restore. The last %d are kept."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A closing parenthesis is missing."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A currency used by the formula has a stale rate."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A currency used by the formula has no usable rate."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A formula computes the price from variables such as weight, rates and custom values."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A formula computes the product price from variables (currency rates, product weight/dimensions, custom values). Formulas are safe: they contain no code and cannot call anything outside the built-in function list."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A formula variable has no value."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A formula variable is outside its allowed range."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A function always needs parentheses, for example min(1, 2)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A number is out of range."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A number is too long."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A number is written incorrectly."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A package section is malformed."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A percentage is applied to the converted base value (profit) and to value + profit (commission). Fixed amounts are in the store unit."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A pricing setting (profit, commission or extra) is out of range."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A pricing setting is out of range."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A value is stored. Leave empty to keep it."
+msgstr ""
+
+#: ratebridge-woo
+msgid "A variable name is too long (max 40 characters)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "API key"
+msgstr ""
+
+#: ratebridge-woo
+msgid "API token"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Accent colour (values)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Action"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Actions"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Add"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Add currency"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Add formula"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Add from presets"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Add samples"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Add the product values to the currency values"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Add this currency from the source preset?"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Add to the currency values"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Add variable"
+msgstr ""
+
+#: ratebridge-woo
+msgid "After"
+msgstr ""
+
+#: ratebridge-woo
+msgid "After a failed request the plugin waits at least %d minutes before trying that source again, so a broken key never burns the quota."
+msgstr ""
+
+#: ratebridge-woo
+msgid "After rounding"
+msgstr ""
+
+#: ratebridge-woo
+msgid "After the add-to-cart button"
+msgstr ""
+
+#: ratebridge-woo
+msgid "After the minimum"
+msgstr ""
+
+#: ratebridge-woo
+msgid "After the price"
+msgstr ""
+
+#: ratebridge-woo
+msgid "After the short description"
+msgstr ""
+
+#: ratebridge-woo
+msgid "AlanChand"
+msgstr ""
+
+#: ratebridge-woo
+msgid "AlanChand reported an error: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "AlanChand returned a response that is not valid JSON."
+msgstr ""
+
+#: ratebridge-woo
+msgid "AlanChand returned no usable prices."
+msgstr ""
+
+#: ratebridge-woo
+msgid "AlanChand returned none of the requested symbols (%s)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Alignment"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Allowed: numbers, variables, + - * / % ^, comparisons, and/or/not, and the functions min, max, round, ceil, floor, abs, pow, sqrt, clamp, if, percent."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Also show the currency of the newest rate"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Amount in store unit"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Amount in the store unit"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Amounts are converted when this differs from the site unit (%s). Percentages are never converted."
+msgstr ""
+
+#: ratebridge-woo
+msgid "An identifier from the product’s formula, for example wage or weight."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Appends the relative update time when the template does not use %updated%."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Applied to every product priced by this currency. Products can override or extend these values."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Applied to newly added currencies. Minimum %d minutes because WordPress cron cannot run more often."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Applies to rates and other highlighted values."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Applies to the plugin shortcodes and the product block only. WooCommerce prices keep their own formatting."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Attention: this converts every stored rate, every fixed profit/commission/extra amount, product minimum prices, fluctuation margins and formula variables marked as money amounts, then recalculates all product prices. Numbers written directly inside a formula expression are NOT converted."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Australian Dollar"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Auto schedule"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Average of buy and sell"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Background"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Backups"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Bahar Azadi coin"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Bahraini Dinar"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Base price"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Base price (USD)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Base price (in the currency)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Base value (price × rate)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Before"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Bitcoin"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Border"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Box shadow"
+msgstr ""
+
+#: ratebridge-woo
+msgid "British Pound"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Buy price"
+msgstr ""
+
+#: ratebridge-woo
+msgid "CSV file (max 5 MB, 20,000 rows)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Calculate"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Calculated price"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Calculated with the formula “%s”"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Calculating…"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Canadian Dollar"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Cancel"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Cell padding"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Center"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Chained comparisons are not allowed. Write them with “and”, for example (1 < 2) and (2 < 3)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Change is inside the fluctuation margin, the price was kept."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Changing the store unit converts every rate and every fixed amount. Please confirm the change."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Changing the store unit multiplies or divides every stored rate and every fixed amount by 10, and all product prices will be recalculated. Continue?"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Check the file (dry run)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Chinese Yuan"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Choose a CSV file first."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Choose a JSON file first."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Choose a currency that is enabled and has a rate."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Choose a file first."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Choose a product, or place this widget on a product page or inside a product loop."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Chunk applied."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Clear"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Clear log"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Clear the update log?"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Code"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Code and name are required."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Column “%s” has an invalid value."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Column “%s” is not a number."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Column “%s” must not be negative."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Columns"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Commission"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Configured"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Connection failed"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Connection successful"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Content"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Controlled by the currency"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Convert money amounts to the site unit"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Converted %1$d currencies and %2$d products. Prices are being recalculated in the background."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Copy the token from your AlanChand account panel. It is sent only in the Authorization header."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Copy the value shown in your Navasan user panel under the API section."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Could not create the currency."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Could not delete the currency."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Could not delete the formula."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Could not duplicate the formula."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Could not save the change."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Could not save the currency."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Could not save the formula."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Could not update the currency."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Create a formula"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Create missing variables"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Cron"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currencies"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency (parent currency)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency Prices"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency added from presets. Enable it to start updating."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency code"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency deleted."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency disabled"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency disabled."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency enabled."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency has no rate"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency mode needs a currency."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency name"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency not found."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency rate"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency saved."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency table"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Currency × base price"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Custom symbol (free text)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Custom value"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Date"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Date format"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Decrease by %"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Decrease by amount"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Default"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Default item price"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Default rounding mode"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Default update interval (minutes)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Delete"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Delete all plugin data (currencies, settings, log) when the plugin is uninstalled"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Delete this currency? This cannot be undone."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Delete this formula?"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Description"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Details"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Display on the site"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Do not convert (import as is)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Dollar price plus a fixed markup."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Download package"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Download products CSV"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Duplicate"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Duration (seconds)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Each source has its own request quota. The plugin never sends more requests than the limits you configure here; when a limit is reached the previous rate is kept."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Edit"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Edit currency"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Edit formula"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Enable %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Enable formula"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Enable “Pricing by currency” on the parent product to price this variation by a currency."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Enabled"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Enter a valid variable name (letters, digits and underscore)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Enter sample values and see the raw result. Currency variables are prefilled with the live rate; nothing is saved. The final price then applies the minimum price, rounding and the fluctuation margin (%s)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Enter the base price first."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Error"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Ethereum"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Euro"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Every 5 minutes (RateBridge)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Every identifier used in the expression must be declared here."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Examples: 1000, 10000, 100000. Ignored when the mode is \"None\"."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Exports the plugin configuration only. API keys, tokens, request counters, logs and caches are never included. Rates are not exported: imported currencies wait for their first update."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Expression"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Extra"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Extra amount"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Fill in the required settings and save before testing the connection."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Final price"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Final sale price"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Fix it in the currency settings"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Fixed amount"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Fluctuation margin (%s)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "For example 100 for USD 100, or 4.75 for 4.75 grams of 18K gold."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Format"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formula"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formula deleted and %d products switched back to currency mode."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formula deleted."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formula disabled."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formula duplicated (disabled)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formula enabled."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formula mode needs a formula slug."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formula not found."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formula result"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formula saved. Products using it will be recalculated."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formula “%1$s” is invalid (%2$s at position %3$d) and was skipped."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formula “%1$s” references currencies that do not exist yet: %2$s. Its prices will not be calculated until they are created."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formula “%1$s” uses undeclared variables (%2$s) and was skipped."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Formulas"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Functions:"
+msgstr ""
+
+#: ratebridge-woo
+msgid "General settings"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Generated from the name; must stay unique."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Generated from the symbol. Change it if the code is already taken."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Global rounding mode: %1$s. Formula prices are in %2$s. Formula products ignore the currency profit, commission and extra amount — put them in the formula."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Gold coin (full)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Gold ounce (Toman)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Gold price (weight × 18K gold)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Gram coin"
+msgstr ""
+
+#: ratebridge-woo
+msgid "HTTP request failed: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Half coin"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Header background"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Header text colour"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Height"
+msgstr ""
+
+#: ratebridge-woo
+msgid "How long one full pass takes."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Icon"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Icon colour"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Icon size"
+msgstr ""
+
+#: ratebridge-woo
+msgid "If a rate is older than this, product prices are left unchanged and a warning is shown. Enter 0 to disable the limit. Manual currencies without a timestamp are never considered stale."
+msgstr ""
+
+#: ratebridge-woo
+msgid "If an item already exists"
+msgstr ""
+
+#: ratebridge-woo
+msgid "If the new price differs from the previous one by less than this amount, the old price is kept."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Import / Export"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Import a package"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Import a products CSV"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Import finished. Prices are being recalculated in the background."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Import finished: %1$d created, %2$d updated, %3$d invalid. Prices are being recalculated in the background."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Import now"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Import this package now? A backup is created first."
+msgstr ""
+
+#: ratebridge-woo
+msgid "In formula mode the currency, base price, profit, commission and extra amount are ignored: put them in the formula. Formula products also have no automatic sale price."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Increase by %"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Increase by amount"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Inside the fluctuation margin: the previous price is kept."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Interval (min)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Invalid"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Invalid preset."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Iraqi Dinar (100)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Item"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Item gap"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Item template"
+msgstr ""
+
+#: ratebridge-woo
+msgid "JSON file (max 2 MB)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Japanese Yen"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Keep current rate"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Keep the existing item (skip)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Keep this off unless you are sure. Deactivating the plugin never deletes data."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Kuwaiti Dinar"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Label"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Label: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Last 20 update attempts"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Last calculation:"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Last error: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Last request"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Last update"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Leave empty for the default template. Placeholders: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Leave empty to show every enabled currency."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Leave empty to use the product of the current page (or the current item in a loop template)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Left"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Length"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Letters: Y m d j H i s — for example Y-m-d H:i"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Log cleared."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Making charge (%)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Manual"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Manual (typed by admin)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Manual currencies are not updated automatically. Edit the currency to change its rate."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Manual rate (%s per 1 unit)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Max"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Maximum hourly variation (0 to 0.5). Default 0.02 = ±2%."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Maximum rate age (hours)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Melted gold (mithqal)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Message"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Min"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Minimum interval"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Minimum minutes between requests"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Minimum price (%s)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Minimum price applied"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Missing currency code."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Missing formula slug."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Mock / test data (development only)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Money unit in the file"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Monthly request limit"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Monthly request usage"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Name"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Name and code"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Name and expression are required."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Navasan"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Navasan reported an error: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Navasan returned a response that is not valid JSON."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Navasan returned no usable prices."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Navasan returned none of the requested symbols (%s)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "New"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Next allowed request"
+msgstr ""
+
+#: ratebridge-woo
+msgid "No"
+msgstr ""
+
+#: ratebridge-woo
+msgid "No backups yet."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No base price"
+msgstr ""
+
+#: ratebridge-woo
+msgid "No currencies were due for an update."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No currencies yet. Use “Add currency” to create one."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No currency is ready: every currency is disabled or has no rate yet, so product prices cannot be calculated."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No currency selected"
+msgstr ""
+
+#: ratebridge-woo
+msgid "No enabled currency has a rate yet, so there is no update date to show."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No enabled currency with a rate is available for the currencies table."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No enabled currency with a rate is available for the ticker."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No enabled currency with a rate is available yet. Enable a currency and give it a rate in the plugin settings."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No formula is assigned to this product."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No formula selected"
+msgstr ""
+
+#: ratebridge-woo
+msgid "No formulas yet. Use “Add formula” or “Add samples”."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No product matches this id or SKU (the importer never creates products)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No source with settings is registered."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No symbols requested."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No symbols were requested."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No test symbol is available for this source."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No update attempts recorded yet."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No value stored yet."
+msgstr ""
+
+#: ratebridge-woo
+msgid "No variables declared yet."
+msgstr ""
+
+#: ratebridge-woo
+msgid "None"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Not configured"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Nothing to import."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Nothing to update."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Notice dismissed."
+msgstr ""
+
+#: ratebridge-woo
+msgid "OK"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Odd row background"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Omani Rial"
+msgstr ""
+
+#: ratebridge-woo
+msgid "One row per product that is priced by the plugin. Columns: id, parent_id, sku, name, type, mode, currency, base_price, sale_base_price, min_price, fluctuation, profit_mode, profit_type, profit_value, commission_type, commission_value, extra_amount, formula_slug, formula_vars."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Only .csv files are accepted."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Only .json files are accepted."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Only products priced by a currency show the block. When the variations of a variable product use different currencies the block is hidden, because one rate would be misleading."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Only the fields you change are applied. Variation prices are never touched by bulk edit."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Open the currency settings"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Operators:"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Optional sale price in the parent currency."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Optional, in the same currency. Leave empty for no sale price."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Order display"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Package exported (%s)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Package format: ratebridge-woo-package, schema %d. Downloads are UTF-8; the CSV starts with a BOM so Excel opens it correctly."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Package import: %1$d created, %2$d updated, %3$d skipped, %4$d invalid."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Padding"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Parsed: %d"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Pause on hover"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Percent"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Percent values are never converted. The site unit is %s."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Percentage"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Percentages must be between 0 and 1000."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Persian digits in the plugin output"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Pick a preset symbol or type a custom one. Leave empty to reuse the code."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Pick a price source, then add one of its preset currencies. New rows start disabled so you can review them first."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Placeholders: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Position"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Prefix"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Preview (1,234,567): %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Previous price kept (fluctuation margin)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Price a piece of gold jewellery from its weight."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Price of this variation in the parent currency."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Price preview"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Price source"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Price sources"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Price type"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Prices are kept as they are until a fresh rate arrives. You can change the limit in the settings."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Prices are not being calculated because the currency %1$s cannot be used: %2$s."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Prices of this variation are calculated from the parent currency (%s)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Pricing by currency"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Pricing method"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Pricing settings"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Product"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Product currency"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Product field"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Product formula variable"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Product price at current rate"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Product price update date"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Product pricing (CSV)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Products"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Products CSV import finished: %1$d products updated, %2$d rows skipped in the last chunk."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Products use this formula. Detach them (they switch back to currency mode) and delete it?"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Profit"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Profit (%)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Profit, commission and extra amount must be zero or a positive number."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Profit, commission and extra mode"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Profit/commission mode"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Provider"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Provider \"%s\" cannot fetch rates automatically."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Provider returned no valid rate for \"%s\"."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Provider settings saved."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Provider symbol"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Purchased with %1$s at a rate of %2$s %3$s (base price: %4$s)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Qatari Riyal"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Quarter coin"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Rate"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Rate (%s)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "RateBridge"
+msgstr ""
+
+#: ratebridge-woo
+msgid "RateBridge Woo"
+msgstr ""
+
+#: ratebridge-woo
+msgid "RateBridge Woo: stale exchange rates"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Rates and fixed amounts (profit, commission, extra amount, minimum price, fluctuation margin) are stored in this unit. Changing it converts every stored amount and recalculates product prices."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Rates are currently stored in %1$s. The cron hook is %2$s."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Rates are stored in %1$s per 1 unit. Next automatic run: %2$s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Rates ticker"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Read the file (dry run)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Reason"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Recalculate currency prices"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Recalculation finished: %1$d repriced, %2$d skipped (no usable currency or no base price), %3$d failed."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Refresh log"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Relative time"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Replace the currency values"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Replace the currency values with the product values"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Request counters reset."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Request quota"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Requests this month"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Required columns are missing: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Reset counters"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Reset this source’s request counters? This does not refund real requests already sent."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Restore"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Restore this backup? The current settings, currencies and formulas are replaced (and backed up first)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Restoring replaces the current settings, currencies and formulas with the backup, then recalculates prices. The current state is backed up first, so a restore can be undone."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Result"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Rial"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Right"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Round down (floor)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Round to nearest N"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Round up (ceil)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Rounded"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Rounding mode"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Rounding override"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Rounding step (N)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Row"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Row background"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Row line colour"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Row text colour"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Russian Ruble"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Sale base price (optional)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Sample:"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Saudi Riyal"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Save"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Save formula"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Save settings"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Save the product once before previewing a formula price."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Saving…"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Search symbol…"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Section"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Sections to export"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Security check failed. Please reload the page."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Select a currency first."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Select a currency…"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Select a formula first."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Select a formula…"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Select at least one section to export."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Select or enter a provider symbol."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Sell price"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Separator colour"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Set (amount)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Set to"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Settings"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Settings saved."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Settings saved. The store unit changed from %1$s to %2$s; %3$d currencies and %4$d products were converted and prices are being recalculated."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Settings, currencies and formulas (JSON package)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Show a currency info block on product pages"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Show the current rate too"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Show the exchange rate to the customer in orders"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Show the variable label"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Show update time"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Silver (gram)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Silver ounce (Toman)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Simple USD price"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Site rates update date"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Skip"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Slug"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Something went wrong. Please try again."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Sort order"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Source"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Start import"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Status"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Step"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Store currency unit"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Store unit"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Store unit changed from %1$s to %2$s. Converted %3$d currencies, %4$d products and %6$d formulas; rounding step is now %5$s."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Strip background"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Success"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Suffix"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Swedish Krona"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Swiss Franc"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Symbol"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Table"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Table typography"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Template"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Test connection"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Test the formula"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Tether"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Text after"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Text before"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Text colour"
+msgstr ""
+
+#: ratebridge-woo
+msgid "That code is already used. Suggested: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "The AlanChand API token is not configured. Add it in “Price sources”."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The CSV file could not be read. Check the encoding (UTF-8) and the size."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The CSV needs a “mode” column and an identifier column (“id” or “sku”)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The Elementor widgets need Elementor %1$s or newer. The installed version is %2$s, so the widgets are not available. Shortcodes keep working."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The JSON is nested too deeply."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The Navasan API key is not configured. Add it in “Price sources”."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The [rbw_formula_var] shortcode needs a name attribute, for example name=\"wage\"."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The [rbw_rate] shortcode needs a currency attribute, for example currency=\"USD\"."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The assigned formula is disabled."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The assigned formula no longer exists."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The backup could not be restored."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The backup was restored. Prices are being recalculated in the background."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The base price is empty, so the price was left unchanged."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The base price is not valid."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The bearer token issued by AlanChand."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The calculated price is never written below this amount. Leave empty for none."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The calculation produced a non-finite number."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The calculation produced a price of zero or less."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The code must be 32 characters or fewer."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The commission was converted from a percentage to an amount because the types differ."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The currency \"%s\" no longer exists. Prices cannot be calculated."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The currency %s does not exist, is disabled, or has no rate yet."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The currency code does not exist on this site."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The currency has no rate yet."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The currency is disabled."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The currency of this product no longer exists."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The currency rate is not valid."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The exchange rate is older than the configured maximum age."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The expression contains a character that is not allowed."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The expression divides by zero."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The expression is empty."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The expression is nested too deeply."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The expression is too complex."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The expression is too long (max 2000 characters)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The expression uses a variable that is not defined."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The file has more rows than the importer allows (20,000)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The file is larger than 2 MB."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The file is larger than 5 MB."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The file is not valid JSON."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The file was read. Review the result, then start the import."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The formula divides by zero."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The formula expression is invalid, so the price was left unchanged."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The formula failed validation and was skipped."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The formula is disabled."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The formula is not valid."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The formula is valid."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The formula produced a price that is not a positive number."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The formula slug does not exist on this site."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The formula takes the square root of a negative number."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The formula uses a variable that has no value."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The formula was evaluated."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The formula “%2$s” has no variable named “%1$s”."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The free plan allows about 120 requests per month. The plugin never exceeds this number."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The function is called with the wrong number of arguments."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The import file could not be prepared."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The import file could not be written."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The import session could not be created."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The import session expired. Please upload the file again."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The importer matches rows by id, then by SKU. It never creates products. Only the fields present in the file are applied, in chunks, and prices are recalculated in the background."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The key issued by your Navasan account panel."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The manual provider does not parse remote responses."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The minimum price was applied."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The minimum refresh interval is %d minutes (WordPress cron limit). Manual currencies are never updated automatically."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The mock provider does not use HTTP."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The mode must be “currency” or “formula”."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The monthly request limit for %1$s has been reached (%2$d of %3$d). No request was sent to the provider."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The number of decimals must be a whole number between -10 and 10."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The order of this list is the order of the columns."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The package contains no settings, currencies or formulas."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The package is larger than 2 MB."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The package is not valid UTF-8."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The package is not valid."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The package must be a JSON object."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The package schema is not recognised."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The package was created by a newer version of the plugin. Update the plugin first."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The package was exported in a different store unit (%s). Money amounts are converted when you keep the conversion option on."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The parent currency is disabled or has no rate, so this variation keeps its current price (or shows as unavailable when it has none)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The price could not be calculated with the formula “%s”."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The price could not be calculated."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The price could not be calculated. Check the currency rate and the base price."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The price is already up to date."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The price of this product has not been calculated yet."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The price of “%1$s” was not calculated: %2$s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "The price was recalculated."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The price was rounded."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The product could not be loaded as a variable product."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The product could not be loaded."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The product has no formula variable named “%s”."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The product is missing a value the formula needs (for example its weight)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The profit was converted from a percentage to an amount because the types differ."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The provider returned no usable rates."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The rate line is always visible to shop managers on the order screen. Turn this on to also show it on the order-received page, in emails and in My Account."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The regular price and the sale price are controlled by the currency and are read-only while pricing by currency is enabled."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The regular price and the sale price of this variation are controlled by the currency and are read-only."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The result is not a finite number."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The row is not an object."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The row is not valid."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The sale price is not lower than the regular price, so it will not be stored."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The sample formulas already exist."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The server did not recognise this request (HTTP %d). Please refresh the page."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The square root of a negative number is not defined."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The store unit did not change, so nothing was converted."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The template is empty."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The test plan allows one request per hour. The plugin will never send requests faster than this."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The ticker has nothing to show: enable a currency and give it a rate first."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The upload could not be verified."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The upload failed. Check the file size and try again."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The upload folder is not writable, so the import cannot start."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The upload folder is not writable, so the import cannot start. Check the permissions of wp-content/uploads."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The uploaded file could not be read."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The value of “%s” must be a non-negative number."
+msgstr ""
+
+#: ratebridge-woo
+msgid "There is no currency yet. Create one in WooCommerce → نرخ ساز → Currencies first."
+msgstr ""
+
+#: ratebridge-woo
+msgid "There is no enabled formula yet."
+msgstr ""
+
+#: ratebridge-woo
+msgid "These currencies have not been updated for more than %1$d hours, so product prices are not being recalculated: %2$s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "This code is already used by another currency."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This currency has no rate yet, so the price cannot be calculated."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This currency has no rate yet."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This currency is disabled."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This function is not supported."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This interval (%1$d minutes) is shorter than the source allows (%2$d minutes). The row will only refresh when the source permits it."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This is not a RateBridge package."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This name is reserved and cannot be used as a variable."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This plugin requires WooCommerce to be installed and active. Its features are disabled until WooCommerce is activated."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This product has no value for this field, so the price cannot be calculated."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This product is not priced by a currency, or its currency has no rate yet."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This product is not priced by a currency."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This product is not priced by a formula."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This provider does not define an endpoint."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This source does not use a network connection, so there is nothing to test."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This source has no preset symbol list. Enter the symbol manually."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This symbol is not offered by the selected source."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This variable product has no variations."
+msgstr ""
+
+#: ratebridge-woo
+msgid "This widget only shows a value on a product page or inside a product loop."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Ticker"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Time"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Title"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Toman"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Total before the minimum"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Trigger"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Turkish Lira"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Turn currency pricing off"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Type"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Typography"
+msgstr ""
+
+#: ratebridge-woo
+msgid "UAE Dirham"
+msgstr ""
+
+#: ratebridge-woo
+msgid "US Dollar"
+msgstr ""
+
+#: ratebridge-woo
+msgid "US Dollar (remittance)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "US dollar"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Unexpected HTTP status: %d"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Unexpected syntax. Check the operators and parentheses."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Uninstall"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Unique identifier, letters/numbers only (e.g. USD, GOLD18)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Unknown action."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Unknown or credential-like settings keys were ignored."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Unknown price source “%s”: the currency is imported disabled with the manual source."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Unknown provider."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Unknown provider: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Unknown rate provider: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Unused variables: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Update"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Update all now"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Update interval (minutes)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Update now"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Update the existing item"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Updated %1$d, failed %2$d. %3$s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Use the currency values"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Use the global setting"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Use the parent currency"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Used for absolute dates in the plugin output and in %updated_date%. Letters: Y (year), m (month), d (day), j (day without leading zero), H (hour), i (minute), s (second). Example: Y-m-d H:i"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Used for the manual provider. Leave empty when editing to keep the current rate."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Valid: %1$d, invalid: %2$d."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Validation finished. Review the report, then confirm the import."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Value"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Variable name"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Variables"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Variables:"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Variations are repriced through their parent product."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Variations: repriced %1$d, skipped %2$d, failed %3$d."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Visible columns"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Volatility"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Waiting for the first update from the new source."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Weight"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Weight (g)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "When enabled, the price is calculated from the currency rate in this plugin."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Which value to read when the API offers both a buy and a sell price."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Widget style"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Width"
+msgstr ""
+
+#: ratebridge-woo
+msgid "With “add”, a percentage and a fixed amount are combined after the percentage is converted to an amount."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Working…"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Yes"
+msgstr ""
+
+#: ratebridge-woo
+msgid "You are not allowed to do this."
+msgstr ""
+
+#: ratebridge-woo
+msgid "You are not allowed to edit this product."
+msgstr ""
+
+#: ratebridge-woo
+msgid "You do not have permission to access this page."
+msgstr ""
+
+#: ratebridge-woo
+msgid "clamp() needs a minimum that is not greater than the maximum."
+msgstr ""
+
+#: ratebridge-woo
+msgid "default: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "disabled"
+msgstr ""
+
+#: ratebridge-woo
+msgid "formula"
+msgstr ""
+
+#: ratebridge-woo
+msgid "formula_vars must be a JSON object."
+msgstr ""
+
+#: ratebridge-woo
+msgid "it has no rate yet"
+msgstr ""
+
+#: ratebridge-woo
+msgid "it is disabled"
+msgstr ""
+
+#: ratebridge-woo
+msgid "just now"
+msgstr ""
+
+#: ratebridge-woo
+msgid "live rate"
+msgstr ""
+
+#: ratebridge-woo
+msgid "min %1$s, max %2$s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "never"
+msgstr ""
+
+#: ratebridge-woo
+msgid "no rate"
+msgstr ""
+
+#: ratebridge-woo
+msgid "no rate yet"
+msgstr ""
+
+#: ratebridge-woo
+msgid "not scheduled"
+msgstr ""
+
+#: ratebridge-woo
+msgid "not set"
+msgstr ""
+
+#: ratebridge-woo
+msgid "now"
+msgstr ""
+
+#: ratebridge-woo
+msgid "rate updated: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "rate: %1$s %2$s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "unknown"
+msgstr ""
+
+#: ratebridge-woo
+msgid "— No change —"
+msgstr ""
+
+#: ratebridge-woo
+msgid "“%s” is not a custom variable of this formula."
+msgstr ""
+

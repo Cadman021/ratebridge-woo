@@ -109,7 +109,17 @@ final class Functions {
 				return (float) max( $args );
 
 			case 'round':
-				$decimals = isset( $args[1] ) ? (int) max( 0, min( 10, round( $args[1] ) ) ) : 0;
+				/*
+				 * Negative decimals round to tens/hundreds/… (`round(1234567, -3)`
+				 * = 1235000). |d| is capped at 10; anything beyond is an explicit
+				 * error instead of being silently clamped, so a typo is visible.
+				 */
+				$requested = isset( $args[1] ) ? $args[1] : 0.0;
+				$decimals  = (int) round( $requested );
+
+				if ( abs( $requested - $decimals ) > 1e-9 || $decimals < -10 || $decimals > 10 ) {
+					return new FormulaError( 'invalid_decimals', 0, 'round' );
+				}
 
 				return (float) round( $args[0], $decimals );
 
@@ -135,10 +145,12 @@ final class Functions {
 				return (float) sqrt( $args[0] );
 
 			case 'clamp':
-				$low  = min( $args[1], $args[2] );
-				$high = max( $args[1], $args[2] );
+				// A reversed range is a mistake: report it instead of swapping.
+				if ( $args[1] > $args[2] ) {
+					return new FormulaError( 'invalid_range', 0, 'clamp' );
+				}
 
-				return (float) max( $low, min( $high, $args[0] ) );
+				return (float) max( $args[1], min( $args[2], $args[0] ) );
 
 			case 'percent':
 				return (float) ( $args[0] * $args[1] / 100.0 );

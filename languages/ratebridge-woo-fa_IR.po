@@ -2277,3 +2277,34 @@ msgstr "— بدون تغییر —"
 
 msgid "“%s” is not a custom variable of this formula."
 msgstr "«%s» متغیر دلخواه این فرمول نیست."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 8a — review fixes
+# ─────────────────────────────────────────────────────────────────────────────
+
+msgid "Chained comparisons are not allowed. Write them with “and”, for example (1 < 2) and (2 < 3)."
+msgstr "مقایسه‌های زنجیره‌ای مجاز نیستند. آن‌ها را با «and» بنویسید، مثلاً (1 < 2) and (2 < 3)."
+
+msgid "The number of decimals must be a whole number between -10 and 10."
+msgstr "تعداد رقم اعشار باید عددی کامل بین ‎-۱۰ و ۱۰ باشد."
+
+msgid "clamp() needs a minimum that is not greater than the maximum."
+msgstr "تابع clamp() به حداقلی نیاز دارد که از حداکثر بزرگ‌تر نباشد."
+
+msgid "The file has more rows than the importer allows (20,000)."
+msgstr "تعداد ردیف‌های فایل بیش از حد مجاز درون‌ریز (۲۰٬۰۰۰) است."
+
+msgid "The import file could not be prepared."
+msgstr "فایل درون‌ریزی آماده نشد."
+
+msgid "The import file could not be written."
+msgstr "فایل درون‌ریزی نوشته نشد."
+
+msgid "The import session could not be created."
+msgstr "نشست درون‌ریزی ساخته نشد."
+
+msgid "The upload folder is not writable, so the import cannot start."
+msgstr "پوشه بارگذاری قابل نوشتن نیست، بنابراین درون‌ریزی شروع نمی‌شود."
+
+msgid "The upload folder is not writable, so the import cannot start. Check the permissions of wp-content/uploads."
+msgstr "پوشه بارگذاری قابل نوشتن نیست، بنابراین درون‌ریزی شروع نمی‌شود. دسترسی‌های wp-content/uploads را بررسی کنید."

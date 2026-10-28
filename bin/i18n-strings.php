@@ -259,9 +259,11 @@ final class Extractor {
 		$out .= "msgstr \"\"\n";
 		$out .= "\"Project-Id-Version: RateBridge Woo\\n\"\n";
 		$out .= "\"Report-Msgid-Bugs-To: https://example.com/ratebridge-woo\\n\"\n";
+		$out .= "\"POT-Creation-Date: " . gmdate( 'c' ) . "\\n\"\n";
 		$out .= "\"MIME-Version: 1.0\\n\"\n";
 		$out .= "\"Content-Type: text/plain; charset=UTF-8\\n\"\n";
 		$out .= "\"Content-Transfer-Encoding: 8bit\\n\"\n";
+		$out .= "\"Plural-Forms: nplurals=2; plural=(n > 1);\\n\"\n";
 		$out .= "\"X-Domain: " . self::DOMAIN . "\\n\"\n\n";
 
 		foreach ( $this->entries() as $text => $meta ) {
@@ -272,6 +274,15 @@ final class Extractor {
 			}
 
 			$out .= 'msgid "' . $this->esc( (string) $text ) . "\"\n";
+
+			// Plural entries need msgid_plural + one msgstr[N] per form.
+			if ( ! empty( $meta['plural'] ) ) {
+				$out .= 'msgid_plural "' . $this->esc( (string) $meta['plural'] ) . "\"\n";
+				$out .= "msgstr[0] \"\"\n";
+				$out .= "msgstr[1] \"\"\n\n";
+				continue;
+			}
+
 			$out .= 'msgstr ""' . "\n\n";
 		}
 

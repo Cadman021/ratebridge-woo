@@ -447,7 +447,17 @@ final class Frontend {
 	 * @return string
 	 */
 	public static function cached( string $key, callable $builder ): string {
-		$transient = self::CACHE_PREFIX . md5( $key );
+		/*
+		 * The key carries the current cache generation, so invalidation works
+		 * with an external object cache too (bumping the counter makes every old
+		 * key unreachable instead of trying to DELETE rows that are not there).
+		 */
+		$transient = \RateBridge\Core\CacheGeneration::key(
+			self::CACHE_PREFIX,
+			$key,
+			\RateBridge\Core\CacheGeneration::get( 'frontend' )
+		);
+
 		$cached    = get_transient( $transient );
 
 		if ( is_string( $cached ) && '' !== $cached ) {
@@ -473,6 +483,18 @@ final class Frontend {
 	 * @return void
 	 */
 	public static function flush_cache(): void {
+		/*
+		 * 1. Bump the generation: this is what actually invalidates the cache,
+		 *    and it works with Redis/Memcached where the transients are not rows
+		 *    in wp_options.
+		 */
+		\RateBridge\Core\CacheGeneration::bump( 'frontend' );
+
+		/*
+		 * 2. Best-effort row cleanup for sites without an external object cache,
+		 *    so old fragments do not linger in the options table until they
+		 *    expire. Never required for correctness.
+		 */
 		global $wpdb;
 
 		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery

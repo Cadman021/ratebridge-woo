@@ -389,6 +389,70 @@ check(
 	(bool) preg_match( '/private function print_column\\( int \\$post_id \\): void/', $fields_php )
 );
 
+echo "\n[10] Every action has a capability entry\n";
+
+/*
+ * The dispatcher used to require `manage_woocommerce` for everything, while
+ * preview_price and the products-CSV actions only need `edit_products`.
+ * `AjaxController::capabilities()` is now the single source of truth.
+ */
+$map_start = strpos( $php, 'public static function capabilities(): array' );
+$map_body  = false === $map_start ? '' : substr( $php, $map_start, 900 );
+
+check(
+	'AjaxController::capabilities() exists',
+	'' !== $map_body,
+	'missing method'
+);
+
+// Actions that only touch product data must be reachable with edit_products.
+foreach ( array( 'preview_price', 'import_products_csv', 'import_products_chunk' ) as $action ) {
+	check(
+		"{$action} maps to edit_products",
+		(bool) preg_match( "/\\['" . preg_quote( $action, '/' ) . "'\\]\\s*=\\s*'edit_products'/s", $map_body ),
+		'still requires manage_woocommerce'
+	);
+}
+
+// The default for everything else.
+check(
+	'default capability is manage_woocommerce',
+	str_contains( $map_body, "'manage_woocommerce'" )
+);
+
+// The dispatcher resolves the capability through the map, not a hardcoded check.
+check(
+	'dispatcher uses capability_for()',
+	(bool) preg_match( '/current_user_can\(\\s*self::capability_for\\(/', $php ),
+	'hardcoded capability check found'
+);
+
+// The map must cover every action we dispatch.
+foreach ( $registered as $slug ) {
+	$named = in_array( $slug, array( 'preview_price', 'import_products_csv', 'import_products_chunk' ), true );
+
+	check(
+		sprintf( "'%s' is reachable from the map", $slug ),
+		$named ? (bool) preg_match( "/\\['" . preg_quote( $slug, '/' ) . "'\\]/s", $map_body ) : true,
+		'not listed in capabilities()'
+	);
+}
+
+echo "\n[11] product.js sends the rbw_admin nonce for preview_price\n";
+
+$product_js = rbw_test_read( $root . '/assets/admin/js/product.js' );
+$fields_src = rbw_test_read( $root . '/includes/Product/ProductFields.php' );
+
+check(
+	'product.js posts the localized nonce',
+	(bool) preg_match( '/body\\.append\\(\\s*[\'"]nonce[\'"]\\s*,\\s*config\\.nonce\\s*\\)/', $product_js )
+);
+
+check(
+	'ProductFields localizes rbw_admin nonce',
+	(bool) preg_match( "/'nonce'\\s*=>\\s*wp_create_nonce\\(\\s*AjaxController::NONCE_ACTION\\s*\\)/", $fields_src )
+);
+
 echo "\n", str_repeat( '=', 60 ), "\n";
 printf( "RESULT: %d passed, %d failed\n", $passed, $failed );
 

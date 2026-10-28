@@ -230,8 +230,16 @@ final class Parser {
 			return $left;
 		}
 
+		$equalities = 0;
+
 		while ( $this->peek()->is( '==' ) || $this->peek()->is( '!=' ) ) {
 			$token = $this->advance();
+
+			// `1 == 2 == 3` is just as ambiguous as a chained `<`.
+			if ( ++$equalities > 1 ) {
+				return new FormulaError( 'chained_comparison', $token->pos );
+			}
+
 			$right = $this->parse_comparison();
 
 			if ( $right instanceof FormulaError ) {
@@ -256,8 +264,20 @@ final class Parser {
 			return $left;
 		}
 
+		$seen = 0;
+
 		while ( $this->peek()->is( '<' ) || $this->peek()->is( '>' ) || $this->peek()->is( '<=' ) || $this->peek()->is( '>=' ) ) {
 			$token = $this->advance();
+
+			/*
+			 * `1 < 2 < 3` is ambiguous (Python evaluates it as a chain, most other
+			 * languages compare a boolean). Reject it at compile time and tell the
+			 * author to write `(1 < 2) and (2 < 3)`.
+			 */
+			if ( ++$seen > 1 ) {
+				return new FormulaError( 'chained_comparison', $token->pos );
+			}
+
 			$right = $this->parse_additive();
 
 			if ( $right instanceof FormulaError ) {

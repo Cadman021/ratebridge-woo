@@ -26,6 +26,8 @@
 
 namespace RateBridge\Providers\Parsing;
 
+defined( 'ABSPATH' ) || exit;
+
 /**
  * Extracts Toman prices from AlanChand payloads.
  */

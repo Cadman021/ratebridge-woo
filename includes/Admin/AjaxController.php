@@ -106,6 +106,43 @@ final class AjaxController
 	}
 
 	/**
+	 * Capability required per dispatcher action.
+	 *
+	 * Everything defaults to `manage_woocommerce` (the plugin's own settings).
+	 * Actions that only touch product data are open to users who can edit
+	 * products, so a shop manager with `edit_products` but without
+	 * `manage_woocommerce` can still use the live price preview and the CSV
+	 * import. Each handler keeps its own per-object `edit_post` check.
+	 *
+	 * @return array<string, string> action => capability
+	 */
+	public static function capabilities(): array
+	{
+		$map = array();
+
+		foreach (self::actions() as $action) {
+			$map[ $action ] = 'manage_woocommerce';
+		}
+
+		$map['preview_price'] = 'edit_products';
+		$map['import_products_csv'] = 'edit_products';
+		$map['import_products_chunk'] = 'edit_products';
+
+		return $map;
+	}
+
+	/**
+	 * Capability for one action.
+	 *
+	 * @param string $action Dispatcher slug.
+	 * @return string
+	 */
+	public static function capability_for(string $action): string
+	{
+		return self::capabilities()[ $action ] ?? 'manage_woocommerce';
+	}
+
+	/**
 	 * Legacy alias suffix => dispatcher slug.
 	 *
 	 * Phase 1/2 registered `rbw_save_currency`, `rbw_delete_currency` and
@@ -177,14 +214,20 @@ final class AjaxController
 			wp_send_json_error(array('message' => __('Security check failed. Please reload the page.', 'ratebridge-woo')), 403);
 		}
 
-		if (! current_user_can('manage_woocommerce')) {
-			wp_send_json_error(array('message' => __('You are not allowed to do this.', 'ratebridge-woo')), 403);
-		}
-
 		$action = $this->resolve_action();
 
 		if ('' === $action || ! in_array($action, self::actions(), true)) {
+			// Capability is checked only after the action is known to be ours.
+			if (! current_user_can('manage_woocommerce')) {
+				wp_send_json_error(array('message' => __('You are not allowed to do this.', 'ratebridge-woo')), 403);
+			}
+
 			wp_send_json_error(array('message' => __('Unknown action.', 'ratebridge-woo')), 400);
+		}
+
+		// Single capability gate, resolved from the action map.
+		if (! current_user_can(self::capability_for($action))) {
+			wp_send_json_error(array('message' => __('You are not allowed to do this.', 'ratebridge-woo')), 403);
 		}
 
 		switch ($action) {
@@ -1869,6 +1912,9 @@ final class AjaxController
 			'division_by_zero' => __('The expression divides by zero.', 'ratebridge-woo'),
 			'negative_sqrt' => __('The square root of a negative number is not defined.', 'ratebridge-woo'),
 			'not_finite' => __('The result is not a finite number.', 'ratebridge-woo'),
+			'invalid_decimals' => __('The number of decimals must be a whole number between -10 and 10.', 'ratebridge-woo'),
+			'invalid_range' => __('clamp() needs a minimum that is not greater than the maximum.', 'ratebridge-woo'),
+			'chained_comparison' => __('Chained comparisons are not allowed. Write them with “and”, for example (1 < 2) and (2 < 3).', 'ratebridge-woo'),
 		);
 
 		return $messages[ $code ] ?? __('The formula is not valid.', 'ratebridge-woo');
@@ -2159,28 +2205,63 @@ final class AjaxController
 			wp_send_json_error(array('message' => $message, 'code' => $session['error']), 400);
 		}
 
-		$token = $this->store_import_token(
-			array(
-				'kind' => 'csv',
-				'rows' => $session['rows'],
-				'map' => $session['map'],
-				'file_unit' => $session['file_unit'],
-				'delimiter' => $session['delimiter'],
-			)
+		/*
+		 * The parsed rows go to a private JSONL file, never into a transient:
+		 * 20,000 rows would bloat wp_options and risk max_allowed_packet. Only
+		 * the session metadata stays in the transient.
+		 */
+		if (! $service->is_tmp_writable()) {
+			wp_send_json_error(
+				array('message' => __('The upload folder is not writable, so the import cannot start. Check the permissions of wp-content/uploads.', 'ratebridge-woo')),
+				500
+			);
+		}
+
+		$token = ProductsCsvService::new_token();
+		$row_file = $service->row_file($token);
+
+		if (null === $row_file) {
+			wp_send_json_error(array('message' => __('The import session could not be created.', 'ratebridge-woo')), 500);
+		}
+
+		$written = $row_file->write((array) $session['rows']);
+
+		if (! $written['ok']) {
+			$row_file->delete();
+
+			wp_send_json_error(
+				array('message' => $this->row_file_error_message((string) $written['error'])),
+				500
+			);
+		}
+
+		$total = (int) $written['rows'];
+		$first = $row_file->read(0, ProductCsv::IMPORT_CHUNK);
+
+		$meta = array(
+			'kind' => 'csv',
+			'file' => basename($row_file->path()),
+			'map' => $session['map'],
+			'file_unit' => $session['file_unit'],
+			'delimiter' => $session['delimiter'],
+			'total' => $total,
+			'offset' => (int) $first['next'],
 		);
 
 		$plan = $service->plan_chunk(
-			array_slice((array) $session['rows'], 0, ProductCsv::IMPORT_CHUNK),
+			(array) $first['rows'],
 			(array) $session['map'],
 			(string) $session['file_unit'],
 			0
 		);
 
+		$this->store_import_token($meta, $token);
+
 		wp_send_json_success(
 			array(
 				'message' => __('The file was read. Review the result, then start the import.', 'ratebridge-woo'),
 				'token' => $token,
-				'rows' => count((array) $session['rows']),
+				'rows' => $total,
 				'chunk' => ProductCsv::IMPORT_CHUNK,
 				'delimiter' => $session['delimiter'],
 				'file_unit' => $session['file_unit'],
@@ -2215,22 +2296,37 @@ final class AjaxController
 			wp_send_json_error(array('message' => __('The import session expired. Please upload the file again.', 'ratebridge-woo')), 400);
 		}
 
-		$offset = isset($_POST['offset']) ? absint($_POST['offset']) : 0;
-		$rows = (array) ($payload['rows'] ?? array());
-		$chunk = array_slice($rows, $offset, ProductCsv::IMPORT_CHUNK);
-
 		$service = new ProductsCsvService();
-		$plan = $service->plan_chunk($chunk, (array) ($payload['map'] ?? array()), (string) ($payload['file_unit'] ?? 'toman'), $offset);
+		$row_file = $service->row_file((string) ($_POST['token'] ?? ''));
+
+		if (null === $row_file) {
+			wp_send_json_error(array('message' => __('The import session expired. Please upload the file again.', 'ratebridge-woo')), 400);
+		}
+
+		// Byte offset of the next unread row (0 on the first call).
+		$offset = isset($_POST['offset']) ? absint($_POST['offset']) : (int) ($payload['offset'] ?? 0);
+		$total = (int) ($payload['total'] ?? 0);
+		$chunk = $row_file->read($offset, ProductCsv::IMPORT_CHUNK);
+
+		$rows_read_before = max(0, (int) ($payload['rows_done'] ?? 0));
+		$plan = $service->plan_chunk((array) $chunk['rows'], (array) ($payload['map'] ?? array()), (string) ($payload['file_unit'] ?? 'toman'), $rows_read_before);
 		$touched = $service->apply_chunk((array) $plan['apply']);
 
 		if (! empty($touched)) {
 			(new \RateBridge\Pricing\RepriceJob())->enqueue_ids($touched);
 		}
 
-		$next = $offset + ProductCsv::IMPORT_CHUNK;
-		$done = $next >= count($rows);
+		$rows_done = $rows_read_before + (int) $chunk['read'];
+		$next = (int) $chunk['next'];
+		$done = (bool) $chunk['eof'];
 
-		if ($done) {
+		// Keep the session metadata fresh so the next chunk knows where it is.
+		$payload['offset'] = $next;
+		$payload['rows_done'] = $rows_done;
+		$this->store_import_token($payload, (string) ($_POST['token'] ?? ''), false);
+
+		if ($done || 0 === (int) $chunk['read']) {
+			$row_file->delete();
 			$this->consume_import_token((string) ($_POST['token'] ?? ''), true);
 
 			\RateBridge\Core\Logger::add(
@@ -2254,8 +2350,8 @@ final class AjaxController
 					? __('Import finished. Prices are being recalculated in the background.', 'ratebridge-woo')
 					: __('Chunk applied.', 'ratebridge-woo'),
 				'offset' => $next,
-				'total' => count($rows),
-				'percent' => count($rows) > 0 ? (int) min(100, round($next / count($rows) * 100)) : 100,
+				'total' => $total,
+				'percent' => $total > 0 ? (int) min(100, round($rows_done / $total * 100)) : 100,
 				'done' => $done,
 				'valid' => (int) $plan['valid'],
 				'invalid' => (int) $plan['invalid'],
@@ -2335,9 +2431,11 @@ final class AjaxController
 	 * @param array<string, mixed> $payload Payload.
 	 * @return string Token.
 	 */
-	private function store_import_token(array $payload): string
+	private function store_import_token(array $payload, string $token = ''): string
 	{
-		$token = wp_generate_password(32, false, false);
+		if ('' === $token) {
+			$token = wp_generate_password(32, false, false);
+		}
 
 		set_transient(
 			'rbw_import_' . get_current_user_id() . '_' . $token,
@@ -2346,6 +2444,23 @@ final class AjaxController
 		);
 
 		return $token;
+	}
+
+	/**
+	 * Persian message for a row-file write failure.
+	 *
+	 * @param string $code RowFile error code.
+	 * @return string
+	 */
+	private function row_file_error_message(string $code): string
+	{
+		$messages = array(
+			'not_writable' => __('The upload folder is not writable, so the import cannot start.', 'ratebridge-woo'),
+			'write_failed' => __('The import file could not be written.', 'ratebridge-woo'),
+			'too_many_rows' => __('The file has more rows than the importer allows (20,000).', 'ratebridge-woo'),
+		);
+
+		return $messages[ $code ] ?? __('The import file could not be prepared.', 'ratebridge-woo');
 	}
 
 	/**

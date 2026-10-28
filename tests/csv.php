@@ -398,6 +398,103 @@ $conv     = ProductCsv::validate_row(
 CsvAssert::float( 'min_price rial -> toman', (float) ( $conv['data']['min_price'] ?? 0 ), 50000.0 );
 CsvAssert::float( 'percent profit untouched', (float) ( $conv['data']['profit_value'] ?? 0 ), 10.0 );
 
+/* ------------------------------------------------------------------------- */
+echo "\n[11] JSONL session file (row writer/reader)\n";
+/* ------------------------------------------------------------------------- */
+require_once __DIR__ . '/../includes/ImportExport/RowFile.php';
+require_once __DIR__ . '/../includes/Core/CacheGeneration.php';
+
+use RateBridge\Core\CacheGeneration;
+use RateBridge\ImportExport\RowFile;
+
+$tmp = sys_get_temp_dir() . '/rbw-rowfile-' . bin2hex( random_bytes( 6 ) ) . '.jsonl';
+$file = new RowFile( $tmp );
+
+$sample = array(
+	array( '1', 'plain' ),
+	array( '2', 'سلام، دنیا' ),
+	array( '3', 'has "quotes" and, commas' ),
+	array( '4', "newline\ninside" ),
+	array( '5', str_repeat( 'x', 4000 ) ),
+	array( '6', '' ),
+);
+
+$write = $file->write( $sample );
+CsvAssert::check( 'write succeeds', true === $write['ok'], $write['error'] );
+CsvAssert::check( 'write reports every row', 6 === $write['rows'], (string) $write['rows'] );
+CsvAssert::check( 'file has bytes', $write['bytes'] > 0 );
+CsvAssert::check( 'no BOM in the file', ! str_starts_with( (string) file_get_contents( $tmp ), "\xEF\xBB\xBF" ) );
+
+// Reading the whole file at once.
+$all = $file->read( 0, 100 );
+CsvAssert::check( 'read returns all rows', 6 === count( $all['rows'] ), (string) count( $all['rows'] ) );
+CsvAssert::check( 'eof on a full read', true === $all['eof'] );
+CsvAssert::check( 'Persian text survives', 'سلام، دنیا' === ( $all['rows'][1][1] ?? '' ), (string) ( $all['rows'][1][1] ?? '' ) );
+CsvAssert::check( 'quotes and commas survive', 'has "quotes" and, commas' === ( $all['rows'][2][1] ?? '' ) );
+CsvAssert::check( 'newline inside a cell survives', "newline\ninside" === ( $all['rows'][3][1] ?? '' ) );
+CsvAssert::check( 'large cell survives', 4000 === strlen( $all['rows'][4][1] ?? '' ) );
+CsvAssert::check( 'empty cell survives', '' === ( $all['rows'][5][1] ?? 'x' ) );
+
+// Offset reading in chunks (the import path).
+$first = $file->read( 0, 2 );
+CsvAssert::check( 'first chunk has 2 rows', 2 === count( $first['rows'] ) );
+CsvAssert::check( 'first chunk is not EOF', false === $first['eof'] );
+
+$second = $file->read( (int) $first['next'], 2 );
+CsvAssert::check( 'second chunk continues', 2 === count( $second['rows'] ) );
+CsvAssert::check( 'second chunk starts at row 3', '3' === ( $second['rows'][0][0] ?? '' ), (string) ( $second['rows'][0][0] ?? '' ) );
+
+$third = $file->read( (int) $second['next'], 2 );
+CsvAssert::check( 'third chunk finishes', 2 === count( $third['rows'] ) && true === $third['eof'] );
+
+// Offsets are monotonically increasing (no re-reads).
+CsvAssert::check( 'offsets increase', (int) $first['next'] < (int) $second['next'] && (int) $second['next'] < (int) $third['next'] );
+
+// A trailing partial line (simulating a crash) is not returned as data.
+file_put_contents( $tmp, "[\"a\"]\n[\"b\"]\n[\"trunc", FILE_APPEND );
+$after_truncated = $file->read( 0, 100 );
+CsvAssert::check( 'truncated trailing line is skipped', 8 === count( $after_truncated['rows'] ), (string) count( $after_truncated['rows'] ) );
+
+// count_rows() counts physical lines: 8 complete rows + the truncated one.
+CsvAssert::check( 'count_rows counts lines', 9 === $file->count_rows(), (string) $file->count_rows() );
+
+// Too many rows is refused before anything is written.
+$idle = sys_get_temp_dir() . '/rbw-rowfile-big-' . bin2hex( random_bytes( 4 ) ) . '.jsonl';
+$big  = new RowFile( $idle );
+$many = array_fill( 0, RowFile::MAX_ROWS + 1, array( 'x' ) );
+$ref  = $big->write( $many );
+CsvAssert::check( 'over 20,000 rows is refused', false === $ref['ok'] && 'too_many_rows' === $ref['error'] );
+CsvAssert::check( 'nothing was written for the refused file', ! file_exists( $idle ) );
+
+// delete()
+CsvAssert::check( 'delete() removes the file', true === $file->delete() && ! file_exists( $tmp ) );
+CsvAssert::check( 'delete() on a missing file is a no-op', true === $file->delete() );
+
+// Reading a missing file returns an empty result, never an error.
+$missing = ( new RowFile( $tmp . '.nope' ) )->read( 0, 10 );
+CsvAssert::check( 'missing file reads as empty', array() === $missing['rows'] && true === $missing['eof'] );
+
+/* ------------------------------------------------------------------------- */
+echo "\n[12] Cache generation keys\n";
+/* ------------------------------------------------------------------------- */
+$k1 = CacheGeneration::key( 'rbw_html_', 'abc', 0 );
+$k2 = CacheGeneration::key( 'rbw_html_', 'abc', 0 );
+$k3 = CacheGeneration::key( 'rbw_html_', 'abc', 1 );
+
+CsvAssert::check( 'same input + generation => same key', $k1 === $k2 );
+CsvAssert::check( 'bumping the generation changes the key', $k1 !== $k3 );
+CsvAssert::check( 'key keeps the prefix', str_starts_with( $k1, 'rbw_html_' ) );
+CsvAssert::check( 'key carries the generation', str_ends_with( $k1, '_g0' ) && str_ends_with( $k3, '_g1' ) );
+CsvAssert::check( 'different input => different key', CacheGeneration::key( 'rbw_html_', 'abd', 0 ) !== $k1 );
+CsvAssert::check( 'option name for frontend', 'rbw_cache_gen' === CacheGeneration::option_name( 'frontend' ) );
+CsvAssert::check( 'option name for a provider', 'rbw_cache_gen_provider_navasan' === CacheGeneration::option_name( 'navasan' ) );
+CsvAssert::check(
+	'unsafe provider scope is sanitised',
+	'rbw_cache_gen_provider_abscript' === CacheGeneration::option_name( 'a!b<script>' ),
+	CacheGeneration::option_name( 'a!b<script>' )
+);
+CsvAssert::check( 'empty scope has no option', '' === CacheGeneration::option_name( '!!' ) );
+
 echo "\n", str_repeat( '=', 60 ), "\n";
 printf( "RESULT: %d passed, %d failed\n", CsvAssert::$passed, CsvAssert::$failed );
 

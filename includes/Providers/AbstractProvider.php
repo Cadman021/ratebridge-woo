@@ -159,6 +159,13 @@ abstract class AbstractProvider implements ProviderInterface {
 			? (string) $args['cache_key']
 			: 'rbw_http_' . md5( $this->get_key() . '|' . $request_url );
 
+		/*
+		 * Append this provider's cache generation. Flushing a provider bumps the
+		 * counter, which invalidates every cached payload even when transients
+		 * live in Redis/Memcached (a DELETE on wp_options would not reach them).
+		 */
+		$cache_key .= '_g' . \RateBridge\Core\CacheGeneration::get( $this->get_key() );
+
 		if ( $cache_ttl > 0 && ! $bypass_cache ) {
 			$cached = get_transient( $cache_key );
 
@@ -389,6 +396,16 @@ abstract class AbstractProvider implements ProviderInterface {
 	 * @return void
 	 */
 	public function flush_cache(): void {
+		/*
+		 * 1. Bump this provider's generation: every existing cache key becomes
+		 *    unreachable. This is the part that works with an external object
+		 *    cache.
+		 */
+		\RateBridge\Core\CacheGeneration::bump( $this->get_key() );
+
+		/*
+		 * 2. Best-effort row cleanup for sites without an object cache.
+		 */
 		$prefix = 'rbw_' . $this->get_key() . '_';
 
 		global $wpdb;

@@ -102,17 +102,40 @@ final class ProductsCsvService {
 		$offset   = ( max( 1, $page ) - 1 ) * $per_page;
 
 		/*
-		 * Managed = `_rbw_enabled` = yes. The variation's parent is managed too, so
-		 * variations of a managed parent are included even without their own flag.
+		 * Managed rows:
+		 *  1. products and variations that carry `_rbw_enabled = yes` themselves;
+		 *  2. variations whose PARENT carries it (a managed variable product owns
+		 *     its variations even when a variation has no flag of its own).
+		 *
+		 * Trashed items and orphan variations are excluded, and the ORDER BY ID is
+		 * stable so LIMIT/OFFSET pagination cannot skip or repeat a row.
 		 */
 		$ids = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->prepare(
-				"SELECT DISTINCT p.ID
+				"SELECT p.ID
 				 FROM {$wpdb->posts} p
-				 INNER JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID AND pm.meta_key = %s AND pm.meta_value = %s
-				 WHERE p.post_type IN ('product', 'product_variation')
+				 WHERE p.post_status <> 'trash'
+				   AND (
+				     p.post_type = 'product'
+				     OR ( p.post_type = 'product_variation' AND p.post_parent > 0 )
+				   )
+				   AND (
+				     EXISTS (
+				       SELECT 1 FROM {$wpdb->postmeta} pm
+				       WHERE pm.post_id = p.ID AND pm.meta_key = %s AND pm.meta_value = %s
+				     )
+				     OR (
+				       p.post_type = 'product_variation'
+				       AND EXISTS (
+				         SELECT 1 FROM {$wpdb->postmeta} ppm
+				         WHERE ppm.post_id = p.post_parent AND ppm.meta_key = %s AND ppm.meta_value = %s
+				       )
+				     )
+				   )
 				 ORDER BY p.ID ASC
 				 LIMIT %d OFFSET %d",
+				ProductData::META_ENABLED,
+				'yes',
 				ProductData::META_ENABLED,
 				'yes',
 				$per_page,
@@ -270,6 +293,7 @@ final class ProductsCsvService {
 			'delimiter' => $delimiter,
 			'map'       => $mapped['map'],
 			'rows'      => $rows,
+			'count'     => count( $rows ),
 			'file_unit' => Package::unit( $file_unit ),
 		);
 	}
@@ -596,6 +620,69 @@ final class ProductsCsvService {
 	}
 
 	/* --------------------------------------------------------------------- */
+	/* Session files                                                         */
+	/* --------------------------------------------------------------------- */
+
+	/**
+	 * Random session token (never derived from user input).
+	 *
+	 * @return string
+	 */
+	public static function new_token(): string {
+		return strtolower( bin2hex( random_bytes( 16 ) ) );
+	}
+
+	/**
+	 * Path of the JSONL row file for a token.
+	 *
+	 * The token is validated against `[a-f0-9]{32}` before it ever reaches the
+	 * filesystem, so a crafted filename cannot escape the private directory.
+	 *
+	 * @param string $token Session token.
+	 * @return string|false Absolute path, or false when the dir/token is unusable.
+	 */
+	public function session_path( string $token ): string|false {
+		if ( ! preg_match( '/^[a-f0-9]{32}$/', $token ) ) {
+			return false;
+		}
+
+		$dir = $this->tmp_dir();
+
+		if ( false === $dir ) {
+			return false;
+		}
+
+		return $dir . '/import-' . $token . '.jsonl';
+	}
+
+	/**
+	 * Whether the private temp directory accepts writes.
+	 *
+	 * @return bool
+	 */
+	public function is_tmp_writable(): bool {
+		$dir = $this->tmp_dir();
+
+		if ( false === $dir ) {
+			return false;
+		}
+
+		return wp_is_writable( $dir ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- WP helper.
+	}
+
+	/**
+	 * Row file reader for a token.
+	 *
+	 * @param string $token Session token.
+	 * @return RowFile|null
+	 */
+	public function row_file( string $token ): ?RowFile {
+		$path = $this->session_path( $token );
+
+		return false === $path ? null : new RowFile( $path );
+	}
+
+	/* --------------------------------------------------------------------- */
 	/* Temporary files                                                       */
 	/* --------------------------------------------------------------------- */
 
@@ -641,11 +728,16 @@ final class ProductsCsvService {
 			return 0;
 		}
 
-		$files = glob( $dir . '/import-*.csv' );
+		$files = array_merge(
+			(array) glob( $dir . '/import-*.jsonl' ),
+			// Legacy sessions from 0.7.0 stored raw CSV copies.
+			(array) glob( $dir . '/import-*.csv' )
+		);
+
 		$now   = time();
 		$count = 0;
 
-		foreach ( is_array( $files ) ? $files : array() as $file ) {
+		foreach ( $files as $file ) {
 			$mtime = @filemtime( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 
 			if ( false !== $mtime && ( $now - $mtime ) > self::TMP_TTL_HOURS * HOUR_IN_SECONDS ) {
