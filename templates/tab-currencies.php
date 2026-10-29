@@ -196,12 +196,30 @@ $rbw_status = static function ( Currency $currency, Repricer $repricer ): array 
 						</td>
 
 						<td data-label="<?php esc_attr_e( 'Status', 'ratebridge-woo' ); ?>">
-							<span class="rbw-badge is-<?php echo esc_attr( $rbw_state['key'] ); ?>" <?php echo '' !== $rbw_state['error'] ? 'title="' . esc_attr( $rbw_state['error'] ) . '"' : ''; ?>>
-								<?php echo esc_html( $rbw_state['label'] ); ?>
-							</span>
-							<?php if ( '' !== $rbw_state['error'] ) : ?>
-								<div class="rbw-error-text"><?php echo esc_html( $rbw_state['error'] ); ?></div>
-							<?php endif; ?>
+							<div class="rbw-status-cell">
+								<span class="rbw-badge is-<?php echo esc_attr( $rbw_state['key'] ); ?>" <?php echo '' !== $rbw_state['error'] ? 'title="' . esc_attr( $rbw_state['error'] ) . '"' : ''; ?>>
+									<?php echo esc_html( $rbw_state['label'] ); ?>
+								</span>
+								<?php if ( '' !== $rbw_state['error'] ) : ?>
+									<?php
+									/*
+									 * The root cause comes first (Phase 9: the provider message is
+									 * stored root-cause-first), so the first line alone is useful.
+									 * Trimmed to one line here; the title attribute keeps the rest.
+									 */
+									$rbw_err_lines = preg_split( '/\R/', trim( $rbw_state['error'] ) ) ?: array();
+									$rbw_root      = (string) ( $rbw_err_lines[0] ?? '' );
+									$rbw_has_more  = count( $rbw_err_lines ) > 1 || mb_strlen( $rbw_root ) > 90;
+									$rbw_root      = mb_strimwidth( $rbw_root, 0, 90, '…' );
+									?>
+									<div class="rbw-error-text rbw-status-error" title="<?php echo esc_attr( $rbw_state['error'] ); ?>">
+										<?php echo esc_html( $rbw_root ); ?>
+										<?php if ( $rbw_has_more ) : ?>
+											<span class="screen-reader-text"><?php echo esc_html( $rbw_state['error'] ); ?></span>
+										<?php endif; ?>
+									</div>
+								<?php endif; ?>
+							</div>
 						</td>
 
 						<td class="rbw-rate" data-rate="<?php echo esc_attr( (string) $rbw_currency->rate ); ?>" data-label="<?php echo esc_attr( sprintf( /* translators: %s: unit */ __( 'Rate (%s)', 'ratebridge-woo' ), $rbw_unit ) ); ?>">
@@ -223,42 +241,44 @@ $rbw_status = static function ( Currency $currency, Repricer $repricer ): array 
 						</td>
 
 						<td class="rbw-actions" data-label="<?php esc_attr_e( 'Actions', 'ratebridge-woo' ); ?>">
-							<button
-								type="button"
-								class="button button-small rbw-icon-button rbw-update-one"
-								data-id="<?php echo esc_attr( (string) $rbw_currency->id ); ?>"
-								<?php disabled( 'manual' === $rbw_currency->provider ); ?>
-								title="<?php esc_attr_e( 'Update now', 'ratebridge-woo' ); ?>"
-							>
-								<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-refresh"></use></svg>
-								<span class="screen-reader-text"><?php esc_html_e( 'Update now', 'ratebridge-woo' ); ?></span>
-							</button>
-
-							<div class="rbw-kebab">
+							<div class="rbw-row-actions">
 								<button
 									type="button"
-									class="button button-small rbw-icon-button rbw-kebab-toggle"
-									aria-haspopup="true"
-									aria-expanded="false"
-									title="<?php esc_attr_e( 'More actions', 'ratebridge-woo' ); ?>"
+									class="button button-small rbw-icon-button rbw-update-one"
+									data-id="<?php echo esc_attr( (string) $rbw_currency->id ); ?>"
+									<?php disabled( 'manual' === $rbw_currency->provider ); ?>
+									title="<?php esc_attr_e( 'Update now', 'ratebridge-woo' ); ?>"
 								>
-									<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-more"></use></svg>
-									<span class="screen-reader-text"><?php esc_html_e( 'More actions', 'ratebridge-woo' ); ?></span>
+									<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-refresh"></use></svg>
+									<span class="screen-reader-text"><?php esc_html_e( 'Update now', 'ratebridge-woo' ); ?></span>
 								</button>
-								<ul class="rbw-menu" role="menu" hidden>
-									<li role="none">
-										<button type="button" role="menuitem" class="rbw-menu-item rbw-edit" data-id="<?php echo esc_attr( (string) $rbw_currency->id ); ?>">
-											<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-edit"></use></svg>
-											<?php esc_html_e( 'Edit', 'ratebridge-woo' ); ?>
-										</button>
-									</li>
-									<li role="none">
-										<button type="button" role="menuitem" class="rbw-menu-item is-danger rbw-delete" data-id="<?php echo esc_attr( (string) $rbw_currency->id ); ?>">
-											<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-trash"></use></svg>
-											<?php esc_html_e( 'Delete', 'ratebridge-woo' ); ?>
-										</button>
-									</li>
-								</ul>
+
+								<div class="rbw-kebab">
+									<button
+										type="button"
+										class="button button-small rbw-icon-button rbw-kebab-toggle"
+										aria-haspopup="true"
+										aria-expanded="false"
+										title="<?php esc_attr_e( 'More actions', 'ratebridge-woo' ); ?>"
+									>
+										<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-more"></use></svg>
+										<span class="screen-reader-text"><?php esc_html_e( 'More actions', 'ratebridge-woo' ); ?></span>
+									</button>
+									<ul class="rbw-menu" role="menu" hidden>
+										<li role="none">
+											<button type="button" role="menuitem" class="rbw-menu-item rbw-edit" data-id="<?php echo esc_attr( (string) $rbw_currency->id ); ?>">
+												<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-edit"></use></svg>
+												<?php esc_html_e( 'Edit', 'ratebridge-woo' ); ?>
+											</button>
+										</li>
+										<li role="none">
+											<button type="button" role="menuitem" class="rbw-menu-item is-danger rbw-delete" data-id="<?php echo esc_attr( (string) $rbw_currency->id ); ?>">
+												<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-trash"></use></svg>
+												<?php esc_html_e( 'Delete', 'ratebridge-woo' ); ?>
+											</button>
+										</li>
+									</ul>
+									</div>
 							</div>
 						</td>
 					</tr>

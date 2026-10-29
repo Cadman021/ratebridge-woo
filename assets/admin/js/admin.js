@@ -1597,6 +1597,28 @@
 	}
 
 	function bindSources() {
+		/*
+		 * Show/hide for secret fields. The value is never rendered server-side
+		 * (the field is empty and only posts when the admin types), so revealing
+		 * simply flips the input type and swaps the eye icon.
+		 */
+		qsa( '.rbw-reveal-secret' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				var wrapper = button.closest( '.rbw-secret' );
+				var field = wrapper ? wrapper.querySelector( 'input' ) : null;
+
+				if ( ! field ) {
+					return;
+				}
+
+				var reveal = 'password' === field.type;
+
+				field.type = reveal ? 'text' : 'password';
+				button.setAttribute( 'aria-pressed', reveal ? 'true' : 'false' );
+				button.classList.toggle( 'is-revealed', reveal );
+			} );
+		} );
+
 		qsa( '.rbw-provider-form' ).forEach( function ( form ) {
 			var provider = form.getAttribute( 'data-provider' );
 

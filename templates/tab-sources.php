@@ -14,8 +14,21 @@ $rbw_cards = isset( $rbw_view['cards'] ) && is_array( $rbw_view['cards'] ) ? $rb
 <h2 class="rbw-section-title"><?php esc_html_e( 'Price sources', 'ratebridge-woo' ); ?></h2>
 
 <p class="rbw-muted">
-	<?php esc_html_e( 'Each source has its own request quota. The plugin never sends more requests than the limits you configure here; when a limit is reached the previous rate is kept.', 'ratebridge-woo' ); ?>
+	<?php esc_html_e( 'Each source has its own request quota. When a limit is reached the previous rate is kept.', 'ratebridge-woo' ); ?>
 </p>
+
+<details class="rbw-disclosure">
+	<summary><?php esc_html_e( 'How the quota works', 'ratebridge-woo' ); ?></summary>
+	<p class="rbw-muted">
+		<?php
+		printf(
+			/* translators: %d: backoff minutes */
+			esc_html__( 'The plugin never sends more requests than the limits below. A rejected key (HTTP 401/403) stops all retries until you change the key or a test succeeds. After any failed request the source is skipped for %d minutes, so a broken key never burns the quota.', 'ratebridge-woo' ),
+			\RateBridge\Providers\RequestBudget::FAILURE_BACKOFF_MINUTES
+		);
+		?>
+	</p>
+</details>
 
 <?php if ( empty( $rbw_cards ) ) : ?>
 	<p><?php esc_html_e( 'No source with settings is registered.', 'ratebridge-woo' ); ?></p>
@@ -87,17 +100,30 @@ $rbw_cards = isset( $rbw_view['cards'] ) && is_array( $rbw_view['cards'] ) ? $rb
 							</label>
 
 							<?php if ( 'password' === $rbw_field_type ) : ?>
-								<input
-									type="password"
-									id="<?php echo esc_attr( $rbw_input_id ); ?>"
-									name="<?php echo esc_attr( $rbw_field_key ); ?>"
-									class="regular-text"
-									dir="ltr"
-									autocomplete="new-password"
-									value=""
-									placeholder="<?php echo esc_attr( (string) ( $rbw_field['value'] ?? '' ) ); ?>"
-									data-has-value="<?php echo ! empty( $rbw_field['has_value'] ) ? '1' : '0'; ?>"
-								/>
+								<span class="rbw-secret">
+									<input
+										type="password"
+										id="<?php echo esc_attr( $rbw_input_id ); ?>"
+										name="<?php echo esc_attr( $rbw_field_key ); ?>"
+										class="regular-text"
+										dir="ltr"
+										autocomplete="new-password"
+										spellcheck="false"
+										value=""
+										placeholder="<?php echo esc_attr( (string) ( $rbw_field['value'] ?? '' ) ); ?>"
+										data-has-value="<?php echo ! empty( $rbw_field['has_value'] ) ? '1' : '0'; ?>"
+									/>
+									<button
+										type="button"
+										class="button button-small rbw-icon-button rbw-reveal-secret"
+										aria-pressed="false"
+										title="<?php esc_attr_e( 'Show or hide the key', 'ratebridge-woo' ); ?>"
+									>
+										<svg class="rbw-icon rbw-icon-eye" aria-hidden="true"><use href="#rbw-i-eye"></use></svg>
+										<svg class="rbw-icon rbw-icon-eye-off" aria-hidden="true"><use href="#rbw-i-eye-off"></use></svg>
+										<span class="screen-reader-text"><?php esc_html_e( 'Show or hide the key', 'ratebridge-woo' ); ?></span>
+									</button>
+								</span>
 								<span class="description">
 									<?php
 									if ( ! empty( $rbw_field['has_value'] ) ) {
@@ -173,7 +199,7 @@ $rbw_cards = isset( $rbw_view['cards'] ) && is_array( $rbw_view['cards'] ) ? $rb
 						>
 							<?php esc_html_e( 'Test connection', 'ratebridge-woo' ); ?>
 						</button>
-						<button type="button" class="button rbw-reset-budget" data-provider="<?php echo esc_attr( (string) $rbw_key ); ?>">
+						<button type="button" class="button button-link rbw-reset-budget is-danger-link" data-provider="<?php echo esc_attr( (string) $rbw_key ); ?>">
 							<?php esc_html_e( 'Reset counters', 'ratebridge-woo' ); ?>
 						</button>
 					</p>
@@ -286,12 +312,6 @@ $rbw_cards = isset( $rbw_view['cards'] ) && is_array( $rbw_view['cards'] ) ? $rb
 	</div>
 <?php endif; ?>
 
-<p class="rbw-muted">
-	<?php
-	printf(
-		/* translators: %d: backoff minutes */
-		esc_html__( 'After a failed request the plugin waits at least %d minutes before trying that source again, so a broken key never burns the quota.', 'ratebridge-woo' ),
-		\RateBridge\Providers\RequestBudget::FAILURE_BACKOFF_MINUTES
-	);
-	?>
+<p class="rbw-muted rbw-sources-footnote">
+	<?php esc_html_e( 'Nothing is ever sent to a source that is over its limit or rejected your key.', 'ratebridge-woo' ); ?>
 </p>

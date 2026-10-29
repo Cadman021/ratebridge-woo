@@ -776,6 +776,37 @@
 	overflow-wrap: anywhere;
 }
 
+/*
+ * Status cell: the badge stays on its own line and the error is a short block
+ * underneath it, constrained to the column instead of running across the row.
+ */
+.rbw-status-cell {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+	min-inline-size: 0;
+	max-inline-size: 22ch;
+}
+
+.rbw-status-error {
+	margin: 0;
+	/* Clamp to two lines: the full text is in the title and in the
+	   screen-reader span, so nothing is lost for AT users. */
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	overflow: hidden;
+	font-size: var(--rbw-fs-xs);
+	line-height: 1.45;
+}
+
+/* Undo the clamp on the stacked mobile table so the text is fully readable. */
+.rbw-status-cell {
+	max-inline-size: 100%;
+}
+
 /* Scrollable table wrapper for narrow screens */
 .rbw-table-scroll {
 	overflow-x: auto;
@@ -1121,6 +1152,132 @@
 	grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
 	gap: var(--rbw-s-4);
 	margin-block: var(--rbw-s-4);
+	/* Every card in a row is exactly as tall as the tallest one. */
+	align-items: stretch;
+}
+
+/*
+ * Provider cards must read as one series, so the inner layout is a column with
+ * the action row pinned to the bottom: whatever the field count or the length of
+ * a helper text, the «ذخیره / تست / بازنشانی» row lines up across the row.
+ */
+.rbw-cards > .rbw-card {
+	display: flex;
+	flex-direction: column;
+	min-inline-size: 0;
+	height: 100%;
+}
+
+.rbw-cards > .rbw-card > .rbw-provider-form {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	min-inline-size: 0;
+}
+
+/* The budget block absorbs the slack, so the action row sits at the bottom. */
+.rbw-cards > .rbw-card > .rbw-provider-form > .rbw-budget {
+	margin-block-start: auto;
+}
+
+/* One aligned action row per card. */
+.rbw-card-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--rbw-s-2);
+	align-items: center;
+	margin-block: var(--rbw-s-3) 0;
+	padding-block-start: var(--rbw-s-3);
+	border-block-start: 1px solid var(--rbw-bg-inset);
+}
+
+.rbw-card-actions .rbw-reveal-secret,
+.rbw-card-actions .button {
+	min-block-size: var(--rbw-tap);
+}
+
+/*
+ * Secret field + reveal toggle. The input is `dir="ltr"` so a key like
+ * `fx-ntz-v1-…` never re-orders inside the RTL card.
+ */
+.rbw-secret {
+	display: flex;
+	align-items: stretch;
+	gap: var(--rbw-s-2);
+}
+
+.rbw-secret input {
+	flex: 1 1 auto;
+	min-inline-size: 0;
+	font-family: var(--rbw-font-mono, ui-monospace, monospace);
+	letter-spacing: 0.02em;
+}
+
+.rbw-reveal-secret {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-inline-size: var(--rbw-tap);
+	padding-inline: var(--rbw-s-2);
+}
+
+/* Only one eye icon is visible at a time. */
+.rbw-reveal-secret .rbw-icon-eye-off,
+.rbw-reveal-secret.is-revealed .rbw-icon-eye {
+	display: none;
+}
+
+.rbw-reveal-secret.is-revealed .rbw-icon-eye-off {
+	display: inline-block;
+}
+
+/* Discreet, destructive-by-nature action: reads as a link, not a button. */
+.button-link.is-danger-link {
+	color: var(--rbw-danger-text);
+	background: none;
+	border: 0;
+	box-shadow: none;
+	text-decoration: underline;
+	padding-inline: 0;
+	min-block-size: auto;
+}
+
+.button-link.is-danger-link:hover,
+.button-link.is-danger-link:focus-visible {
+	color: var(--rbw-danger-text);
+	background: var(--rbw-danger-bg);
+	text-decoration: none;
+}
+
+/* Collapsed helper detail («بیشتر»). */
+.rbw-disclosure {
+	margin-block: var(--rbw-s-2) var(--rbw-s-3);
+}
+
+.rbw-disclosure > summary {
+	cursor: pointer;
+	font-size: var(--rbw-fs-sm);
+	color: var(--rbw-primary);
+	text-decoration: underline;
+	width: fit-content;
+}
+
+.rbw-disclosure > summary::marker {
+	content: "";
+}
+
+.rbw-disclosure > summary:focus-visible {
+	outline: 2px solid var(--rbw-primary);
+	outline-offset: 2px;
+	border-radius: var(--rbw-r-sm);
+}
+
+.rbw-disclosure[open] > summary {
+	margin-block-end: var(--rbw-s-2);
+}
+
+.rbw-sources-footnote {
+	margin-block-start: var(--rbw-s-3);
 }
 
 .rbw-card-header h3 {
@@ -1859,7 +2016,18 @@
 	}
 
 	.rbw-actions {
-		justify-content: flex-start;
+		flex-wrap: nowrap;
+		justify-content: flex-end;
+	}
+
+	/* On the stacked layout the status cell can use the full width. */
+	.rbw-status-cell {
+		max-inline-size: 100%;
+	}
+
+	.rbw-status-error {
+		-webkit-line-clamp: 3;
+		line-clamp: 3;
 	}
 
 	.rbw-modal {

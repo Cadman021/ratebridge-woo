@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: RateBridge Woo\n"
 "Report-Msgid-Bugs-To: https://example.com/ratebridge-woo\n"
-"POT-Creation-Date: 2026-10-29T20:28:00+00:00\n"
+"POT-Creation-Date: 2026-10-29T20:29:46+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -331,10 +331,6 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "After"
-msgstr ""
-
-#: ratebridge-woo
-msgid "After a failed request the plugin waits at least %d minutes before trying that source again, so a broken key never burns the quota."
 msgstr ""
 
 #: ratebridge-woo
@@ -942,7 +938,7 @@ msgid "Duration (seconds)"
 msgstr ""
 
 #: ratebridge-woo
-msgid "Each source has its own request quota. The plugin never sends more requests than the limits you configure here; when a limit is reached the previous rate is kept."
+msgid "Each source has its own request quota. When a limit is reached the previous rate is kept."
 msgstr ""
 
 #: ratebridge-woo
@@ -1227,6 +1223,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "How long one full pass takes."
+msgstr ""
+
+#: ratebridge-woo
+msgid "How the quota works"
 msgstr ""
 
 #: ratebridge-woo
@@ -1743,6 +1743,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Not used by any product yet."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Nothing is ever sent to a source that is over its limit or rejected your key."
 msgstr ""
 
 #: ratebridge-woo
@@ -2398,6 +2402,10 @@ msgid "Show dates in the Jalali calendar"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Show or hide the key"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Show the current rate too"
 msgstr ""
 
@@ -2895,6 +2903,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "The parent currency is disabled or has no rate, so this variation keeps its current price (or shows as unavailable when it has none)."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The plugin never sends more requests than the limits below. A rejected key (HTTP 401/403) stops all retries until you change the key or a test succeeds. After any failed request the source is skipped for %d minutes, so a broken key never burns the quota."
 msgstr ""
 
 #: ratebridge-woo

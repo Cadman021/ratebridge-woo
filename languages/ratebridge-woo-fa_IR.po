@@ -2762,3 +2762,22 @@ msgstr "این نوع فایل در اینجا پذیرفته نمی‌شود. �
 
 msgid "That file is too large for this importer."
 msgstr "این فایل برای این درون‌ریز بیش از حد بزرگ است."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 9b — sources + currencies list polish
+# ─────────────────────────────────────────────────────────────────────────────
+
+msgid "Each source has its own request quota. When a limit is reached the previous rate is kept."
+msgstr "هر منبع سهمیه درخواست خودش را دارد. وقتی سهمیه تمام شود، نرخ قبلی حفظ می‌شود."
+
+msgid "How the quota works"
+msgstr "سهمیه چگونه کار می‌کند"
+
+msgid "Nothing is ever sent to a source that is over its limit or rejected your key."
+msgstr "هیچ درخواستی به منبعی که سهمیه‌اش تمام شده یا کلید شما را رد کرده ارسال نمی‌شود."
+
+msgid "Show or hide the key"
+msgstr "نمایش یا پنهان کردن کلید"
+
+msgid "The plugin never sends more requests than the limits below. A rejected key (HTTP 401/403) stops all retries until you change the key or a test succeeds. After any failed request the source is skipped for %d minutes, so a broken key never burns the quota."
+msgstr "افزونه هرگز بیش از محدودیت‌های زیر درخواست نمی‌فرستد. کلید ردشده (HTTP 401/403) تا زمانی که کلید را تغییر ندهید یا تستی موفق نشود، همه تلاش‌ها را متوقف می‌کند. پس از هر درخواست ناموفق، منبع به مدت %d دقیقه نادیده گرفته می‌شود تا کلید خراب سهمیه را نسوزاند."
