@@ -29,17 +29,67 @@ $rbw_csv_url   = AdminController::products_url();
 
 <div id="rbw-notices" class="rbw-notices" role="status" aria-live="polite"></div>
 
+<?php
+/*
+ * Shared stepper markup for both import cards. The implementation is driven by
+ * admin.js: step 1 collects the file, step 2 shows the dry-run preview, step 3
+ * executes. The native <input type="file"> stays in the DOM (visually hidden)
+ * so keyboard and mobile users keep the OS picker — and so no English
+ * «Choose File / No file chosen» text can ever appear in the Persian UI.
+ *
+ * @param string $id     Unique prefix for ids.
+ * @param string $accept Accept attribute for the file input.
+ * @param string $label  Visible drop-zone label.
+ * @param string $hint   Small hint under the label.
+ * @return void
+ */
+$rbw_stepper = static function ( string $id, string $accept, string $label, string $hint ): void {
+	?>
+	<ol class="rbw-steps" aria-label="<?php esc_attr_e( 'Import steps', 'ratebridge-woo' ); ?>">
+		<li class="rbw-step is-active" data-step="1">
+			<span class="rbw-step-num" aria-hidden="true">۱</span>
+			<span class="rbw-step-label"><?php esc_html_e( 'Choose a file', 'ratebridge-woo' ); ?></span>
+		</li>
+		<li class="rbw-step" data-step="2">
+			<span class="rbw-step-num" aria-hidden="true">۲</span>
+			<span class="rbw-step-label"><?php esc_html_e( 'Preview', 'ratebridge-woo' ); ?></span>
+		</li>
+		<li class="rbw-step" data-step="3">
+			<span class="rbw-step-num" aria-hidden="true">۳</span>
+			<span class="rbw-step-label"><?php esc_html_e( 'Run', 'ratebridge-woo' ); ?></span>
+		</li>
+	</ol>
+
+	<div class="rbw-dropzone" data-dropzone="<?php echo esc_attr( $id ); ?>" tabindex="0" role="button">
+		<svg class="rbw-icon rbw-dropzone-icon" aria-hidden="true"><use href="#rbw-i-upload"></use></svg>
+		<span class="rbw-dropzone-label"><?php echo esc_html( $label ); ?></span>
+		<span class="rbw-dropzone-hint"><?php echo esc_html( $hint ); ?></span>
+
+		<input
+			type="file"
+			id="<?php echo esc_attr( $id ); ?>-file"
+			name="file"
+			class="rbw-file-input"
+			accept="<?php echo esc_attr( $accept ); ?>"
+		/>
+	</div>
+
+	<p class="rbw-file-chosen" data-file-chosen="<?php echo esc_attr( $id ); ?>" hidden></p>
+	<?php
+};
+?>
+
 <!-- Card 1: package -->
 <div class="rbw-card rbw-io-card">
 	<h3><?php esc_html_e( 'Settings, currencies and formulas (JSON package)', 'ratebridge-woo' ); ?></h3>
 
 	<p class="description">
-		<?php esc_html_e( 'Exports the plugin configuration only. API keys, tokens, request counters, logs and caches are never included. Rates are not exported: imported currencies wait for their first update.', 'ratebridge-woo' ); ?>
+		<?php esc_html_e( 'Configuration only — no API keys, rates, counters, logs or caches.', 'ratebridge-woo' ); ?>
 	</p>
 
 	<form id="rbw-package-export-form" onsubmit="return false;">
 		<fieldset class="rbw-io-fieldset">
-			<legend><?php esc_html_e( 'Sections to export', 'ratebridge-woo' ); ?></legend>
+			<legend class="rbw-io-legend"><?php esc_html_e( 'Sections to export', 'ratebridge-woo' ); ?></legend>
 			<?php foreach ( $rbw_sections as $rbw_key => $rbw_label ) : ?>
 				<label class="rbw-inline">
 					<input type="checkbox" name="sections[]" value="<?php echo esc_attr( $rbw_key ); ?>" checked />
@@ -65,16 +115,13 @@ $rbw_csv_url   = AdminController::products_url();
 	<h4><?php esc_html_e( 'Import a package', 'ratebridge-woo' ); ?></h4>
 
 	<form id="rbw-package-import-form" onsubmit="return false;" enctype="multipart/form-data">
-		<p>
-			<label for="rbw-package-file"><?php esc_html_e( 'JSON file (max 2 MB)', 'ratebridge-woo' ); ?></label>
-			<input type="file" id="rbw-package-file" name="file" accept=".json,application/json" />
-		</p>
+		<?php $rbw_stepper( 'rbw-package', '.json,application/json', __( 'Drop the JSON package here, or choose a file', 'ratebridge-woo' ), __( 'JSON, up to 2 MB', 'ratebridge-woo' ) ); ?>
 
 		<p>
 			<label for="rbw-package-policy"><?php esc_html_e( 'If an item already exists', 'ratebridge-woo' ); ?></label>
 			<select id="rbw-package-policy" name="policy">
 				<option value="<?php echo esc_attr( ImportPlan::POLICY_SKIP ); ?>" selected>
-					<?php esc_html_e( 'Keep the existing item (skip)', 'ratebridge-woo' ); ?>
+					<?php esc_html_e( 'Skip (keep existing)', 'ratebridge-woo' ); ?>
 				</option>
 				<option value="<?php echo esc_attr( ImportPlan::POLICY_UPDATE ); ?>">
 					<?php esc_html_e( 'Update the existing item', 'ratebridge-woo' ); ?>
@@ -85,8 +132,8 @@ $rbw_csv_url   = AdminController::products_url();
 		<p>
 			<label for="rbw-package-convert"><?php esc_html_e( 'Store unit', 'ratebridge-woo' ); ?></label>
 			<select id="rbw-package-convert" name="convert">
-				<option value="1" selected><?php esc_html_e( 'Convert money amounts to the site unit', 'ratebridge-woo' ); ?></option>
-				<option value="0"><?php esc_html_e( 'Do not convert (import as is)', 'ratebridge-woo' ); ?></option>
+				<option value="1" selected><?php esc_html_e( 'Convert to the site unit', 'ratebridge-woo' ); ?></option>
+				<option value="0"><?php esc_html_e( 'Import as-is', 'ratebridge-woo' ); ?></option>
 			</select>
 			<span class="description">
 				<?php
@@ -99,8 +146,8 @@ $rbw_csv_url   = AdminController::products_url();
 			</span>
 		</p>
 
-		<p>
-			<button type="button" class="button" id="rbw-package-dry-run">
+		<p class="rbw-step-actions">
+			<button type="button" class="button" id="rbw-package-dry-run" disabled>
 				<?php esc_html_e( 'Check the file (dry run)', 'ratebridge-woo' ); ?>
 			</button>
 			<button type="button" class="button button-primary" id="rbw-package-execute" disabled>
@@ -117,7 +164,7 @@ $rbw_csv_url   = AdminController::products_url();
 	<h3><?php esc_html_e( 'Product pricing (CSV)', 'ratebridge-woo' ); ?></h3>
 
 	<p class="description">
-		<?php esc_html_e( 'One row per product that is priced by the plugin. Columns: id, parent_id, sku, name, type, mode, currency, base_price, sale_base_price, min_price, fluctuation, profit_mode, profit_type, profit_value, commission_type, commission_value, extra_amount, formula_slug, formula_vars.', 'ratebridge-woo' ); ?>
+		<?php esc_html_e( 'One row per product priced by the plugin. Columns: id, parent_id, sku, name, type, mode, currency, base_price, sale_base_price, min_price, fluctuation, profit_mode, profit_type, profit_value, commission_type, commission_value, extra_amount, formula_slug, formula_vars.', 'ratebridge-woo' ); ?>
 	</p>
 
 	<p>
@@ -131,14 +178,11 @@ $rbw_csv_url   = AdminController::products_url();
 	<h4><?php esc_html_e( 'Import a products CSV', 'ratebridge-woo' ); ?></h4>
 
 	<p class="description">
-		<?php esc_html_e( 'The importer matches rows by id, then by SKU. It never creates products. Only the fields present in the file are applied, in chunks, and prices are recalculated in the background.', 'ratebridge-woo' ); ?>
+		<?php esc_html_e( 'Rows are matched by id, then by SKU; products are never created. Only the fields present in the file are applied, in chunks, and prices are recalculated in the background.', 'ratebridge-woo' ); ?>
 	</p>
 
 	<form id="rbw-csv-import-form" onsubmit="return false;" enctype="multipart/form-data">
-		<p>
-			<label for="rbw-csv-file"><?php esc_html_e( 'CSV file (max 5 MB, 20,000 rows)', 'ratebridge-woo' ); ?></label>
-			<input type="file" id="rbw-csv-file" name="file" accept=".csv,text/csv" />
-		</p>
+		<?php $rbw_stepper( 'rbw-csv', '.csv,text/csv', __( 'Drop the CSV here, or choose a file', 'ratebridge-woo' ), __( 'CSV, up to 5 MB / 20,000 rows', 'ratebridge-woo' ) ); ?>
 
 		<p>
 			<label for="rbw-csv-unit"><?php esc_html_e( 'Money unit in the file', 'ratebridge-woo' ); ?></label>
@@ -157,8 +201,8 @@ $rbw_csv_url   = AdminController::products_url();
 			</span>
 		</p>
 
-		<p>
-			<button type="button" class="button" id="rbw-csv-upload">
+		<p class="rbw-step-actions">
+			<button type="button" class="button" id="rbw-csv-upload" disabled>
 				<?php esc_html_e( 'Read the file (dry run)', 'ratebridge-woo' ); ?>
 			</button>
 			<button type="button" class="button button-primary" id="rbw-csv-execute" disabled>

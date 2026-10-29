@@ -2734,6 +2734,16 @@
 			return;
 		}
 
+		// Step 1: choosing a file unlocks the dry run (2 MB cap mirrors the server).
+		bindDropzone( 'rbw-package', {
+			accept: '.json',
+			maxBytes: 2 * 1024 * 1024,
+			onChange: function ( file ) {
+				dryRun.disabled = ! file;
+				execute.disabled = true;
+			}
+		} );
+
 		dryRun.addEventListener( 'click', function () {
 			var fileInput = qs( '#rbw-package-file' );
 
@@ -2798,6 +2808,7 @@
 						}
 
 						token = '';
+						setStepDone( 'rbw-package' );
 						refreshBackups( ( response.data || {} ).backups );
 					} )
 					.catch( handleRequestError )
@@ -2898,6 +2909,19 @@
 		if ( ! upload || ! execute ) {
 			return;
 		}
+
+		// Step 1: choosing a file unlocks the dry run (5 MB cap mirrors the server).
+		bindDropzone( 'rbw-csv', {
+			accept: '.csv',
+			maxBytes: 5 * 1024 * 1024,
+			onChange: function ( file ) {
+				upload.disabled = ! file;
+				execute.disabled = true;
+				if ( report ) {
+					report.hidden = true;
+				}
+			}
+		} );
 
 		upload.addEventListener( 'click', function () {
 			var fileInput = qs( '#rbw-csv-file' );
@@ -3032,6 +3056,231 @@
 	/**
 	 * Bind the whole Import/Export tab.
 	 */
+	/**
+	 * Turn a stepper into a drag-and-drop file picker.
+	 *
+	 * The native <input type="file"> is visually hidden but stays functional, so
+	 *:
+	 *  - clicking the zone opens the OS picker (label semantics + programmatic
+	 *    click), which is also what mobile browsers need;
+	 *  - Enter/Space on the focused zone does the same (keyboard path);
+	 *  - dropping a file assigns it to the input via DataTransfer, so the rest of
+	 *    the code keeps reading `fileInput.files[0]` and no contract changes.
+	 *
+	 * No English browser chrome («Choose File / No file chosen») is ever shown,
+	 * because the input itself is never rendered.
+	 *
+	 * @param {string} id        Stepper prefix ('rbw-package' or 'rbw-csv').
+	 * @param {Object} opts      Options.
+	 * @param {string} opts.accept      Comma-separated extensions, e.g. '.json'.
+	 * @param {number} opts.maxBytes    Hard size limit.
+	 * @param {Function} opts.onChange  Called after a valid file is selected.
+	 * @param {string} opts.stepActions  Selector for the buttons enabled on select.
+	 * @return {HTMLInputElement|null} The file input, or null when absent.
+	 */
+	function bindDropzone( id, opts ) {
+		var zone = qs( '[data-dropzone="' + id + '"]' );
+		var input = qs( '#' + id + '-file' );
+		var chosen = qs( '[data-file-chosen="' + id + '"]' );
+
+		if ( ! zone || ! input ) {
+			return null;
+		}
+
+		var steps = zone.parentNode.querySelectorAll( '.rbw-step' );
+		var extensions = ( opts.accept || '' ).split( ',' )
+			.map( function ( part ) { return part.trim().toLowerCase(); } )
+			.filter( function ( part ) { return part.charAt( 0 ) === '.'; } );
+
+		/**
+		 * Reflect the current file in the zone, the label and the stepper.
+		 *
+		 * @param {File|null} file Selected file.
+		 */
+		function reflect( file ) {
+			var label = zone.querySelector( '.rbw-dropzone-label' );
+			var hint = zone.querySelector( '.rbw-dropzone-hint' );
+			var isValid = !! file;
+
+			zone.classList.toggle( 'is-filled', isValid );
+			zone.classList.remove( 'is-error' );
+
+			if ( label ) {
+				label.textContent = isValid ? file.name : ( label.getAttribute( 'data-default' ) || label.textContent );
+			}
+
+			if ( hint ) {
+				hint.textContent = isValid ? formatBytes( file.size ) : ( hint.getAttribute( 'data-default' ) || hint.textContent );
+			}
+
+			if ( chosen ) {
+				if ( isValid ) {
+					chosen.innerHTML = '<strong>' + esc( file.name ) + '</strong>' +
+						'<span>' + esc( formatBytes( file.size ) ) + '</span>';
+					chosen.hidden = false;
+				} else {
+					chosen.textContent = '';
+					chosen.hidden = true;
+				}
+			}
+
+			// Step 1 done; step 2 becomes the active one.
+			if ( steps.length ) {
+				Array.prototype.forEach.call( steps, function ( step, index ) {
+					step.classList.toggle( 'is-done', isValid && 0 === index );
+					step.classList.toggle( 'is-active', isValid ? 1 === index : 0 === index );
+				} );
+			}
+
+			if ( opts.onChange ) {
+				opts.onChange( file );
+			}
+		}
+
+		/**
+		 * Validate and accept a file.
+		 *
+		 * @param {File} file Candidate file.
+		 */
+		function accept( file ) {
+			zone.classList.remove( 'is-error' );
+
+			if ( ! file ) {
+				return;
+			}
+
+			var name = String( file.name || '' ).toLowerCase();
+			var okExt = ! extensions.length || extensions.some( function ( ext ) {
+				return name.lastIndexOf( ext ) === name.length - ext.length;
+			} );
+
+			if ( ! okExt ) {
+				zone.classList.add( 'is-error' );
+				notify( strings.wrongFileType || strings.genericError, 'error' );
+				return;
+			}
+
+			if ( opts.maxBytes && file.size > opts.maxBytes ) {
+				zone.classList.add( 'is-error' );
+				notify( strings.fileTooLarge || strings.genericError, 'error' );
+				return;
+			}
+
+			reflect( file );
+		}
+
+		// Remember the original copy so clearing the file restores it.
+		[ '.rbw-dropzone-label', '.rbw-dropzone-hint' ].forEach( function ( sel ) {
+			var node = zone.querySelector( sel );
+
+			if ( node ) {
+				node.setAttribute( 'data-default', node.textContent );
+			}
+		} );
+
+		zone.addEventListener( 'click', function () {
+			input.click();
+		} );
+
+		zone.addEventListener( 'keydown', function ( event ) {
+			if ( 'Enter' === event.key || ' ' === event.key || 'Spacebar' === event.key ) {
+				event.preventDefault();
+				input.click();
+			}
+		} );
+
+		// Dropping on the window would otherwise navigate away from the admin.
+		[ 'dragenter', 'dragover' ].forEach( function ( type ) {
+			zone.addEventListener( type, function ( event ) {
+				event.preventDefault();
+				event.stopPropagation();
+				zone.classList.add( 'is-dragover' );
+			} );
+		} );
+
+		[ 'dragleave', 'dragend' ].forEach( function ( type ) {
+			zone.addEventListener( type, function ( event ) {
+				event.preventDefault();
+				event.stopPropagation();
+				zone.classList.remove( 'is-dragover' );
+			} );
+		} );
+
+		zone.addEventListener( 'drop', function ( event ) {
+			event.preventDefault();
+			event.stopPropagation();
+			zone.classList.remove( 'is-dragover' );
+
+			var files = event.dataTransfer && event.dataTransfer.files;
+
+			if ( ! files || ! files.length ) {
+				return;
+			}
+
+			// Assign through DataTransfer so `input.files` is populated as if the
+			// user had used the picker.
+			try {
+				var transfer = new DataTransfer();
+				transfer.items.add( files[ 0 ] );
+				input.files = transfer.files;
+			} catch ( error ) {
+				// Older browsers cannot set `input.files`; fall back to a soft state.
+				zone.setAttribute( 'data-dropped-name', files[ 0 ].name );
+			}
+
+			accept( files[ 0 ] );
+		} );
+
+		input.addEventListener( 'change', function () {
+			accept( input.files && input.files[ 0 ] );
+		} );
+
+		reflect( input.files && input.files[ 0 ] );
+
+		return input;
+	}
+
+	/**
+	 * Human-readable byte size.
+	 *
+	 * @param {number} bytes Size in bytes.
+	 * @return {string}
+	 */
+	function formatBytes( bytes ) {
+		var size = Number( bytes ) || 0;
+
+		if ( size < 1024 ) {
+			return size + ' B';
+		}
+
+		if ( size < 1024 * 1024 ) {
+			return ( size / 1024 ).toFixed( 1 ) + ' KB';
+		}
+
+		return ( size / ( 1024 * 1024 ) ).toFixed( 1 ) + ' MB';
+	}
+
+	/**
+	 * Mark the final stepper step as the active one (after a successful run).
+	 *
+	 * @param {string} id Stepper prefix.
+	 * @return {void}
+	 */
+	function setStepDone( id ) {
+		var zone = qs( '[data-dropzone="' + id + '"]' );
+
+		if ( ! zone ) {
+			return;
+		}
+
+		var list = zone.parentNode.querySelectorAll( '.rbw-step' );
+
+		Array.prototype.forEach.call( list, function ( step ) {
+			step.classList.add( 'is-done' );
+			step.classList.remove( 'is-active' );
+		} );
+	}
+
 	function bindImportExport() {
 		if ( ! qs( '#rbw-package-export-form' ) && ! qs( '#rbw-csv-import-form' ) ) {
 			return;

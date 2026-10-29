@@ -253,6 +253,8 @@ final class SettingsPage {
 					// Import / export.
 					'selectOneSection'  => __( 'Select at least one section to export.', 'ratebridge-woo' ),
 					'chooseFile'        => __( 'Choose a file first.', 'ratebridge-woo' ),
+					'wrongFileType'     => __( 'That file type is not accepted here. Drop the expected file instead.', 'ratebridge-woo' ),
+					'fileTooLarge'      => __( 'That file is too large for this importer.', 'ratebridge-woo' ),
 					'section'           => __( 'Section', 'ratebridge-woo' ),
 					'create'            => __( 'New', 'ratebridge-woo' ),
 					'update'            => __( 'Update', 'ratebridge-woo' ),

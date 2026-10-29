@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: RateBridge Woo\n"
 "Report-Msgid-Bugs-To: https://example.com/ratebridge-woo\n"
-"POT-Creation-Date: 2026-10-29T20:25:01+00:00\n"
+"POT-Creation-Date: 2026-10-29T20:28:00+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -534,7 +534,7 @@ msgid "Buy/sell are indicative quotes around the market mid."
 msgstr ""
 
 #: ratebridge-woo
-msgid "CSV file (max 5 MB, 20,000 rows)"
+msgid "CSV, up to 5 MB / 20,000 rows"
 msgstr ""
 
 #: ratebridge-woo
@@ -610,6 +610,10 @@ msgid "Choose a currency that is enabled and has a rate."
 msgstr ""
 
 #: ratebridge-woo
+msgid "Choose a file"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Choose a file first."
 msgstr ""
 
@@ -662,6 +666,10 @@ msgid "Commission"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Configuration only — no API keys, rates, counters, logs or caches."
+msgstr ""
+
+#: ratebridge-woo
 msgid "Connected"
 msgstr ""
 
@@ -682,7 +690,7 @@ msgid "Controlled by the currency"
 msgstr ""
 
 #: ratebridge-woo
-msgid "Convert money amounts to the site unit"
+msgid "Convert to the site unit"
 msgstr ""
 
 #: ratebridge-woo
@@ -906,10 +914,6 @@ msgid "Display on the site"
 msgstr ""
 
 #: ratebridge-woo
-msgid "Do not convert (import as is)"
-msgstr ""
-
-#: ratebridge-woo
 msgid "Dollar price plus a fixed markup."
 msgstr ""
 
@@ -919,6 +923,14 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Download products CSV"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Drop the CSV here, or choose a file"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Drop the JSON package here, or choose a file"
 msgstr ""
 
 #: ratebridge-woo
@@ -1015,10 +1027,6 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Examples: 1000, 10000, 100000. Ignored when the mode is \"None\"."
-msgstr ""
-
-#: ratebridge-woo
-msgid "Exports the plugin configuration only. API keys, tokens, request counters, logs and caches are never included. Rates are not exported: imported currencies wait for their first update."
 msgstr ""
 
 #: ratebridge-woo
@@ -1258,6 +1266,10 @@ msgid "Import a products CSV"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Import as-is"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Import finished. Prices are being recalculated in the background."
 msgstr ""
 
@@ -1267,6 +1279,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Import now"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Import steps"
 msgstr ""
 
 #: ratebridge-woo
@@ -1326,7 +1342,7 @@ msgid "Item template"
 msgstr ""
 
 #: ratebridge-woo
-msgid "JSON file (max 2 MB)"
+msgid "JSON, up to 2 MB"
 msgstr ""
 
 #: ratebridge-woo
@@ -1339,10 +1355,6 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Keep current rate"
-msgstr ""
-
-#: ratebridge-woo
-msgid "Keep the existing item (skip)"
 msgstr ""
 
 #: ratebridge-woo
@@ -1730,6 +1742,10 @@ msgid "Not configured"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Not used by any product yet."
+msgstr ""
+
+#: ratebridge-woo
 msgid "Nothing needs your attention right now."
 msgstr ""
 
@@ -1758,7 +1774,7 @@ msgid "Omani Rial"
 msgstr ""
 
 #: ratebridge-woo
-msgid "One row per product that is priced by the plugin. Columns: id, parent_id, sku, name, type, mode, currency, base_price, sale_base_price, min_price, fluctuation, profit_mode, profit_type, profit_value, commission_type, commission_value, extra_amount, formula_slug, formula_vars."
+msgid "One row per product priced by the plugin. Columns: id, parent_id, sku, name, type, mode, currency, base_price, sale_base_price, min_price, fluctuation, profit_mode, profit_type, profit_value, commission_type, commission_value, extra_amount, formula_slug, formula_vars."
 msgstr ""
 
 #: ratebridge-woo
@@ -1883,6 +1899,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Prefix"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Preview"
 msgstr ""
 
 #: ratebridge-woo
@@ -2190,11 +2210,23 @@ msgid "Round down (floor)"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Round down to a multiple of %s"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Round to nearest N"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Round to the nearest multiple of %s"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Round up (ceil)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Round up to a multiple of %s"
 msgstr ""
 
 #: ratebridge-woo
@@ -2227,6 +2259,14 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Row text colour"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Rows are matched by id, then by SKU; products are never created. Only the fields present in the file are applied, in chunks, and prices are recalculated in the background."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Run"
 msgstr ""
 
 #: ratebridge-woo
@@ -2398,6 +2438,10 @@ msgid "Skip"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Skip (keep existing)"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Slug"
 msgstr ""
 
@@ -2523,6 +2567,14 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "That code is already used. Suggested: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "That file is too large for this importer."
+msgstr ""
+
+#: ratebridge-woo
+msgid "That file type is not accepted here. Drop the expected file instead."
 msgstr ""
 
 #: ratebridge-woo
@@ -2767,10 +2819,6 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "The import session expired. Please upload the file again."
-msgstr ""
-
-#: ratebridge-woo
-msgid "The importer matches rows by id, then by SKU. It never creates products. Only the fields present in the file are applied, in chunks, and prices are recalculated in the background."
 msgstr ""
 
 #: ratebridge-woo

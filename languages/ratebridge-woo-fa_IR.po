@@ -2698,3 +2698,67 @@ msgstr "نمایش تاریخ شمسی"
 
 msgid "When on, every date the plugin prints (overview, currencies, logs, backups, shortcodes and the product block) uses the Solar Hijri calendar with the same letters; time stays 24-hour in the site timezone. On by default for Persian sites."
 msgstr "با روشن بودن این گزینه، همه تاریخ‌هایی که افزونه نمایش می‌دهد (نمای کلی، ارزها، گزارش‌ها، پشتیبان‌ها، شورت‌کدها و بلوک محصول) با تقویم هجری شمسی و همان حروف نمایش داده می‌شوند؛ ساعت به صورت ۲۴ ساعته و در منطقه زمانی سایت می‌ماند. برای سایت‌های فارسی به‌طور پیش‌فرض روشن است."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 9b — formulas list, import/export stepper
+# ─────────────────────────────────────────────────────────────────────────────
+
+msgid "Not used by any product yet."
+msgstr "هنوز در هیچ محصولی استفاده نشده است."
+
+msgid "Round to the nearest multiple of %s"
+msgstr "گرد کردن به نزدیک‌ترین مضرب %s"
+
+msgid "Round up to a multiple of %s"
+msgstr "گرد کردن به بالا (مضرب %s)"
+
+msgid "Round down to a multiple of %s"
+msgstr "گرد کردن به پایین (مضرب %s)"
+
+msgid "Import steps"
+msgstr "مراحل درون‌ریزی"
+
+msgid "Choose a file"
+msgstr "انتخاب فایل"
+
+msgid "Preview"
+msgstr "پیش‌نمایش"
+
+msgid "Run"
+msgstr "اجرا"
+
+msgid "Drop the JSON package here, or choose a file"
+msgstr "فایل JSON را اینجا رها کنید یا فایل را انتخاب کنید"
+
+msgid "JSON, up to 2 MB"
+msgstr "JSON، حداکثر ۲ مگابایت"
+
+msgid "Drop the CSV here, or choose a file"
+msgstr "فایل CSV را اینجا رها کنید یا فایل را انتخاب کنید"
+
+msgid "CSV, up to 5 MB / 20,000 rows"
+msgstr "CSV، حداکثر ۵ مگابایت / ۲۰٬۰۰۰ سطر"
+
+msgid "Configuration only — no API keys, rates, counters, logs or caches."
+msgstr "فقط تنظیمات — بدون کلید API، نرخ، شمارنده، گزارش یا حافظه موقت."
+
+msgid "Skip (keep existing)"
+msgstr "رد کردن (موجود حفظ شود)"
+
+msgid "Convert to the site unit"
+msgstr "تبدیل به واحد سایت"
+
+msgid "Import as-is"
+msgstr "بدون تبدیل (همان‌طور که هست)"
+
+msgid "One row per product priced by the plugin. Columns: id, parent_id, sku, name, type, mode, currency, base_price, sale_base_price, min_price, fluctuation, profit_mode, profit_type, profit_value, commission_type, commission_value, extra_amount, formula_slug, formula_vars."
+msgstr "هر سطر یک محصول قیمت‌گذاری‌شده با افزونه. ستون‌ها: id، parent_id، sku، name، type، mode، currency، base_price، sale_base_price، min_price، fluctuation، profit_mode، profit_type، profit_value، commission_type، commission_value، extra_amount، formula_slug، formula_vars."
+
+msgid "Rows are matched by id, then by SKU; products are never created. Only the fields present in the file are applied, in chunks, and prices are recalculated in the background."
+msgstr "سطرها ابتدا با شناسه و سپس با SKU تطبیق داده می‌شوند؛ هیچ محصولی ساخته نمی‌شود. فقط فیلدهای موجود در فایل، به‌صورت بخش‌بخش اعمال می‌شوند و قیمت‌ها در پس‌زمینه دوباره محاسبه می‌شوند."
+
+msgid "That file type is not accepted here. Drop the expected file instead."
+msgstr "این نوع فایل در اینجا پذیرفته نمی‌شود. فایل مورد انتظار را رها کنید."
+
+msgid "That file is too large for this importer."
+msgstr "این فایل برای این درون‌ریز بیش از حد بزرگ است."

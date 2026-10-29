@@ -728,11 +728,52 @@
 	align-items: center;
 }
 
+/*
+ * Shared row-action cluster (currencies + formulas): a primary icon button and
+ * a kebab, laid out horizontally and never wrapping, so the row height stays
+ * uniform across the list.
+ */
+.rbw-row-actions {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 4px;
+}
+
+.rbw-actions .rbw-row-actions {
+	inline-size: 100%;
+}
+
+/* List tables (currencies, formulas) share one visual rhythm. */
+.rbw-table-list {
+	table-layout: auto;
+}
+
+.rbw-table-list tbody tr {
+	block-size: auto;
+}
+
+.rbw-table-list .rbw-col-enabled {
+	inline-size: 1%;
+}
+
+/* The formula status badge keeps the same footprint as a currency badge. */
+.rbw-formula-badge {
+	white-space: nowrap;
+}
+
+.rbw-formula-hint {
+	/* A hint, not an error: muted instead of red. */
+	color: var(--rbw-text-muted);
+}
+
 .rbw-error-text {
 	color: var(--rbw-danger-text);
 	font-size: var(--rbw-fs-xs);
 	line-height: 1.5;
 	margin-block-start: 2px;
+	overflow-wrap: anywhere;
 }
 
 /* Scrollable table wrapper for narrow screens */
@@ -1421,17 +1462,197 @@
 	margin-block-start: 0;
 }
 
+/*
+ * A <legend> is painted ON the fieldset border, vertically centred on it. The
+ * old padding-left only (0 top) plus a legend whose line-height exceeded the
+ * fieldset's padding made the text sit over the border. Fix: reserve block
+ * space above the content, keep the legend inside it, and give the legend a
+ * background matching the card so the border appears to be cut cleanly.
+ */
 .rbw-io-fieldset {
 	border: 1px solid var(--rbw-border);
 	border-radius: var(--rbw-r-sm);
-	padding: var(--rbw-s-2) var(--rbw-s-3);
+	padding: var(--rbw-s-4) var(--rbw-s-3) var(--rbw-s-2);
 	margin-block: var(--rbw-s-2) var(--rbw-s-3);
+	min-inline-size: 0;
 }
 
-.rbw-io-fieldset legend {
-	padding-inline: 4px;
+.rbw-io-fieldset legend,
+.rbw-io-legend {
+	padding-inline: var(--rbw-s-2);
+	margin-inline-start: calc(var(--rbw-s-2) * -1);
 	font-weight: var(--rbw-fw-bold);
 	font-size: var(--rbw-fs-sm);
+	line-height: 1.4;
+	background: var(--rbw-surface);
+}
+
+/* ===================================================================== */
+/* Import / export: stepper + drop zone                                  */
+/* ===================================================================== */
+
+.rbw-steps {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--rbw-s-2);
+	margin: 0 0 var(--rbw-s-3);
+	padding: 0;
+	list-style: none;
+	counter-reset: none;
+}
+
+.rbw-step {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--rbw-s-1);
+	font-size: var(--rbw-fs-sm);
+	color: var(--rbw-text-muted);
+}
+
+/* Dashed connector between steps. */
+.rbw-step + .rbw-step::before {
+	content: "";
+	inline-size: var(--rbw-s-4);
+	block-size: 2px;
+	margin-inline-end: var(--rbw-s-1);
+	background: var(--rbw-border);
+	border-radius: 1px;
+}
+
+.rbw-step-num {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 22px;
+	block-size: 22px;
+	border-radius: 50%;
+	border: 1px solid var(--rbw-border-strong);
+	background: var(--rbw-bg-inset);
+	font-size: var(--rbw-fs-xs);
+	font-weight: var(--rbw-fw-bold);
+	font-variant-numeric: tabular-nums;
+}
+
+.rbw-step.is-active {
+	color: var(--rbw-primary-strong);
+	font-weight: var(--rbw-fw-medium);
+}
+
+.rbw-step.is-active .rbw-step-num {
+	background: var(--rbw-primary);
+	border-color: var(--rbw-primary);
+	color: #fff;
+}
+
+.rbw-step.is-done {
+	color: var(--rbw-success-text);
+}
+
+.rbw-step.is-done .rbw-step-num {
+	background: var(--rbw-success-bg);
+	border-color: var(--rbw-success-border);
+	color: var(--rbw-success-text);
+}
+
+/* The drop zone replaces the native control entirely. */
+.rbw-dropzone {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--rbw-s-1);
+	text-align: center;
+	padding: var(--rbw-s-5) var(--rbw-s-3);
+	margin-block-end: var(--rbw-s-2);
+	border: 2px dashed var(--rbw-border-strong);
+	border-radius: var(--rbw-r-md);
+	background: var(--rbw-bg-inset);
+	cursor: pointer;
+	transition: border-color var(--rbw-dur-1) var(--rbw-ease), background var(--rbw-dur-1) var(--rbw-ease);
+}
+
+.rbw-dropzone:hover,
+.rbw-dropzone:focus-visible {
+	border-color: var(--rbw-primary);
+	background: color-mix(in srgb, var(--rbw-primary) 5%, var(--rbw-bg-inset));
+}
+
+.rbw-dropzone.is-dragover {
+	border-color: var(--rbw-primary);
+	border-style: solid;
+	background: color-mix(in srgb, var(--rbw-primary) 10%, var(--rbw-bg-inset));
+}
+
+.rbw-dropzone.is-filled {
+	border-style: solid;
+	border-color: var(--rbw-success-border);
+	background: var(--rbw-success-bg);
+}
+
+.rbw-dropzone.is-error {
+	border-color: var(--rbw-danger-border);
+	background: var(--rbw-danger-bg);
+}
+
+.rbw-dropzone-icon {
+	inline-size: 28px;
+	block-size: 28px;
+	color: var(--rbw-text-muted);
+}
+
+.rbw-dropzone.is-filled .rbw-dropzone-icon {
+	color: var(--rbw-success-text);
+}
+
+.rbw-dropzone-label {
+	font-weight: var(--rbw-fw-medium);
+	font-size: var(--rbw-fs-sm);
+	color: var(--rbw-text);
+}
+
+.rbw-dropzone-hint {
+	font-size: var(--rbw-fs-xs);
+	color: var(--rbw-text-muted);
+}
+
+/*
+ * The native input stays in the DOM (keyboard + mobile access, and the form
+ * still posts a real file), but it is not rendered: clip it to 1px instead of
+ * `display:none` so it remains focusable and the OS picker still opens on
+ * click-through from the drop zone.
+ */
+.rbw-file-input {
+	position: absolute;
+	inline-size: 1px;
+	block-size: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	border: 0;
+	white-space: nowrap;
+}
+
+.rbw-file-chosen {
+	display: flex;
+	align-items: center;
+	gap: var(--rbw-s-2);
+	margin-block: 0 var(--rbw-s-2);
+	font-size: var(--rbw-fs-sm);
+	color: var(--rbw-text-muted);
+	overflow-wrap: anywhere;
+}
+
+.rbw-file-chosen strong {
+	color: var(--rbw-text);
+	font-weight: var(--rbw-fw-medium);
+}
+
+.rbw-step-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--rbw-s-2);
 }
 
 .rbw-io-report {

@@ -17,7 +17,30 @@ $rbw_product_fields = isset( $rbw_view['product_fields'] ) && is_array( $rbw_vie
 $rbw_currencies    = isset( $rbw_view['currencies'] ) && is_array( $rbw_view['currencies'] ) ? $rbw_view['currencies'] : array();
 $rbw_settings      = isset( $rbw_view['settings'] ) && is_array( $rbw_view['settings'] ) ? $rbw_view['settings'] : array();
 $rbw_rounding      = (string) ( $rbw_settings['rounding_mode'] ?? 'nearest' );
+$rbw_step          = (int) ( $rbw_settings['rounding_step'] ?? 1000 );
 $rbw_unit          = RateFormatter::unit_label( (string) ( $rbw_settings['store_currency_unit'] ?? 'toman' ), __( 'Toman', 'ratebridge-woo' ), __( 'Rial', 'ratebridge-woo' ) );
+
+/*
+ * The footnote used to print the raw stored value (`nearest`), which means
+ * nothing to a Persian-speaking admin. Same vocabulary as the General tab's
+ * dropdown, so the two screens can never disagree, plus the step when the mode
+ * uses one — «گرد کردن به نزدیک‌ترین مضرب ۱۰٬۰۰۰».
+ */
+$rbw_rounding_labels = array(
+	'none'    => __( 'None', 'ratebridge-woo' ),
+	'nearest' => __( 'Round to the nearest multiple of %s', 'ratebridge-woo' ),
+	'ceil'    => __( 'Round up to a multiple of %s', 'ratebridge-woo' ),
+	'floor'   => __( 'Round down to a multiple of %s', 'ratebridge-woo' ),
+);
+
+$rbw_rounding_label = $rbw_rounding_labels[ $rbw_rounding ] ?? $rbw_rounding_labels['nearest'];
+
+if ( 'none' !== $rbw_rounding && $rbw_step > 0 ) {
+	$rbw_rounding_label = sprintf( $rbw_rounding_label, RateFormatter::number( (float) $rbw_step ) );
+} elseif ( 'none' !== $rbw_rounding ) {
+	// No step configured: fall back to the plain mode name.
+	$rbw_rounding_label = __( 'Round to nearest N', 'ratebridge-woo' );
+}
 ?>
 
 <div class="rbw-toolbar">
@@ -32,21 +55,22 @@ $rbw_unit          = RateFormatter::unit_label( (string) ( $rbw_settings['store_
 	</span>
 </div>
 
-<table class="widefat striped rbw-table" id="rbw-formulas-table">
+<table class="widefat rbw-table rbw-table-list" id="rbw-formulas-table">
 	<thead>
 		<tr>
 			<th class="rbw-col-enabled"><?php esc_html_e( 'Enabled', 'ratebridge-woo' ); ?></th>
 			<th><?php esc_html_e( 'Name', 'ratebridge-woo' ); ?></th>
+			<th><?php esc_html_e( 'Status', 'ratebridge-woo' ); ?></th>
 			<th><?php esc_html_e( 'Expression', 'ratebridge-woo' ); ?></th>
 			<th class="rbw-col-count"><?php esc_html_e( 'Variables', 'ratebridge-woo' ); ?></th>
 			<th class="rbw-col-count"><?php esc_html_e( 'Products', 'ratebridge-woo' ); ?></th>
-			<th class="rbw-col-actions"><?php esc_html_e( 'Actions', 'ratebridge-woo' ); ?></th>
+			<th class="rbw-col-actions"><span class="screen-reader-text"><?php esc_html_e( 'Actions', 'ratebridge-woo' ); ?></span></th>
 		</tr>
 	</thead>
 	<tbody>
 		<?php if ( empty( $rbw_formulas ) ) : ?>
 			<tr class="rbw-empty-row">
-				<td colspan="6"><?php esc_html_e( 'No formulas yet. Use “Add formula” or “Add samples”.', 'ratebridge-woo' ); ?></td>
+				<td colspan="7"><?php esc_html_e( 'No formulas yet. Use “Add formula” or “Add samples”.', 'ratebridge-woo' ); ?></td>
 			</tr>
 		<?php else : ?>
 			<?php foreach ( $rbw_formulas as $rbw_row ) : ?>
@@ -60,6 +84,12 @@ $rbw_unit          = RateFormatter::unit_label( (string) ( $rbw_settings['store_
 
 				$rbw_expr = preg_replace( '/\s+/', ' ', (string) $rbw_formula->expression ) ?? '';
 				$rbw_expr = mb_strimwidth( $rbw_expr, 0, 70, '…' );
+
+				// Same status vocabulary as the currencies list.
+				$rbw_state = ! $rbw_formula->is_enabled ? 'disabled' : 'enabled';
+				$rbw_label = ! $rbw_formula->is_enabled
+					? __( 'Disabled', 'ratebridge-woo' )
+					: __( 'Enabled', 'ratebridge-woo' );
 				?>
 				<?php
 				// The builder reads the full row from this attribute (no extra request).
@@ -67,9 +97,11 @@ $rbw_unit          = RateFormatter::unit_label( (string) ( $rbw_settings['store_
 				?>
 				<tr
 					data-formula-id="<?php echo esc_attr( (string) $rbw_formula->id ); ?>"
+					data-status="<?php echo esc_attr( $rbw_state ); ?>"
+					data-search="<?php echo esc_attr( mb_strtolower( $rbw_formula->name . ' ' . $rbw_formula->slug . ' ' . (string) $rbw_formula->expression ) ); ?>"
 					data-payload="<?php echo esc_attr( (string) $rbw_payload ); ?>"
 				>
-					<td>
+					<td class="rbw-col-enabled" data-label="<?php esc_attr_e( 'Enabled', 'ratebridge-woo' ); ?>">
 						<label class="rbw-switch">
 							<input
 								type="checkbox"
@@ -80,29 +112,80 @@ $rbw_unit          = RateFormatter::unit_label( (string) ( $rbw_settings['store_
 							<span class="screen-reader-text"><?php esc_html_e( 'Enable formula', 'ratebridge-woo' ); ?></span>
 						</label>
 					</td>
-					<td>
-						<strong><?php echo esc_html( $rbw_formula->name ); ?></strong>
-						<div class="rbw-muted"><code dir="ltr"><?php echo esc_html( $rbw_formula->slug ); ?></code></div>
+
+					<td data-label="<?php esc_attr_e( 'Name', 'ratebridge-woo' ); ?>">
+						<div class="rbw-c-name">
+							<strong><?php echo esc_html( $rbw_formula->name ); ?></strong>
+							<code dir="ltr"><?php echo esc_html( $rbw_formula->slug ); ?></code>
+						</div>
 					</td>
-					<td><code dir="ltr" class="rbw-formula-expr"><?php echo esc_html( $rbw_expr ); ?></code></td>
-					<td><?php echo esc_html( (string) count( $rbw_formula->variables ) ); ?></td>
-					<td>
+
+					<td data-label="<?php esc_attr_e( 'Status', 'ratebridge-woo' ); ?>">
+						<span class="rbw-badge is-<?php echo esc_attr( $rbw_state ); ?> rbw-formula-badge">
+							<?php echo esc_html( $rbw_label ); ?>
+						</span>
+						<?php if ( 0 === $rbw_products ) : ?>
+							<div class="rbw-error-text rbw-formula-hint">
+								<?php esc_html_e( 'Not used by any product yet.', 'ratebridge-woo' ); ?>
+							</div>
+						<?php endif; ?>
+					</td>
+
+					<td data-label="<?php esc_attr_e( 'Expression', 'ratebridge-woo' ); ?>"><code dir="ltr" class="rbw-formula-expr"><?php echo esc_html( $rbw_expr ); ?></code></td>
+					<td data-label="<?php esc_attr_e( 'Variables', 'ratebridge-woo' ); ?>"><?php echo esc_html( (string) count( $rbw_formula->variables ) ); ?></td>
+					<td data-label="<?php esc_attr_e( 'Products', 'ratebridge-woo' ); ?>">
 						<?php if ( $rbw_products > 0 ) : ?>
-							<span class="rbw-badge rbw-badge-success"><?php echo esc_html( (string) $rbw_products ); ?></span>
+							<span class="rbw-chip"><?php echo esc_html( (string) $rbw_products ); ?></span>
 						<?php else : ?>
 							<span class="rbw-muted">0</span>
 						<?php endif; ?>
 					</td>
-					<td class="rbw-actions">
-						<button type="button" class="button button-small rbw-formula-edit" data-id="<?php echo esc_attr( (string) $rbw_formula->id ); ?>">
-							<?php esc_html_e( 'Edit', 'ratebridge-woo' ); ?>
-						</button>
-						<button type="button" class="button button-small rbw-formula-duplicate" data-id="<?php echo esc_attr( (string) $rbw_formula->id ); ?>">
-							<?php esc_html_e( 'Duplicate', 'ratebridge-woo' ); ?>
-						</button>
-						<button type="button" class="button button-small button-link-delete rbw-formula-delete" data-id="<?php echo esc_attr( (string) $rbw_formula->id ); ?>" data-products="<?php echo esc_attr( (string) $rbw_products ); ?>">
-							<?php esc_html_e( 'Delete', 'ratebridge-woo' ); ?>
-						</button>
+
+					<td class="rbw-actions" data-label="<?php esc_attr_e( 'Actions', 'ratebridge-woo' ); ?>">
+						<div class="rbw-row-actions">
+							<button
+								type="button"
+								class="button button-small rbw-icon-button rbw-formula-edit"
+								data-id="<?php echo esc_attr( (string) $rbw_formula->id ); ?>"
+								title="<?php esc_attr_e( 'Edit', 'ratebridge-woo' ); ?>"
+							>
+								<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-edit"></use></svg>
+								<span class="screen-reader-text"><?php esc_html_e( 'Edit', 'ratebridge-woo' ); ?></span>
+							</button>
+
+							<div class="rbw-kebab">
+								<button
+									type="button"
+									class="button button-small rbw-icon-button rbw-kebab-toggle"
+									aria-haspopup="true"
+									aria-expanded="false"
+									title="<?php esc_attr_e( 'More actions', 'ratebridge-woo' ); ?>"
+								>
+									<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-more"></use></svg>
+									<span class="screen-reader-text"><?php esc_html_e( 'More actions', 'ratebridge-woo' ); ?></span>
+								</button>
+								<ul class="rbw-menu" role="menu" hidden>
+									<li role="none">
+										<button type="button" role="menuitem" class="rbw-menu-item rbw-formula-edit" data-id="<?php echo esc_attr( (string) $rbw_formula->id ); ?>">
+											<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-edit"></use></svg>
+											<?php esc_html_e( 'Edit', 'ratebridge-woo' ); ?>
+										</button>
+									</li>
+									<li role="none">
+										<button type="button" role="menuitem" class="rbw-menu-item rbw-formula-duplicate" data-id="<?php echo esc_attr( (string) $rbw_formula->id ); ?>">
+											<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-copy"></use></svg>
+											<?php esc_html_e( 'Duplicate', 'ratebridge-woo' ); ?>
+										</button>
+									</li>
+									<li role="none">
+										<button type="button" role="menuitem" class="rbw-menu-item is-danger rbw-formula-delete" data-id="<?php echo esc_attr( (string) $rbw_formula->id ); ?>" data-products="<?php echo esc_attr( (string) $rbw_products ); ?>">
+											<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-trash"></use></svg>
+											<?php esc_html_e( 'Delete', 'ratebridge-woo' ); ?>
+										</button>
+									</li>
+								</ul>
+							</div>
+						</div>
 					</td>
 				</tr>
 			<?php endforeach; ?>
@@ -263,9 +346,9 @@ $rbw_unit          = RateFormatter::unit_label( (string) ( $rbw_settings['store_
 <p class="rbw-muted">
 	<?php
 	printf(
-		/* translators: 1: global rounding mode, 2: unit label */
+		/* translators: 1: global rounding mode label, 2: unit label */
 		esc_html__( 'Global rounding mode: %1$s. Formula prices are in %2$s. Formula products ignore the currency profit, commission and extra amount — put them in the formula.', 'ratebridge-woo' ),
-		'<code>' . esc_html( $rbw_rounding ) . '</code>',
+		'<span class="rbw-chip">' . esc_html( $rbw_rounding_label ) . '</span>',
 		esc_html( $rbw_unit )
 	);
 	?>
