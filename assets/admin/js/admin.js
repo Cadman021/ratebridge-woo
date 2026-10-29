@@ -76,29 +76,212 @@
 	}
 
 	/**
-	 * Show a notice above the tables.
+	 * Toast stack host (created once).
+	 *
+	 * @return {HTMLElement} Container element.
+	 */
+	function toastHost() {
+		var host = qs( '#rbw-toasts' );
+
+		if ( host ) {
+			return host;
+		}
+
+		host = document.createElement( 'div' );
+		host.id = 'rbw-toasts';
+		host.className = 'rbw-toasts';
+		host.setAttribute( 'role', 'status' );
+		host.setAttribute( 'aria-live', 'polite' );
+		host.setAttribute( 'aria-atomic', 'false' );
+		document.body.appendChild( host );
+
+		return host;
+	}
+
+	/**
+	 * Show a toast notification.
+	 *
+	 * Success toasts dismiss themselves; errors and warnings stay until the user
+	 * closes them (or dismisses the last one).
 	 *
 	 * @param {string} message Message text.
-	 * @param {string} type    success|error|info.
+	 * @param {string} type    success|error|warning|info.
 	 */
 	function notify( message, type ) {
-		var box = qs( '#rbw-notices' );
-		if ( ! box || ! message ) {
+		if ( ! message ) {
 			return;
 		}
 
-		var el = document.createElement( 'div' );
-		el.className = 'rbw-notice is-' + ( type || 'info' );
-		el.textContent = message;
+		var kind = type || 'info';
+		var host = toastHost();
+		var toast = document.createElement( 'div' );
+		var icons = { success: 'check', error: 'error', warning: 'warning', info: 'info' };
 
-		box.innerHTML = '';
-		box.appendChild( el );
+		toast.className = 'rbw-toast is-' + kind;
+		toast.setAttribute( 'role', 'alert' === kind ? 'alert' : 'status' );
+
+		toast.innerHTML =
+			'<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-' + ( icons[ kind ] || 'info' ) + '"></use></svg>' +
+			'<div class="rbw-toast-body"></div>' +
+			'<button type="button" class="rbw-toast-close" aria-label="' + esc( strings.dismiss || 'Close' ) + '">' +
+			'<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-close"></use></svg></button>';
+
+		qs( '.rbw-toast-body', toast ).textContent = message;
+
+		qs( '.rbw-toast-close', toast ).addEventListener( 'click', function () {
+			removeToast( toast );
+		} );
+
+		host.appendChild( toast );
+
+		// Keep the stack short.
+		var all = qsa( '.rbw-toast', host );
+
+		if ( all.length > 4 ) {
+			removeToast( all[ 0 ] );
+		}
+
+		if ( 'error' !== kind && 'warning' !== kind ) {
+			window.setTimeout( function () {
+				removeToast( toast );
+			}, 5000 );
+		}
+	}
+
+	/**
+	 * Remove a toast with a short fade.
+	 *
+	 * @param {HTMLElement} toast Toast element.
+	 */
+	function removeToast( toast ) {
+		if ( ! toast || ! toast.parentNode ) {
+			return;
+		}
+
+		toast.style.opacity = '0';
 
 		window.setTimeout( function () {
-			if ( el.parentNode === box ) {
-				box.innerHTML = '';
+			if ( toast.parentNode ) {
+				toast.parentNode.removeChild( toast );
 			}
-		}, 6000 );
+		}, 150 );
+	}
+
+	/* ------------------------------------------------------------------ */
+	/* Confirm dialog (replaces window.confirm)                            */
+	/* ------------------------------------------------------------------ */
+
+	var confirmResolve = null;
+	var confirmLastFocus = null;
+
+	/**
+	 * Build (once) and show the confirm dialog.
+	 *
+	 * Behaves like window.confirm(): resolves true/false and the caller keeps its
+	 * original payloads. Adds: focus trap, ESC, danger variant, RTL labels.
+	 *
+	 * @param {string} message Message text.
+	 * @param {Object} options {danger:boolean, confirmLabel:string}.
+	 * @return {Promise<boolean>} Resolves when the user answers.
+	 */
+	function confirmDialog( message, options ) {
+		var settings = options || {};
+
+		return new Promise( function ( resolve ) {
+			var dialog = qs( '#rbw-confirm' );
+
+			if ( ! dialog ) {
+				confirmLastFocus = document.activeElement;
+				confirmResolve = resolve;
+				resolve( false );
+				return;
+			}
+			confirmLastFocus = document.activeElement;
+			confirmResolve = resolve;
+
+			var body = qs( '#rbw-confirm-message', dialog );
+			var okButton = qs( '#rbw-confirm-ok', dialog );
+			var cancelButton = qs( '#rbw-confirm-cancel', dialog );
+
+			if ( body ) {
+				body.textContent = message || '';
+			}
+
+			if ( okButton ) {
+				okButton.textContent = settings.confirmLabel || strings.okLabel || 'OK';
+				okButton.className = 'button ' + ( settings.danger ? 'button-link-delete rbw-danger' : 'button-primary' );
+			}
+
+			if ( cancelButton ) {
+				cancelButton.textContent = strings.cancelLabel || strings.cancel || 'Cancel';
+			}
+
+			dialog.hidden = false;
+			( settings.danger ? cancelButton : okButton || cancelButton ).focus();
+
+			function close( answer ) {
+				dialog.hidden = true;
+
+				document.removeEventListener( 'keydown', onKey );
+
+				if ( confirmResolve ) {
+					confirmResolve( answer );
+					confirmResolve = null;
+				}
+
+				if ( confirmLastFocus && confirmLastFocus.focus ) {
+					confirmLastFocus.focus();
+				}
+			}
+
+			function onKey( event ) {
+				if ( 'Escape' === event.key ) {
+					event.preventDefault();
+					close( false );
+					return;
+				}
+
+				if ( 'Tab' !== event.key ) {
+					return;
+				}
+
+				// Focus trap between the two buttons.
+				var focusables = [ okButton, cancelButton ].filter( Boolean );
+
+				if ( ! focusables.length ) {
+					return;
+				}
+
+				var first = focusables[ 0 ];
+				var last = focusables[ focusables.length - 1 ];
+
+				if ( event.shiftKey && document.activeElement === first ) {
+					event.preventDefault();
+					last.focus();
+				} else if ( ! event.shiftKey && document.activeElement === last ) {
+					event.preventDefault();
+					first.focus();
+				}
+			}
+
+			document.addEventListener( 'keydown', onKey );
+
+			okButton.onclick = function () {
+				close( true );
+			};
+
+			cancelButton.onclick = function () {
+				close( false );
+			};
+
+			var backdrop = qs( '.rbw-modal-backdrop', dialog );
+
+			if ( backdrop ) {
+				backdrop.onclick = function () {
+					close( false );
+				};
+			}
+		} );
 	}
 
 	/**
@@ -243,11 +426,12 @@
 			button.setAttribute( 'data-rbw-bound', '1' );
 
 			button.addEventListener( 'click', function () {
-				if ( ! window.confirm( strings.confirmDelete ) ) {
-					return;
-				}
+				confirmDialog( strings.confirmDelete, { danger: true, confirmLabel: strings.deleteLabel } ).then( function ( ok ) {
+					if ( ! ok ) {
+						return;
+					}
 
-				request( 'delete', { id: button.getAttribute( 'data-id' ) } )
+					request( 'delete', { id: button.getAttribute( 'data-id' ) } )
 					.then( function ( response ) {
 						if ( ! response.success ) {
 							notify( messageFrom( response ), 'error' );
@@ -264,6 +448,7 @@
 					.catch( function ( error ) {
 						handleRequestError( error );
 					} );
+				} );
 			} );
 		} );
 
@@ -822,16 +1007,21 @@
 			};
 
 			// The unit change rewrites every stored rate: ask explicitly.
-			if ( unitChanged && ! window.confirm( strings.confirmUnitChange || 'Convert all stored rates?' ) ) {
-				return;
-			}
+			var gate = unitChanged
+				? confirmDialog( strings.confirmUnitChange || 'Convert all stored rates?', { confirmLabel: strings.saveSettingsButton } )
+				: Promise.resolve( true );
 
-			if ( button ) {
-				button.disabled = true;
-				button.textContent = strings.saving;
-			}
+			gate.then( function ( ok ) {
+				if ( ! ok ) {
+					return;
+				}
 
-			request( 'save_settings', payload )
+				if ( button ) {
+					button.disabled = true;
+					button.textContent = strings.saving;
+				}
+
+				request( 'save_settings', payload )
 				.then( function ( response ) {
 					notify( messageFrom( response ), response.success ? 'success' : 'error' );
 				} )
@@ -844,6 +1034,7 @@
 						button.textContent = strings.saveSettingsButton;
 					}
 				} );
+			} );
 		} );
 	}
 
@@ -874,11 +1065,12 @@
 		var clearButton = qs( '#rbw-clear-log' );
 		if ( clearButton ) {
 			clearButton.addEventListener( 'click', function () {
-				if ( ! window.confirm( strings.confirmClear ) ) {
-					return;
-				}
+				confirmDialog( strings.confirmClear, { danger: true } ).then( function ( ok ) {
+					if ( ! ok ) {
+						return;
+					}
 
-				request( 'clear_log', {} )
+					request( 'clear_log', {} )
 					.then( function ( response ) {
 						notify( messageFrom( response ), response.success ? 'success' : 'error' );
 						renderLog( [] );
@@ -886,6 +1078,7 @@
 					.catch( function ( error ) {
 						handleRequestError( error );
 					} );
+				} );
 			} );
 		}
 	}
@@ -1437,13 +1630,14 @@
 
 		qsa( '.rbw-reset-budget' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {
-				if ( ! window.confirm( strings.confirmBudgetReset ) ) {
-					return;
-				}
+				confirmDialog( strings.confirmBudgetReset, { danger: true } ).then( function ( ok ) {
+					if ( ! ok ) {
+						return;
+					}
 
-				var provider = button.getAttribute( 'data-provider' );
+					var provider = button.getAttribute( 'data-provider' );
 
-				request( 'reset_budget', { provider: provider } )
+					request( 'reset_budget', { provider: provider } )
 					.then( function ( response ) {
 						notify( messageFrom( response ), response.success ? 'success' : 'error' );
 						if ( response.success && response.data.card ) {
@@ -1453,6 +1647,7 @@
 					.catch( function ( error ) {
 						handleRequestError( error );
 					} );
+				} );
 			} );
 		} );
 
@@ -2317,18 +2512,20 @@
 			button.addEventListener( 'click', function () {
 				var products = parseInt( button.getAttribute( 'data-products' ) || '0', 10 );
 				var detach = '0';
+				var question = products > 0
+					? ( strings.confirmDetach || 'Products use this formula. Detach and delete?' )
+					: ( strings.confirmDeleteFormula || strings.confirmDelete );
 
-				if ( products > 0 ) {
-					if ( ! window.confirm( ( strings.confirmDetach || 'Products use this formula. Detach and delete?' ) ) ) {
+				confirmDialog( question, { danger: true, confirmLabel: strings.deleteLabel } ).then( function ( ok ) {
+					if ( ! ok ) {
 						return;
 					}
 
-					detach = '1';
-				} else if ( ! window.confirm( strings.confirmDeleteFormula || strings.confirmDelete ) ) {
-					return;
-				}
+					if ( products > 0 ) {
+						detach = '1';
+					}
 
-				request( 'delete_formula', { id: button.getAttribute( 'data-id' ), detach: detach } )
+					request( 'delete_formula', { id: button.getAttribute( 'data-id' ), detach: detach } )
 					.then( function ( response ) {
 						notify( messageFrom( response ), response.success ? 'success' : 'error' );
 
@@ -2337,6 +2534,7 @@
 						}
 					} )
 					.catch( handleRequestError );
+				} );
 			} );
 		} );
 	}
@@ -2531,30 +2729,32 @@
 				return;
 			}
 
-			if ( ! window.confirm( strings.confirmImport || strings.genericError ) ) {
-				return;
-			}
+			confirmDialog( strings.confirmImport || strings.genericError, { confirmLabel: strings.importNow || strings.saveButton } ).then( function ( ok ) {
+				if ( ! ok ) {
+					return;
+				}
 
-			execute.disabled = true;
-			var previous = execute.textContent;
-			execute.textContent = strings.working;
+				execute.disabled = true;
+				var previous = execute.textContent;
+				execute.textContent = strings.working;
 
-			request( 'import_package_execute', { token: token } )
-				.then( function ( response ) {
-					notify( messageFrom( response ), response.success ? 'success' : 'error' );
+				request( 'import_package_execute', { token: token } )
+					.then( function ( response ) {
+						notify( messageFrom( response ), response.success ? 'success' : 'error' );
 
-					if ( ! response.success ) {
-						return;
-					}
+						if ( ! response.success ) {
+							return;
+						}
 
-					token = '';
-					refreshBackups( ( response.data || {} ).backups );
-				} )
-				.catch( handleRequestError )
-				.finally( function () {
-					execute.disabled = true;
-					execute.textContent = previous;
-				} );
+						token = '';
+						refreshBackups( ( response.data || {} ).backups );
+					} )
+					.catch( handleRequestError )
+					.finally( function () {
+						execute.disabled = true;
+						execute.textContent = previous;
+					} );
+			} );
 		} );
 	}
 
@@ -2608,24 +2808,26 @@
 			button.setAttribute( 'data-rbw-bound', '1' );
 
 			button.addEventListener( 'click', function () {
-				if ( ! window.confirm( strings.confirmRestore || strings.genericError ) ) {
-					return;
-				}
+				confirmDialog( strings.confirmRestore || strings.genericError, { danger: true, confirmLabel: strings.restore || strings.okLabel } ).then( function ( ok ) {
+					if ( ! ok ) {
+						return;
+					}
 
-				button.disabled = true;
+					button.disabled = true;
 
-				request( 'restore_backup', { id: button.getAttribute( 'data-id' ) } )
-					.then( function ( response ) {
-						notify( messageFrom( response ), response.success ? 'success' : 'error' );
+					request( 'restore_backup', { id: button.getAttribute( 'data-id' ) } )
+						.then( function ( response ) {
+							notify( messageFrom( response ), response.success ? 'success' : 'error' );
 
-						if ( response.success ) {
-							refreshBackups( ( response.data || {} ).backups );
-						}
-					} )
-					.catch( handleRequestError )
-					.finally( function () {
-						button.disabled = false;
-					} );
+							if ( response.success ) {
+								refreshBackups( ( response.data || {} ).backups );
+							}
+						} )
+						.catch( handleRequestError )
+						.finally( function () {
+							button.disabled = false;
+						} );
+				} );
 			} );
 		} );
 	}
@@ -2790,6 +2992,48 @@
 		bindRestoreButtons();
 	}
 
+	/**
+	 * Accessible tablist: arrow keys move between tabs, Home/End jump.
+	 *
+	 * Activation follows focus (both arrow directions map to visual order, which
+	 * RTL reverses for free because the DOM order is what matters).
+	 */
+	function bindTabs() {
+		var list = qs( '.rbw-tabs[role="tablist"]' );
+
+		if ( ! list ) {
+			return;
+		}
+
+		var tabs = qsa( '[role="tab"]', list );
+
+		tabs.forEach( function ( tab, index ) {
+			tab.addEventListener( 'keydown', function ( event ) {
+				var next = null;
+
+				if ( 'ArrowRight' === event.key || 'ArrowDown' === event.key ) {
+					next = tabs[ ( index + 1 ) % tabs.length ];
+				} else if ( 'ArrowLeft' === event.key || 'ArrowUp' === event.key ) {
+					next = tabs[ ( index - 1 + tabs.length ) % tabs.length ];
+				} else if ( 'Home' === event.key ) {
+					next = tabs[ 0 ];
+				} else if ( 'End' === event.key ) {
+					next = tabs[ tabs.length - 1 ];
+				}
+
+				if ( ! next ) {
+					return;
+				}
+
+				event.preventDefault();
+				next.focus();
+
+				// Deep-link navigation is the existing mechanic (?tab=…).
+				window.location.href = next.getAttribute( 'href' );
+			} );
+		} );
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		bindToolbar();
 		bindTable();
@@ -2802,5 +3046,6 @@
 		bindSources();
 		bindFormulas();
 		bindImportExport();
+		bindTabs();
 	} );
 }() );

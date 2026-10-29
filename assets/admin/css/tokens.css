@@ -1,0 +1,206 @@
+/**
+ * RateBridge Woo — design tokens.
+ *
+ * Loaded before every other plugin stylesheet, only on the plugin's own pages,
+ * the products list and the product editor. Everything is scoped under
+ * `.rbw-admin` so no rule can leak into another admin screen.
+ *
+ * Rules of the house:
+ *  - Light theme only.
+ *  - Logical properties everywhere (margin-inline, inset-inline,
+ *    border-inline-start) so RTL and LTR both work without a second file.
+ *  - Every text/background pair below is >= 4.5:1.
+ *  - No frameworks, no build step, no icon fonts.
+ */
+
+/* ------------------------------------------------------------------------- */
+/* Fonts                                                                     */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * Vazirmatn ships with the plugin (assets/fonts/*.woff2). The system stack is
+ * declared FIRST so a missing file can never produce a 404-visible fallback:
+ * the browser simply keeps the local font.
+ */
+@font-face {
+	font-family: "Vazirmatn";
+	src: url("../../../fonts/Vazirmatn-Regular.woff2") format("woff2");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+	/* Arabic/Persian block + basic Latin (digits stay legible). */
+	unicode-range: U+0000-00FF, U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF, U+200C-200E;
+}
+
+@font-face {
+	font-family: "Vazirmatn";
+	src: url("../../../fonts/Vazirmatn-Medium.woff2") format("woff2");
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+0000-00FF, U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF, U+200C-200E;
+}
+
+@font-face {
+	font-family: "Vazirmatn";
+	src: url("../../../fonts/Vazirmatn-Bold.woff2") format("woff2");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+0000-00FF, U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF, U+200C-200E;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Tokens                                                                    */
+/* ------------------------------------------------------------------------- */
+
+.rbw-admin {
+	/* --- brand -------------------------------------------------------- */
+	--rbw-primary: var(--wp-admin-theme-color, #2271b1);
+	--rbw-primary-strong: var(--wp-admin-theme-color-darker-10, #135e96);
+	--rbw-primary-soft: var(--rbw-primary-08);
+	--rbw-on-primary: #fff;
+
+	/* Tints are derived where the browser supports color-mix(), with a
+	   static fallback that is the equivalent flat colour. */
+	--rbw-primary-08: #f0f6fc;
+	--rbw-primary-15: #dcebf7;
+	--rbw-primary-30: #b6d7ef;
+
+	/* --- neutrals ----------------------------------------------------- */
+	--rbw-bg: #fff;
+	--rbw-bg-subtle: #f6f7f7;
+	--rbw-bg-inset: #f0f0f1;
+	--rbw-surface: #fff;
+	--rbw-border: #dcdcde;
+	--rbw-border-strong: #c3c4c7;
+	--rbw-text: #1d2327;
+	--rbw-text-muted: #50575e;
+	--rbw-text-faint: #646970;
+
+	/* --- status (soft bg + strong text, all >= 4.5:1) ------------------ */
+	--rbw-success-bg: #edfaef;
+	--rbw-success-text: #00631a;
+	--rbw-success-border: #00a32a;
+
+	--rbw-warning-bg: #fcf9e8;
+	--rbw-warning-text: #6b4d00;
+	--rbw-warning-border: #dba617;
+
+	--rbw-danger-bg: #fcf0f1;
+	--rbw-danger-text: #a11a1b;
+	--rbw-danger-border: #d63638;
+
+	--rbw-info-bg: #f0f6fc;
+	--rbw-info-text: #0a4b78;
+	--rbw-info-border: #2271b1;
+
+	/* --- spacing (4px base) ------------------------------------------- */
+	--rbw-s-1: 4px;
+	--rbw-s-2: 8px;
+	--rbw-s-3: 12px;
+	--rbw-s-4: 16px;
+	--rbw-s-5: 24px;
+	--rbw-s-6: 32px;
+
+	/* --- radius ------------------------------------------------------- */
+	--rbw-r-sm: 6px;
+	--rbw-r-md: 10px;
+	--rbw-r-lg: 14px;
+	--rbw-r-pill: 999px;
+
+	/* --- elevation ---------------------------------------------------- */
+	--rbw-shadow-1: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.04);
+	--rbw-shadow-2: 0 4px 12px rgba(16, 24, 40, 0.10), 0 2px 4px rgba(16, 24, 40, 0.06);
+	--rbw-shadow-modal: 0 20px 45px rgba(16, 24, 40, 0.24);
+
+	/* --- z-index ------------------------------------------------------ */
+	--rbw-z-row: 1;
+	--rbw-z-sticky: 10;
+	--rbw-z-menu: 100;
+	--rbw-z-modal: 100100;
+	--rbw-z-toast: 100200;
+
+	/* --- motion ------------------------------------------------------- */
+	--rbw-dur-1: 120ms;
+	--rbw-dur-2: 200ms;
+	--rbw-dur-3: 320ms;
+	--rbw-ease: cubic-bezier(0.2, 0, 0.2, 1);
+
+	/* --- typography --------------------------------------------------- */
+	--rbw-font: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+	--rbw-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+	--rbw-fs-xs: 11px;
+	--rbw-fs-sm: 12px;
+	--rbw-fs-md: 13px;
+	--rbw-fs-lg: 15px;
+	--rbw-fs-xl: 19px;
+	--rbw-fs-2xl: 24px;
+	--rbw-lh: 1.7;
+	--rbw-fw-normal: 400;
+	--rbw-fw-medium: 500;
+	--rbw-fw-bold: 700;
+
+	/* --- focus -------------------------------------------------------- */
+	--rbw-focus: 0 0 0 2px #fff, 0 0 0 4px var(--rbw-primary);
+	--rbw-focus-inset: inset 0 0 0 2px var(--rbw-primary);
+
+	/* --- sizes -------------------------------------------------------- */
+	--rbw-tap: 32px;      /* desktop control height */
+	--rbw-tap-min: 40px;  /* touch target on narrow screens */
+	--rbw-max-width: 1280px;
+
+	font-family: var(--rbw-font);
+	color: var(--rbw-text);
+	line-height: var(--rbw-lh);
+	font-size: var(--rbw-fs-md);
+}
+
+@supports (color: color-mix(in srgb, red 50%, transparent)) {
+	.rbw-admin {
+		--rbw-primary-08: color-mix(in srgb, var(--rbw-primary) 8%, #fff);
+		--rbw-primary-15: color-mix(in srgb, var(--rbw-primary) 15%, #fff);
+		--rbw-primary-30: color-mix(in srgb, var(--rbw-primary) 30%, #fff);
+	}
+}
+
+/* ------------------------------------------------------------------------- */
+/* Icon sprite                                                               */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * A single inline <svg> sprite (templates/icon-sprite.php) is printed once per
+ * page and hidden. Icons inherit `currentColor`.
+ */
+.rbw-sprite {
+	position: absolute;
+	width: 0;
+	height: 0;
+	overflow: hidden;
+}
+
+.rbw-icon {
+	display: inline-block;
+	inline-size: 1em;
+	block-size: 1em;
+	vertical-align: -0.125em;
+	flex: 0 0 auto;
+	fill: currentColor;
+	/* Direction-aware chevrons are mirrored in RTL below. */
+	pointer-events: none;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Motion                                                                    */
+/* ------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+	.rbw-admin *,
+	.rbw-admin *::before,
+	.rbw-admin *::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+		scroll-behavior: auto !important;
+	}
+}

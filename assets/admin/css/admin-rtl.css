@@ -1,95 +1,57 @@
 /**
- * RateBridge Woo - admin styles (RTL overrides).
+ * RateBridge Woo — admin RTL overrides.
  *
- * admin.css already uses logical properties, so most of the layout is
- * direction-agnostic. This file handles direction, tab order and the
- * numeric/latin fragments that must stay left-to-right.
+ * admin.css already uses logical properties, so this file only fixes the few
+ * places where a direction really matters: numeric/latin fragments that must stay
+ * LTR, and the mirrored arrow icon.
+ *
+ * Loaded AFTER admin.css (never instead of it).
  */
 
-.rbw-wrap {
+.rbw-admin {
 	direction: rtl;
 	text-align: right;
 }
 
-/* Tab row reads right-to-left; no floats so nothing escapes the row. */
 .rbw-tabs {
 	direction: rtl;
 	justify-content: flex-start;
 }
 
-.rbw-tabs .nav-tab {
-	float: none;
-}
-
-.rbw-toolbar,
-.rbw-card-actions,
-.rbw-modal-actions,
-.rbw-actions,
-.rbw-inline,
-.rbw-budget-list li {
-	direction: rtl;
-}
-
-/* Fallbacks for browsers without logical property support. */
-.rbw-notice {
-	border-right: 4px solid #2271b1;
-	border-left: 0;
-}
-
-.rbw-notice.is-success {
-	border-right-color: #00a32a;
-}
-
-.rbw-notice.is-error {
-	border-right-color: #d63638;
-}
-
-.rbw-warning {
-	border-right: 4px solid #dba617;
-	border-left: 0;
-}
-
-.rbw-test-result.is-success {
-	border-right: 4px solid #00a32a;
-	border-left: 0;
-}
-
-.rbw-test-result.is-error {
-	border-right: 4px solid #d63638;
-	border-left: 0;
-}
-
-.rbw-modal-content {
-	text-align: right;
-}
-
-/*
- * Latin/numeric fragments: force LTR and isolate them so a trailing period
- * from an English sentence cannot jump to the wrong side.
- */
+/* Numbers, codes and formulas stay LTR inside an RTL page. */
 .rbw-rate,
 .rbw-last-updated,
 .rbw-table code,
-.rbw-card input[dir="ltr"],
+.rbw-admin .rbw-formula-expr,
+.rbw-editor,
+.rbw-editor-highlight,
 .rbw-modal-content input[dir="ltr"],
-.rbw-preset-list,
-.rbw-test-result .rbw-ltr {
+.rbw-admin .rbw-kpi-value,
+.rbw-meter-label,
+.rbw-timeline-meta time,
+.rbw-test-result,
+.rbw-formula-test-result,
+.rbw-formula-error-line {
 	direction: ltr;
 	unicode-bidi: isolate;
+}
+
+.rbw-admin .rbw-kpi-value,
+.rbw-meter-label,
+.rbw-timeline-meta time {
+	text-align: right;
+}
+
+.rbw-admin .rbw-formula-expression,
+.rbw-editor,
+.rbw-editor-highlight,
+.rbw-formula-error-line {
 	text-align: left;
 }
 
-/* Keep the table header alignment natural for RTL reading order. */
-.rbw-table th,
-.rbw-table td {
-	text-align: right;
-}
-
-.rbw-table th.rbw-col-rate,
-.rbw-table td.rbw-rate,
-.rbw-table th.rbw-col-interval,
-.rbw-table td.rbw-col-interval {
-	text-align: right;
+/* Arrow icon points "back" → mirrored in RTL. */
+.rbw-admin .rbw-icon--directional {
+	transform: scaleX(-1);
 }
 
 .rbw-budget-list li span {
@@ -98,51 +60,25 @@
 
 .rbw-meter-fill {
 	/* Grows from the right edge in RTL. */
-	margin-right: 0;
-	margin-left: auto;
+	margin-inline-start: auto;
 }
 
-.rbw-modal-error {
-	border-right: 4px solid #d63638;
-	border-left: 0;
+/* Timeline rail sits on the right in RTL. */
+.rbw-timeline {
+	padding-inline: var(--rbw-s-3) 0;
+}
+
+.rbw-timeline-dot {
+	inset-inline-start: auto;
+	inset-inline-end: calc(var(--rbw-s-3) * -1 - 5px);
+}
+
+.rbw-modal-content {
 	text-align: right;
 }
 
-/* Formulas tab */
-.rbw-formula-expression,
-.rbw-formula-error-line,
-.rbw-formula-test-result {
-	direction: ltr;
-	text-align: left;
-}
-
-.rbw-mode-formula {
-	border-inline-start: 3px solid #2271b1;
-	border-inline-end: 0;
-	text-align: right;
-}
-
-.rbw-formula-chips,
-.rbw-var-custom,
-.rbw-formula-test {
-	direction: rtl;
-}
-
-/* Import / Export + bulk edit */
-.rbw-io-fieldset,
-.rbw-io-messages,
-.rbw-io-table th,
-.rbw-bulk-row {
-	direction: rtl;
-	text-align: right;
-}
-
-.rbw-bulk-label {
-	text-align: right;
-}
-
-.rbw-bulk-number,
-.rbw-io-table td[dir="ltr"] {
-	direction: ltr;
-	text-align: left;
+/* Toast stack moves to the right in RTL. */
+.rbw-toasts {
+	inset-inline-start: auto;
+	inset-inline-end: var(--rbw-s-4);
 }

@@ -7,62 +7,142 @@
  * @package RateBridge
  */
 
+use RateBridge\Admin\SettingsPage;
+
 defined( 'ABSPATH' ) || exit;
 
-$rbw_active_tab = isset( $rbw_view['active_tab'] ) ? (string) $rbw_view['active_tab'] : 'currencies';
-$rbw_tabs       = array(
-	'currencies' => __( 'Currencies', 'ratebridge-woo' ),
-	'formulas'   => __( 'Formulas', 'ratebridge-woo' ),
-	'sources'    => __( 'Price sources', 'ratebridge-woo' ),
-	'general'    => __( 'General settings', 'ratebridge-woo' ),
-	'import-export' => __( 'Import / Export', 'ratebridge-woo' ),
+$rbw_active_tab = isset( $rbw_view['active_tab'] ) ? (string) $rbw_view['active_tab'] : 'overview';
+$rbw_health     = isset( $rbw_view['health'] ) && is_array( $rbw_view['health'] ) ? $rbw_view['health'] : array(
+	'level'   => 'ok',
+	'label'   => __( 'Everything is fine', 'ratebridge-woo' ),
+	'details' => '',
 );
+
+$rbw_tabs = array(
+	'overview'      => array(
+		'label' => __( 'Overview', 'ratebridge-woo' ),
+		'icon'  => 'chart',
+	),
+	'currencies'    => array(
+		'label' => __( 'Currencies', 'ratebridge-woo' ),
+		'icon'  => 'coin',
+	),
+	'formulas'      => array(
+		'label' => __( 'Formulas', 'ratebridge-woo' ),
+		'icon'  => 'formula',
+	),
+	'sources'       => array(
+		'label' => __( 'Price sources', 'ratebridge-woo' ),
+		'icon'  => 'link',
+	),
+	'general'       => array(
+		'label' => __( 'General settings', 'ratebridge-woo' ),
+		'icon'  => 'filter',
+	),
+	'import-export' => array(
+		'label' => __( 'Import / Export', 'ratebridge-woo' ),
+		'icon'  => 'download',
+	),
+);
+
+$rbw_tab_url = static function ( string $tab ): string {
+	return add_query_arg(
+		array(
+			'page' => SettingsPage::SLUG,
+			'tab'  => $tab,
+		),
+		admin_url( 'admin.php' )
+	);
+};
 ?>
-<div class="wrap rbw-wrap">
-	<h1 class="wp-heading-inline"><?php esc_html_e( 'Currency Prices', 'ratebridge-woo' ); ?></h1>
-	<hr class="wp-header-end" />
+<?php require RBW_PLUGIN_DIR . 'templates/icon-sprite.php'; ?>
+
+<div class="wrap rbw-wrap rbw-admin">
+	<header class="rbw-header">
+		<div class="rbw-header-main">
+			<h1 class="rbw-title">
+				<?php esc_html_e( 'RateBridge', 'ratebridge-woo' ); ?>
+				<span class="rbw-version"><?php echo esc_html( 'v' . RBW_VERSION ); ?></span>
+			</h1>
+
+			<span class="rbw-health is-<?php echo esc_attr( (string) $rbw_health['level'] ); ?>"
+				title="<?php echo esc_attr( (string) ( $rbw_health['details'] ?? '' ) ); ?>">
+				<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-<?php echo esc_attr( 'ok' === $rbw_health['level'] ? 'check' : ( 'warn' === $rbw_health['level'] ? 'warning' : 'error' ) ); ?>"></use></svg>
+				<?php echo esc_html( (string) $rbw_health['label'] ); ?>
+			</span>
+		</div>
+
+		<div class="rbw-header-actions">
+			<button type="button" class="button" id="rbw-update-all-header">
+				<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-refresh"></use></svg>
+				<?php esc_html_e( 'Update all now', 'ratebridge-woo' ); ?>
+			</button>
+			<a class="button" href="<?php echo esc_url( $rbw_tab_url( 'general' ) ); ?>">
+				<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-filter"></use></svg>
+				<?php esc_html_e( 'Settings', 'ratebridge-woo' ); ?>
+			</a>
+		</div>
+	</header>
 
 	<div id="rbw-notices" class="rbw-notices" role="status" aria-live="polite"></div>
 
-	<nav class="nav-tab-wrapper rbw-tabs">
-		<?php foreach ( $rbw_tabs as $rbw_tab_key => $rbw_tab_label ) : ?>
+	<nav class="rbw-tabs" role="tablist" aria-label="<?php esc_attr_e( 'RateBridge sections', 'ratebridge-woo' ); ?>">
+		<?php foreach ( $rbw_tabs as $rbw_tab_key => $rbw_tab ) : ?>
+			<?php $rbw_is_active = $rbw_active_tab === $rbw_tab_key; ?>
 			<a
-				href="<?php echo esc_url( add_query_arg( array( 'page' => 'ratebridge-woo', 'tab' => $rbw_tab_key ), admin_url( 'admin.php' ) ) ); ?>"
-				class="nav-tab <?php echo $rbw_active_tab === $rbw_tab_key ? 'nav-tab-active' : ''; ?>"
+				class="rbw-tab<?php echo $rbw_is_active ? ' is-active' : ''; ?>"
+				id="rbw-tab-<?php echo esc_attr( $rbw_tab_key ); ?>"
+				href="<?php echo esc_url( $rbw_tab_url( $rbw_tab_key ) ); ?>"
+				role="tab"
+				aria-selected="<?php echo $rbw_is_active ? 'true' : 'false'; ?>"
+				aria-controls="rbw-panel-<?php echo esc_attr( $rbw_tab_key ); ?>"
+				tabindex="<?php echo $rbw_is_active ? '0' : '-1'; ?>"
 				data-rbw-tab="<?php echo esc_attr( $rbw_tab_key ); ?>"
 			>
-				<?php echo esc_html( $rbw_tab_label ); ?>
+				<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-<?php echo esc_attr( $rbw_tab['icon'] ); ?>"></use></svg>
+				<span><?php echo esc_html( $rbw_tab['label'] ); ?></span>
 			</a>
 		<?php endforeach; ?>
 	</nav>
 
-	<div class="rbw-tab-panel" id="rbw-panel-currencies">
-		<?php if ( 'currencies' === $rbw_active_tab ) : ?>
-			<?php require RBW_PLUGIN_DIR . 'templates/tab-currencies.php'; ?>
-		<?php endif; ?>
-	</div>
+	<?php
+	$rbw_panels = array(
+		'overview'      => 'tab-overview.php',
+		'currencies'    => 'tab-currencies.php',
+		'formulas'      => 'tab-formulas.php',
+		'import-export' => 'tab-import-export.php',
+		'sources'       => 'tab-sources.php',
+		'general'       => 'tab-general.php',
+	);
 
-	<div class="rbw-tab-panel" id="rbw-panel-formulas">
-		<?php if ( 'formulas' === $rbw_active_tab ) : ?>
-			<?php require RBW_PLUGIN_DIR . 'templates/tab-formulas.php'; ?>
-		<?php endif; ?>
-	</div>
+	foreach ( $rbw_panels as $rbw_panel_key => $rbw_panel_file ) :
+		$rbw_is_active = $rbw_active_tab === $rbw_panel_key;
+		?>
+		<div
+			class="rbw-panel"
+			id="rbw-panel-<?php echo esc_attr( $rbw_panel_key ); ?>"
+			role="tabpanel"
+			aria-labelledby="rbw-tab-<?php echo esc_attr( $rbw_panel_key ); ?>"
+			<?php echo $rbw_is_active ? '' : 'hidden'; ?>
+		>
+			<?php if ( $rbw_is_active ) : ?>
+				<?php require RBW_PLUGIN_DIR . 'templates/' . $rbw_panel_file; ?>
+			<?php endif; ?>
+		</div>
+	<?php endforeach; ?>
 
-	<div class="rbw-tab-panel" id="rbw-panel-import-export">
-		<?php if ( 'import-export' === $rbw_active_tab ) : ?>
-			<?php require RBW_PLUGIN_DIR . 'templates/tab-import-export.php'; ?>
-		<?php endif; ?>
-	</div>
-
-	<div class="rbw-tab-panel" id="rbw-panel-sources">
-		<?php if ( 'sources' === $rbw_active_tab ) : ?>
-			<?php require RBW_PLUGIN_DIR . 'templates/tab-sources.php'; ?>
-		<?php endif; ?>
-	</div>
-
-	<div class="rbw-tab-panel" id="rbw-panel-general">
-		<?php if ( 'general' === $rbw_active_tab ) : ?>
-			<?php require RBW_PLUGIN_DIR . 'templates/tab-general.php'; ?>
-		<?php endif; ?>
+	<!-- Accessible confirm dialog (replaces window.confirm) -->
+	<div class="rbw-modal" id="rbw-confirm" hidden>
+		<div class="rbw-modal-backdrop"></div>
+		<div class="rbw-modal-content" role="alertdialog" aria-modal="true" aria-labelledby="rbw-confirm-message">
+			<h2 class="rbw-modal-head" id="rbw-confirm-title"><?php esc_html_e( 'Please confirm', 'ratebridge-woo' ); ?></h2>
+			<div class="rbw-modal-body">
+				<p id="rbw-confirm-message"></p>
+			</div>
+			<p class="rbw-modal-actions">
+				<button type="button" class="button button-primary" id="rbw-confirm-ok"><?php esc_html_e( 'OK', 'ratebridge-woo' ); ?></button>
+				<button type="button" class="button" id="rbw-confirm-cancel"><?php esc_html_e( 'Cancel', 'ratebridge-woo' ); ?></button>
+			</p>
+		</div>
 	</div>
 </div>

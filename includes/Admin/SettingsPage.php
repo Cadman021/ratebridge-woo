@@ -94,6 +94,13 @@ final class SettingsPage {
 				return;
 			}
 
+			wp_enqueue_style(
+				'rbw-tokens',
+				RBW_PLUGIN_URL . 'assets/admin/css/tokens.css',
+				array(),
+				RBW_VERSION
+			);
+
 			wp_enqueue_script(
 				'rbw-admin',
 				RBW_PLUGIN_URL . 'assets/admin/js/admin.js',
@@ -122,10 +129,18 @@ final class SettingsPage {
 			return;
 		}
 
+		// Design tokens first: every other stylesheet depends on them.
+		wp_enqueue_style(
+			'rbw-tokens',
+			RBW_PLUGIN_URL . 'assets/admin/css/tokens.css',
+			array(),
+			RBW_VERSION
+		);
+
 		wp_enqueue_style(
 			'rbw-admin',
 			RBW_PLUGIN_URL . 'assets/admin/css/admin.css',
-			array(),
+			array( 'rbw-tokens' ),
 			RBW_VERSION
 		);
 
@@ -253,6 +268,10 @@ final class SettingsPage {
 					'rowsRead'          => __( '%d rows read.', 'ratebridge-woo' ),
 					'validInvalid'      => __( 'Valid: %1$d, invalid: %2$d.', 'ratebridge-woo' ),
 					'row'               => __( 'Row', 'ratebridge-woo' ),
+					// UI shell / toasts / confirm.
+					'dismiss'           => __( 'Dismiss', 'ratebridge-woo' ),
+					'cancelLabel'       => __( 'Cancel', 'ratebridge-woo' ),
+					'importNow'         => __( 'Import now', 'ratebridge-woo' ),
 				),
 			)
 		);
@@ -303,8 +322,8 @@ final class SettingsPage {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'ratebridge-woo' ) );
 		}
 
-		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( (string) $_GET['tab'] ) ) : 'currencies'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$tab = in_array( $tab, array( 'currencies', 'formulas', 'sources', 'general', 'import-export' ), true ) ? $tab : 'currencies';
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( (string) $_GET['tab'] ) ) : 'overview'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$tab = in_array( $tab, array( 'overview', 'currencies', 'formulas', 'sources', 'general', 'import-export' ), true ) ? $tab : 'overview';
 
 		$repo      = new CurrencyRepository();
 		$registry  = ProviderRegistry::instance();
@@ -325,8 +344,13 @@ final class SettingsPage {
 			);
 		}
 
+		// Overview aggregates existing data only (KPIs, provider health, attention list).
+		$rbw_overview = ( new Overview() )->model();
+
 		// Templates receive $rbw_view in scope.
 		$rbw_view = array(
+			'overview'     => $rbw_overview,
+			'health'       => $rbw_overview['health'],
 			'currencies'   => $repo->get_all(),
 			'formulas'     => $formulas,
 			'variable_types' => array(
