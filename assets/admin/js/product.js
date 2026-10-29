@@ -98,11 +98,21 @@
 	}
 
 	/**
+	 * Currently selected pricing method (radio group, same field name as before).
+	 *
+	 * @return {string} currency|formula
+	 */
+	function currentMode() {
+		var checked = qs( 'input[name="rbw_mode"]:checked' );
+
+		return checked ? checked.value : 'currency';
+	}
+
+	/**
 	 * Show the pricing-method panel that matches the selected mode.
 	 */
 	function syncMode() {
-		var select = qs( '#rbw_mode' );
-		var mode = select ? select.value : 'currency';
+		var mode = currentMode();
 
 		var currencyBox = qs( '.rbw-mode-currency' );
 		var formulaBox = qs( '.rbw-mode-formula' );
@@ -169,7 +179,7 @@
 		body.append( 'nonce', config.nonce );
 
 		// Formula mode sends its own fields; the preview endpoint understands both.
-		var mode = ( qs( '#rbw_mode' ) || {} ).value || 'currency';
+		var mode = currentMode();
 
 		body.append( 'mode', mode );
 
@@ -227,11 +237,33 @@
 		}
 
 		var rows = data.breakdown || [];
-		var html = '<table class="rbw-preview-table"><tbody>';
+		var finalRow = null;
 
 		rows.forEach( function ( row ) {
-			var isFinal = 'final' === row.key;
-			html += '<tr' + ( isFinal ? ' class="rbw-preview-final"' : '' ) + '>';
+			if ( 'final' === row.key ) {
+				finalRow = row;
+			}
+		} );
+
+		// Result card: the final price is emphasised, the chain stays quiet.
+		var html = '<div class="rbw-preview-card">';
+
+		if ( finalRow ) {
+			html += '<div class="rbw-preview-final">' +
+				'<span>' + esc( strings.finalPrice || 'Final price' ) + '</span>' +
+				'<strong>' + esc( finalRow.value ) + '</strong>' +
+				'<span>' + esc( data.unit || '' ) + '</span>' +
+				'</div>';
+		}
+
+		html += '<table class="rbw-preview-table"><tbody>';
+
+		rows.forEach( function ( row ) {
+			if ( 'final' === row.key ) {
+				return;
+			}
+
+			html += '<tr>';
 			html += '<th scope="row">' + esc( row.label ) + '</th>';
 			html += '<td dir="ltr">' + esc( row.value ) + '</td>';
 			html += '</tr>';
@@ -272,10 +304,12 @@
 		if ( notes.length ) {
 			html += '<ul class="rbw-preview-notes">';
 			notes.forEach( function ( note ) {
-				html += '<li>' + esc( note ) + '</li>';
+				html += '<li><svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-info"></use></svg>' + esc( note ) + '</li>';
 			} );
 			html += '</ul>';
 		}
+
+		html += '</div><!-- .rbw-preview-card -->';
 
 		target.className = 'rbw-preview-output' + ( data.stale ? ' is-stale' : '' );
 		target.innerHTML = html;
@@ -336,11 +370,9 @@
 			checkbox.addEventListener( 'change', syncSimple );
 		}
 
-		var modeSelect = qs( '#rbw_mode' );
-
-		if ( modeSelect ) {
-			modeSelect.addEventListener( 'change', syncMode );
-		}
+		qsa( 'input[name="rbw_mode"]' ).forEach( function ( radio ) {
+			radio.addEventListener( 'change', syncMode );
+		} );
 
 		qsa( '.rbw-rule-type' ).forEach( function ( select ) {
 			select.addEventListener( 'change', function () {

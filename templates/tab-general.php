@@ -38,6 +38,13 @@ $rbw_placeholders = array( '%name%', '%code%', '%symbol%', '%rate%', '%unit%', '
 $rbw_default_tpl  = ProductNotice::DEFAULT_TEMPLATE;
 ?>
 <form id="rbw-general-form" onsubmit="return false;">
+	<section class="rbw-card">
+		<header class="rbw-card-head">
+			<h2>
+				<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-coin"></use></svg>
+				<?php esc_html_e( 'Store currency and rounding', 'ratebridge-woo' ); ?>
+			</h2>
+		</header>
 	<table class="form-table rbw-form-table" role="presentation">
 		<tbody>
 			<tr>
@@ -125,6 +132,19 @@ $rbw_default_tpl  = ProductNotice::DEFAULT_TEMPLATE;
 				</td>
 			</tr>
 
+		</tbody>
+	</table>
+	</section>
+
+	<section class="rbw-card">
+		<header class="rbw-card-head">
+			<h2>
+				<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-refresh"></use></svg>
+				<?php esc_html_e( 'Refresh and safety', 'ratebridge-woo' ); ?>
+			</h2>
+		</header>
+	<table class="form-table rbw-form-table" role="presentation">
+		<tbody>
 			<tr>
 				<th scope="row">
 					<label for="rbw-max-rate-age"><?php esc_html_e( 'Maximum rate age (hours)', 'ratebridge-woo' ); ?></label>
@@ -175,8 +195,21 @@ $rbw_default_tpl  = ProductNotice::DEFAULT_TEMPLATE;
 				</td>
 			</tr>
 
+		</tbody>
+	</table>
+	</section>
+
+	<section class="rbw-card">
+		<header class="rbw-card-head">
+			<h2>
+				<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-eye"></use></svg>
+				<?php esc_html_e( 'Display on the site', 'ratebridge-woo' ); ?>
+			</h2>
+		</header>
+	<table class="form-table rbw-form-table" role="presentation">
+		<tbody>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Display on the site', 'ratebridge-woo' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Frontend output', 'ratebridge-woo' ); ?></th>
 				<td>
 					<label class="rbw-inline">
 						<input type="checkbox" name="product_block_enabled" value="1" <?php checked( $rbw_block_on ); ?> />
@@ -227,8 +260,21 @@ $rbw_default_tpl  = ProductNotice::DEFAULT_TEMPLATE;
 				</td>
 			</tr>
 
+		</tbody>
+	</table>
+	</section>
+
+	<section class="rbw-card">
+		<header class="rbw-card-head">
+			<h2>
+				<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-trash"></use></svg>
+				<?php esc_html_e( 'Uninstall', 'ratebridge-woo' ); ?>
+			</h2>
+		</header>
+	<table class="form-table rbw-form-table" role="presentation">
+		<tbody>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Uninstall', 'ratebridge-woo' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'Data', 'ratebridge-woo' ); ?></th>
 				<td>
 					<label class="rbw-inline">
 						<input type="checkbox" name="delete_data_on_uninstall" value="1" <?php checked( $rbw_delete_data ); ?> />
@@ -239,9 +285,13 @@ $rbw_default_tpl  = ProductNotice::DEFAULT_TEMPLATE;
 			</tr>
 		</tbody>
 	</table>
+	</section>
 
 	<p class="submit">
-		<button type="submit" class="button button-primary" id="rbw-save-settings"><?php esc_html_e( 'Save settings', 'ratebridge-woo' ); ?></button>
+		<button type="submit" class="button button-primary" id="rbw-save-settings">
+			<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-save"></use></svg>
+			<?php esc_html_e( 'Save settings', 'ratebridge-woo' ); ?>
+		</button>
 	</p>
 </form>
 

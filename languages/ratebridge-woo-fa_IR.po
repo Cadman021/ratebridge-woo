@@ -2308,3 +2308,212 @@ msgstr "پوشه بارگذاری قابل نوشتن نیست، بنابرای�
 
 msgid "The upload folder is not writable, so the import cannot start. Check the permissions of wp-content/uploads."
 msgstr "پوشه بارگذاری قابل نوشتن نیست، بنابراین درون‌ریزی شروع نمی‌شود. دسترسی‌های wp-content/uploads را بررسی کنید."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 8b — UI redesign
+# ─────────────────────────────────────────────────────────────────────────────
+
+msgid "%1$d of %2$d requests"
+msgstr "%1$d از %2$d درخواست"
+
+msgid "%d requests"
+msgstr "%d درخواست"
+
+msgid "%d issue needs attention"
+msgid_plural "%d issues need attention"
+msgstr[0] "%d مورد نیازمند توجه است"
+msgstr[1] "%d مورد نیازمند توجه است"
+
+msgid "%d warning"
+msgid_plural "%d warnings"
+msgstr[0] "%d هشدار"
+msgstr[1] "%d هشدار"
+
+msgid "%s has a stale rate"
+msgstr "نرخ %s کهنه است"
+
+msgid "%s is waiting for its first rate"
+msgstr "%s در انتظار اولین نرخ است"
+
+msgid "%s reported an error"
+msgstr "%s خطا گزارش کرده است"
+
+msgid "Active currencies"
+msgstr "ارزهای فعال"
+
+msgid "Add your first currency"
+msgstr "اولین ارز خود را اضافه کنید"
+
+msgid "All good"
+msgstr "همه‌چیز مرتب است"
+
+msgid "All price sources"
+msgstr "همه منابع قیمت"
+
+msgid "All statuses"
+msgstr "همه وضعیت‌ها"
+
+msgid "Basic information"
+msgstr "اطلاعات پایه"
+
+msgid "Cards"
+msgstr "کارتی"
+
+msgid "Connected"
+msgstr "متصل"
+
+msgid "Currencies and their current rates"
+msgstr "ارزها و نرخ‌های فعلی آن‌ها"
+
+msgid "Data"
+msgstr "داده‌ها"
+
+msgid "Disabled"
+msgstr "غیرفعال"
+
+msgid "Dismiss"
+msgstr "بستن"
+
+msgid "Enable at least one currency so prices can be calculated."
+msgstr "برای محاسبه قیمت‌ها حداقل یک ارز را فعال کنید."
+
+msgid "Error %1$s at position %2$d. Products using it are not repriced."
+msgstr "خطای %1$s در موقعیت %2$d. محصولاتی که از آن استفاده می‌کنند بازقیمت‌گذاری نمی‌شوند."
+
+msgid "Error or stale"
+msgstr "خطا یا کهنه"
+
+msgid "Every active currency has a fresh rate."
+msgstr "همه ارزهای فعال نرخ تازه دارند."
+
+msgid "Everything is fine"
+msgstr "همه‌چیز مرتب است"
+
+msgid "Filter by price source"
+msgstr "فیلتر بر اساس منبع قیمت"
+
+msgid "Filter by status"
+msgstr "فیلتر بر اساس وضعیت"
+
+msgid "Fix the formula"
+msgstr "اصلاح فرمول"
+
+msgid "Formula “%s” is invalid"
+msgstr "فرمول «%s» نامعتبر است"
+
+msgid "Frontend output"
+msgstr "خروجی سایت"
+
+msgid "Full log"
+msgstr "گزارش کامل"
+
+msgid "Last successful update"
+msgstr "آخرین به‌روزرسانی موفق"
+
+msgid "Local"
+msgstr "محلی"
+
+msgid "Manage"
+msgstr "مدیریت"
+
+msgid "Managed products"
+msgstr "محصولات مدیریت‌شده"
+
+msgid "Minimal"
+msgstr "ساده"
+
+msgid "Monthly request quota used"
+msgstr "سهمیه ماهانه درخواست‌ها"
+
+msgid "More actions"
+msgstr "کارهای دیگر"
+
+msgid "Needs a key"
+msgstr "نیازمند کلید"
+
+msgid "Needs attention"
+msgstr "نیازمند توجه"
+
+msgid "Next request allowed: %s"
+msgstr "درخواست بعدی مجاز: %s"
+
+msgid "Next scheduled run"
+msgstr "اجرای زمان‌بندی‌شده بعدی"
+
+msgid "No active currency"
+msgstr "هیچ ارز فعالی نیست"
+
+msgid "Nothing needs your attention right now."
+msgstr "اکنون چیزی نیازمند توجه شما نیست."
+
+msgid "Open currencies"
+msgstr "باز کردن ارزها"
+
+msgid "Overview"
+msgstr "نمای کلی"
+
+msgid "Please confirm"
+msgstr "تأیید کنید"
+
+msgid "Prices can only be calculated once at least one currency has a rate. Add a currency, pick a price source and enable it."
+msgstr "قیمت‌ها تنها وقتی محاسبه می‌شوند که حداقل یک ارز نرخ داشته باشد. یک ارز اضافه کنید، منبع قیمت را انتخاب و آن را فعال کنید."
+
+msgid "Quota exhausted"
+msgstr "سهمیه تمام‌شده"
+
+msgid "RateBridge sections"
+msgstr "بخش‌های نرخ ساز"
+
+msgid "Recent activity"
+msgstr "فعالیت اخیر"
+
+msgid "Refresh and safety"
+msgstr "به‌روزرسانی و ایمنی"
+
+msgid "Review the currency"
+msgstr "بررسی ارز"
+
+msgid "Search currencies"
+msgstr "جستجوی ارزها"
+
+msgid "Search name or code…"
+msgstr "جستجوی نام یا کد…"
+
+msgid "Stale rate"
+msgstr "نرخ کهنه"
+
+msgid "Store currency and rounding"
+msgstr "واحد فروشگاه و گرد کردن"
+
+msgid "Striped"
+msgstr "راه‌راه"
+
+msgid "Style"
+msgstr "ظاهر"
+
+msgid "The rate is older than %1$d hours (last update: %2$s). Products keep their price until a fresh rate arrives."
+msgstr "نرخ قدیمی‌تر از %1$d ساعت است (آخرین به‌روزرسانی: %2$s). قیمت محصولات تا رسیدن نرخ تازه بدون تغییر می‌ماند."
+
+msgid "The rate is older than the configured maximum age."
+msgstr "نرخ قدیمی‌تر از حداکثر سن تعیین‌شده است."
+
+msgid "View products"
+msgstr "مشاهده محصولات"
+
+msgid "WP-Cron is not scheduled"
+msgstr "WP-Cron زمان‌بندی نشده است"
+
+msgid "Waiting for a rate"
+msgstr "در انتظار نرخ"
+
+msgid "You have unsaved changes. Close without saving?"
+msgstr "تغییرات ذخیره‌نشده دارید. بدون ذخیره بسته شود؟"
+
+msgid "in %s"
+msgstr "تا %s دیگر"
+
+msgid "no update yet"
+msgstr "هنوز به‌روزرسانی نشده"
+
+msgid "of %d configured"
+msgstr "از %d ارز تعریف‌شده"

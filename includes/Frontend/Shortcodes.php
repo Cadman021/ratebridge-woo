@@ -250,6 +250,7 @@ final class Shortcodes {
 				'columns'    => 'name,rate,updated',
 				'title'      => '',
 				'class'      => '',
+				'style'      => 'minimal',
 			),
 			(is_array( $atts ) ? $atts : array()),
 			'rbw_rates'
@@ -263,7 +264,9 @@ final class Shortcodes {
 			$columns = array( 'name', 'rate', 'updated' );
 		}
 
-		$cache_key = wp_json_encode( array( 'rates', $codes, $columns, $title, $atts['class'], Frontend::use_persian_digits(), Settings::store_unit() ) );
+		$style = self::table_style( $atts['style'] );
+
+		$cache_key = wp_json_encode( array( 'rates', $codes, $columns, $title, $atts['class'], $style, Frontend::use_persian_digits(), Settings::store_unit() ) );
 
 		return Frontend::cached(
 			(string) $cache_key,
@@ -276,9 +279,30 @@ final class Shortcodes {
 					);
 				}
 
-				return $this->render_table( $currencies, $columns, $title, (string) $atts['class'] );
+				return $this->render_table( $currencies, $columns, $title, (string) $atts['class'], (string) ( $atts['style'] ?? 'minimal' ) );
 			}
 		);
+	}
+
+	/**
+	 * Table styles a shortcode/widget may ask for.
+	 *
+	 * @return string[]
+	 */
+	public static function table_styles(): array {
+		return array( 'minimal', 'striped', 'cards' );
+	}
+
+	/**
+	 * Normalise a table style name.
+	 *
+	 * @param mixed $style Raw value.
+	 * @return string
+	 */
+	public static function table_style( mixed $style ): string {
+		$style = is_string( $style ) ? sanitize_key( $style ) : '';
+
+		return in_array( $style, self::table_styles(), true ) ? $style : 'minimal';
 	}
 
 	/**
@@ -312,12 +336,14 @@ final class Shortcodes {
 	 * @param string     $class      Extra CSS class.
 	 * @return string
 	 */
-	public function render_table( array $currencies, array $columns, string $title = '', string $class = '' ): string {
+	public function render_table( array $currencies, array $columns, string $title = '', string $class = '', string $style = 'minimal' ): string {
 		$headers = self::columns();
 		$unit    = Frontend::unit_label();
+		$style   = self::table_style( $style );
 
 		$html = sprintf(
-			'<div class="rbw-rates-wrap%s">',
+			'<div class="rbw-rates-wrap rbw-rates--%s%s">',
+			esc_attr( $style ),
 			'' !== $class ? ' ' . esc_attr( $this->sanitize_class( $class ) ) : ''
 		);
 

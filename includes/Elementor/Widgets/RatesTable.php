@@ -84,6 +84,20 @@ final class RatesTable extends AbstractWidget {
 		);
 
 		$this->add_control(
+			'rbw_style_variant',
+			array(
+				'label'   => __( 'Style', 'ratebridge-woo' ),
+				'type'    => Controls_Manager::SELECT,
+				'options' => array(
+					'minimal' => __( 'Minimal', 'ratebridge-woo' ),
+					'striped' => __( 'Striped', 'ratebridge-woo' ),
+					'cards'   => __( 'Cards', 'ratebridge-woo' ),
+				),
+				'default' => 'minimal',
+			)
+		);
+
+		$this->add_control(
 			'rbw_columns_heading',
 			array(
 				'label'     => __( 'Columns', 'ratebridge-woo' ),
@@ -236,6 +250,7 @@ final class RatesTable extends AbstractWidget {
 			'rbw_title'      => '',
 			'rbw_currencies' => array(),
 			'rbw_columns'    => array( 'name', 'rate', 'updated' ),
+			'rbw_style_variant' => 'minimal',
 		);
 	}
 
@@ -250,6 +265,7 @@ final class RatesTable extends AbstractWidget {
 		$codes   = $this->to_codes( $settings['rbw_currencies'] ?? array() );
 		$columns = $this->sanitize_columns( $settings['rbw_columns'] ?? array() );
 		$title   = isset( $settings['rbw_title'] ) ? sanitize_text_field( (string) $settings['rbw_title'] ) : '';
+		$style   = Shortcodes::table_style( $settings['rbw_style_variant'] ?? 'minimal' );
 
 		$currencies = Frontend::resolve_currencies( $codes );
 
@@ -262,9 +278,9 @@ final class RatesTable extends AbstractWidget {
 		}
 
 		$html = Frontend::cached(
-			(string) wp_json_encode( array( 'elementor-table', $codes, $columns, $title, $this->custom_labels( $settings ), Frontend::use_persian_digits() ) ),
-			function () use ( $currencies, $columns, $title, $settings ): string {
-				return $this->shortcodes()->render_table( $currencies, $columns, $title, 'rbw-elementor-table' );
+			(string) wp_json_encode( array( 'elementor-table', $codes, $columns, $title, $style, $this->custom_labels( $settings ), Frontend::use_persian_digits() ) ),
+			function () use ( $currencies, $columns, $title, $style, $settings ): string {
+				return $this->shortcodes()->render_table( $currencies, $columns, $title, 'rbw-elementor-table', $style );
 			}
 		);
 

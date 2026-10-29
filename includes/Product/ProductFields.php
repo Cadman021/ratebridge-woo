@@ -85,6 +85,9 @@ final class ProductFields {
 
 		// Assets on the product edit screen.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+
+		// The panel and preview use the same inline SVG sprite as the plugin page.
+		add_action( 'admin_footer', array( $this, 'render_icon_sprite' ) );
 	}
 
 	/**
@@ -178,7 +181,7 @@ final class ProductFields {
 		$currencies = $this->currencies();
 		$unit       = SettingsPage::unit_label();
 
-		echo '<div class="options_group rbw-product-panel">';
+		echo '<div class="options_group rbw-product-panel rbw-admin">';
 
 		woocommerce_wp_checkbox(
 			array(
@@ -361,19 +364,30 @@ final class ProductFields {
 	private function render_mode_select( int $post_id, array $data ): void {
 		unset( $post_id );
 
+		$mode = (string) ( $data['mode'] ?? ProductData::MODE_CURRENCY );
+
+		/*
+		 * A segmented control over the SAME `rbw_mode` field: two radio buttons
+		 * with identical name/value semantics, so the save handler and the JS keep
+		 * reading `[name="rbw_mode"]` exactly as before.
+		 */
 		printf(
-			'<p class="form-field rbw-field rbw-mode-field">
-				<label for="rbw_mode">%1$s</label>
-				<select id="rbw_mode" name="rbw_mode" class="rbw-mode-select">
-					<option value="currency"%2$s>%3$s</option>
-					<option value="formula"%4$s>%5$s</option>
-				</select>
+			'<div class="form-field rbw-field rbw-mode-field rbw-segmented" role="radiogroup" aria-label="%1$s">
+				<span class="rbw-field-label">%1$s</span>
+				<label class="rbw-segment">
+					<input type="radio" name="rbw_mode" id="rbw_mode" value="currency"%2$s />
+					<span>%3$s</span>
+				</label>
+				<label class="rbw-segment">
+					<input type="radio" name="rbw_mode" id="rbw_mode_formula" value="formula"%4$s />
+					<span>%5$s</span>
+				</label>
 				<span class="description">%6$s</span>
-			</p>',
+			</div>',
 			esc_html__( 'Pricing method', 'ratebridge-woo' ),
-			selected( $data['mode'] ?? ProductData::MODE_CURRENCY, ProductData::MODE_CURRENCY, false ),
+			checked( $mode, ProductData::MODE_CURRENCY, false ),
 			esc_html__( 'Currency × base price', 'ratebridge-woo' ),
-			selected( $data['mode'] ?? ProductData::MODE_CURRENCY, ProductData::MODE_FORMULA, false ),
+			checked( $mode, ProductData::MODE_FORMULA, false ),
 			esc_html__( 'Formula', 'ratebridge-woo' ),
 			esc_html__( 'A formula computes the price from variables such as weight, rates and custom values.', 'ratebridge-woo' )
 		);
@@ -1492,6 +1506,21 @@ final class ProductFields {
 	}
 
 	/**
+	 * Print the icon sprite once on the product editor.
+	 *
+	 * @return void
+	 */
+	public function render_icon_sprite(): void {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+
+		if ( ! $screen instanceof \WP_Screen || 'product' !== $screen->post_type ) {
+			return;
+		}
+
+		require RBW_PLUGIN_DIR . 'templates/icon-sprite.php';
+	}
+
+	/**
 	 * Enqueue the product stylesheet (+ its RTL companion).
 	 *
 	 * Shared by the editor and the products list so the «ارز» column and the
@@ -1500,10 +1529,18 @@ final class ProductFields {
 	 * @return void
 	 */
 	private function enqueue_styles(): void {
+		// Design tokens first (badges, chips, preview card all read them).
+		wp_enqueue_style(
+			'rbw-tokens',
+			RBW_PLUGIN_URL . 'assets/admin/css/tokens.css',
+			array(),
+			RBW_VERSION
+		);
+
 		wp_enqueue_style(
 			self::HANDLE,
 			RBW_PLUGIN_URL . 'assets/admin/css/product.css',
-			array(),
+			array( 'rbw-tokens' ),
 			RBW_VERSION
 		);
 

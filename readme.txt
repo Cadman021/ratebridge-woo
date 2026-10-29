@@ -4,7 +4,7 @@ Tags: currency, exchange rate, woocommerce, pricing, gold price, persian
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.8.0
+Stable tag: 0.8.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -105,6 +105,13 @@ only removed on uninstall when **«حذف تمام داده‌ها هنگام ح
 
 == Changelog ==
 
+= 0.8.1 =
+* UI redesign: design tokens, Vazirmatn, inline icon sprite, a new Overview tab (KPIs, provider
+  health, attention list, activity timeline), restyled currencies list with filters and a kebab
+  menu, toast notifications and an accessible confirm dialog, and a `style` attribute for
+  `[rbw_rates]` (`minimal` / `striped` / `cards`).
+* No functional change: every AJAX action, payload and capability is unchanged.
+
 = 0.8.0 =
 * Review fixes: the CSV import keeps rows in a private JSONL file instead of a transient, cache
   invalidation now works with Redis/Memcached (generation counters), a per-action capability map,
@@ -151,6 +158,9 @@ only removed on uninstall when **«حذف تمام داده‌ها هنگام ح
 * First release: currency table, manual and mock providers, settings page, Persian UI.
 
 == Upgrade Notice ==
+
+= 0.8.1 =
+New admin UI and a `style` attribute for the currencies table; behaviour unchanged.
 
 = 0.8.0 =
 Review fixes: CSV import memory, cache invalidation with Redis/Memcached, capabilities, export

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: RateBridge Woo\n"
 "Report-Msgid-Bugs-To: https://example.com/ratebridge-woo\n"
-"POT-Creation-Date: 2026-10-28T20:50:16+00:00\n"
+"POT-Creation-Date: 2026-10-29T12:28:34+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -19,6 +19,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "%1$d of %2$d"
+msgstr ""
+
+#: ratebridge-woo
+msgid "%1$d of %2$d requests"
 msgstr ""
 
 #: ratebridge-woo
@@ -48,6 +52,12 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: ratebridge-woo
+msgid "%d issue needs attention"
+msgid_plural "%d issues need attention"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ratebridge-woo
 msgid "%d preset symbols available."
 msgstr ""
 
@@ -56,6 +66,10 @@ msgid "%d product uses this formula. Confirm detaching them to delete it."
 msgid_plural "%d products use this formula. Confirm detaching them to delete it."
 msgstr[0] ""
 msgstr[1] ""
+
+#: ratebridge-woo
+msgid "%d requests"
+msgstr ""
 
 #: ratebridge-woo
 msgid "%d rows read."
@@ -68,6 +82,12 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: ratebridge-woo
+msgid "%d warning"
+msgid_plural "%d warnings"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ratebridge-woo
 msgid "%s (copy)"
 msgstr ""
 
@@ -76,6 +96,10 @@ msgid "%s day ago"
 msgid_plural "%s days ago"
 msgstr[0] ""
 msgstr[1] ""
+
+#: ratebridge-woo
+msgid "%s has a stale rate"
+msgstr ""
 
 #: ratebridge-woo
 msgid "%s hour ago"
@@ -92,6 +116,10 @@ msgid "%s is required."
 msgstr ""
 
 #: ratebridge-woo
+msgid "%s is waiting for its first rate"
+msgstr ""
+
+#: ratebridge-woo
 msgid "%s minute ago"
 msgid_plural "%s minutes ago"
 msgstr[0] ""
@@ -102,6 +130,10 @@ msgid "%s month ago"
 msgid_plural "%s months ago"
 msgstr[0] ""
 msgstr[1] ""
+
+#: ratebridge-woo
+msgid "%s reported an error"
+msgstr ""
 
 #: ratebridge-woo
 msgid "%s year ago"
@@ -226,6 +258,10 @@ msgid "Actions"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Active currencies"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Add"
 msgstr ""
 
@@ -259,6 +295,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Add variable"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Add your first currency"
 msgstr ""
 
 #: ratebridge-woo
@@ -311,6 +351,18 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Alignment"
+msgstr ""
+
+#: ratebridge-woo
+msgid "All good"
+msgstr ""
+
+#: ratebridge-woo
+msgid "All price sources"
+msgstr ""
+
+#: ratebridge-woo
+msgid "All statuses"
 msgstr ""
 
 #: ratebridge-woo
@@ -406,6 +458,10 @@ msgid "Base value (price × rate)"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Basic information"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Before"
 msgstr ""
 
@@ -455,6 +511,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Cancel"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Cards"
 msgstr ""
 
 #: ratebridge-woo
@@ -558,6 +618,10 @@ msgid "Configured"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Connected"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Connection failed"
 msgstr ""
 
@@ -638,6 +702,10 @@ msgid "Currencies"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Currencies and their current rates"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Currency"
 msgstr ""
 
@@ -714,6 +782,10 @@ msgid "Custom value"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Data"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Date"
 msgstr ""
 
@@ -770,6 +842,14 @@ msgid "Details"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Disabled"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Dismiss"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Display on the site"
 msgstr ""
 
@@ -818,6 +898,10 @@ msgid "Enable %s"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Enable at least one currency so prices can be calculated."
+msgstr ""
+
+#: ratebridge-woo
 msgid "Enable formula"
 msgstr ""
 
@@ -846,6 +930,14 @@ msgid "Error"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Error %1$s at position %2$d. Products using it are not repriced."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Error or stale"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Ethereum"
 msgstr ""
 
@@ -858,7 +950,15 @@ msgid "Every 5 minutes (RateBridge)"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Every active currency has a fresh rate."
+msgstr ""
+
+#: ratebridge-woo
 msgid "Every identifier used in the expression must be declared here."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Everything is fine"
 msgstr ""
 
 #: ratebridge-woo
@@ -886,6 +986,14 @@ msgid "Fill in the required settings and save before testing the connection."
 msgstr ""
 
 #: ratebridge-woo
+msgid "Filter by price source"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Filter by status"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Final price"
 msgstr ""
 
@@ -895,6 +1003,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Fix it in the currency settings"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Fix the formula"
 msgstr ""
 
 #: ratebridge-woo
@@ -966,7 +1078,19 @@ msgid "Formula “%1$s” uses undeclared variables (%2$s) and was skipped."
 msgstr ""
 
 #: ratebridge-woo
+msgid "Formula “%s” is invalid"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Formulas"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Frontend output"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Full log"
 msgstr ""
 
 #: ratebridge-woo
@@ -1174,6 +1298,10 @@ msgid "Last request"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Last successful update"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Last update"
 msgstr ""
 
@@ -1202,11 +1330,23 @@ msgid "Letters: Y m d j H i s — for example Y-m-d H:i"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Local"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Log cleared."
 msgstr ""
 
 #: ratebridge-woo
 msgid "Making charge (%)"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Manage"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Managed products"
 msgstr ""
 
 #: ratebridge-woo
@@ -1250,6 +1390,10 @@ msgid "Min"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Minimal"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Minimum interval"
 msgstr ""
 
@@ -1286,7 +1430,15 @@ msgid "Monthly request limit"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Monthly request quota used"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Monthly request usage"
+msgstr ""
+
+#: ratebridge-woo
+msgid "More actions"
 msgstr ""
 
 #: ratebridge-woo
@@ -1322,6 +1474,14 @@ msgid "Navasan returned none of the requested symbols (%s)."
 msgstr ""
 
 #: ratebridge-woo
+msgid "Needs a key"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Needs attention"
+msgstr ""
+
+#: ratebridge-woo
 msgid "New"
 msgstr ""
 
@@ -1330,7 +1490,19 @@ msgid "Next allowed request"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Next request allowed: %s"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Next scheduled run"
+msgstr ""
+
+#: ratebridge-woo
 msgid "No"
+msgstr ""
+
+#: ratebridge-woo
+msgid "No active currency"
 msgstr ""
 
 #: ratebridge-woo
@@ -1426,6 +1598,10 @@ msgid "Not configured"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Nothing needs your attention right now."
+msgstr ""
+
+#: ratebridge-woo
 msgid "Nothing to import."
 msgstr ""
 
@@ -1470,6 +1646,10 @@ msgid "Only the fields you change are applied. Variation prices are never touche
 msgstr ""
 
 #: ratebridge-woo
+msgid "Open currencies"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Open the currency settings"
 msgstr ""
 
@@ -1487,6 +1667,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Order display"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Overview"
 msgstr ""
 
 #: ratebridge-woo
@@ -1546,6 +1730,10 @@ msgid "Placeholders: %s"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Please confirm"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Position"
 msgstr ""
 
@@ -1591,6 +1779,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Prices are not being calculated because the currency %1$s cannot be used: %2$s."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Prices can only be calculated once at least one currency has a rate. Add a currency, pick a price source and enable it."
 msgstr ""
 
 #: ratebridge-woo
@@ -1702,6 +1894,10 @@ msgid "Quarter coin"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Quota exhausted"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Rate"
 msgstr ""
 
@@ -1719,6 +1915,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "RateBridge Woo: stale exchange rates"
+msgstr ""
+
+#: ratebridge-woo
+msgid "RateBridge sections"
 msgstr ""
 
 #: ratebridge-woo
@@ -1751,6 +1951,14 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Recalculation finished: %1$d repriced, %2$d skipped (no usable currency or no base price), %3$d failed."
+msgstr ""
+
+#: ratebridge-woo
+msgid "Recent activity"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Refresh and safety"
 msgstr ""
 
 #: ratebridge-woo
@@ -1807,6 +2015,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Result"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Review the currency"
 msgstr ""
 
 #: ratebridge-woo
@@ -1895,6 +2107,14 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Saving…"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Search currencies"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Search name or code…"
 msgstr ""
 
 #: ratebridge-woo
@@ -2026,6 +2246,10 @@ msgid "Source"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Stale rate"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Start import"
 msgstr ""
 
@@ -2035,6 +2259,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Step"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Store currency and rounding"
 msgstr ""
 
 #: ratebridge-woo
@@ -2051,6 +2279,14 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Strip background"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Striped"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Style"
 msgstr ""
 
 #: ratebridge-woo
@@ -2478,6 +2714,14 @@ msgid "The provider returned no usable rates."
 msgstr ""
 
 #: ratebridge-woo
+msgid "The rate is older than %1$d hours (last update: %2$s). Products keep their price until a fresh rate arrives."
+msgstr ""
+
+#: ratebridge-woo
+msgid "The rate is older than the configured maximum age."
+msgstr ""
+
+#: ratebridge-woo
 msgid "The rate line is always visible to shop managers on the order screen. Turn this on to also show it on the order-received page, in emails and in My Account."
 msgstr ""
 
@@ -2822,11 +3066,23 @@ msgid "Variations: repriced %1$d, skipped %2$d, failed %3$d."
 msgstr ""
 
 #: ratebridge-woo
+msgid "View products"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Visible columns"
 msgstr ""
 
 #: ratebridge-woo
 msgid "Volatility"
+msgstr ""
+
+#: ratebridge-woo
+msgid "WP-Cron is not scheduled"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Waiting for a rate"
 msgstr ""
 
 #: ratebridge-woo
@@ -2882,6 +3138,10 @@ msgid "You do not have permission to access this page."
 msgstr ""
 
 #: ratebridge-woo
+msgid "You have unsaved changes. Close without saving?"
+msgstr ""
+
+#: ratebridge-woo
 msgid "clamp() needs a minimum that is not greater than the maximum."
 msgstr ""
 
@@ -2899,6 +3159,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "formula_vars must be a JSON object."
+msgstr ""
+
+#: ratebridge-woo
+msgid "in %s"
 msgstr ""
 
 #: ratebridge-woo
@@ -2934,6 +3198,10 @@ msgid "no rate yet"
 msgstr ""
 
 #: ratebridge-woo
+msgid "no update yet"
+msgstr ""
+
+#: ratebridge-woo
 msgid "not scheduled"
 msgstr ""
 
@@ -2943,6 +3211,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "now"
+msgstr ""
+
+#: ratebridge-woo
+msgid "of %d configured"
 msgstr ""
 
 #: ratebridge-woo
