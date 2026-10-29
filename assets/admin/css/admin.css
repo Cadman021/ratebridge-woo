@@ -2217,6 +2217,7 @@
 	inset-block-start: calc(100% + 4px);
 	inset-inline-end: 0;
 	min-inline-size: 170px;
+	max-inline-size: min(280px, calc(100vw - 16px));
 	margin: 0;
 	padding: 4px;
 	list-style: none;
@@ -2224,6 +2225,26 @@
 	border: 1px solid var(--rbw-border);
 	border-radius: var(--rbw-r-sm);
 	box-shadow: var(--rbw-shadow-2);
+}
+
+/*
+ * Portalled state.
+ *
+ * `.rbw-table` keeps `overflow: hidden` (rounded corners) and the mobile layout
+ * needs `overflow-x: auto`, so any absolutely-positioned descendant is clipped.
+ * As a result the kebab menu is MOVED to <body> while open (see bindMenus) and
+ * positioned with `position: fixed` + inline top/left computed from the toggle's
+ * bounding rect. `position: fixed` is used instead of absolute so no scroll
+ * offset has to be kept in sync; the menu is repositioned on scroll instead.
+ */
+.rbw-menu.rbw-menu--portal {
+	position: fixed;
+	/* top/left are set inline in JS; reset the in-flow anchoring. */
+	inset-block-start: auto;
+	inset-inline-end: auto;
+	/* Own stacking context so the shadow never bleeds onto the table. */
+	z-index: var(--rbw-z-menu);
+	margin: 0;
 }
 
 .rbw-menu[hidden] {

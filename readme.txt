@@ -42,6 +42,12 @@ instead of a fixed amount:
 
 **Requirements:** WordPress 6.4+, WooCommerce 8.0+, PHP 8.1+. Elementor 3.5+ is optional (widgets).
 
+**Fonts and licenses:** the admin UI uses the **Vazirmatn** typeface by Saber Rastikerdar
+(https://github.com/rastikerdar/vazirmatn), bundled unmodified as `.woff2` files in
+`assets/fonts/` and loaded from `assets/admin/css/tokens.css`. Vazirmatn is licensed under the
+**SIL Open Font License 1.1**; the full license text ships in `assets/fonts/OFL.txt`.
+Frontend output inherits the theme font and loads no webfont of its own.
+
 == Installation ==
 
 1. Upload the `ratebridge-woo` folder to `/wp-content/plugins/` (or install the ZIP from

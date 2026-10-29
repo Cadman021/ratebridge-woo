@@ -472,6 +472,9 @@
 			button.setAttribute( 'data-rbw-bound', '1' );
 
 			button.addEventListener( 'click', function () {
+				// The item lives in a portalled menu: close it before opening the dialog.
+				closeMenus();
+
 				confirmDialog( strings.confirmDelete, { danger: true, confirmLabel: strings.deleteLabel } ).then( function ( ok ) {
 					if ( ! ok ) {
 						return;
@@ -505,6 +508,8 @@
 			button.setAttribute( 'data-rbw-bound', '1' );
 
 			button.addEventListener( 'click', function () {
+				closeMenus();
+
 				var id = button.getAttribute( 'data-id' );
 
 				request( 'get_currency', { id: id } )
@@ -2554,6 +2559,12 @@
 
 		qsa( '.rbw-formula-edit' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {
+				/*
+				 * Close first: while the menu is portalled it is a child of <body>,
+				 * so `closest('tr')` would return null. closeMenus() puts it back.
+				 */
+				closeMenus();
+
 				var id = button.getAttribute( 'data-id' );
 				var row = button.closest( 'tr' );
 
@@ -2569,6 +2580,8 @@
 
 		qsa( '.rbw-formula-duplicate' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {
+				closeMenus();
+
 				request( 'duplicate_formula', { id: button.getAttribute( 'data-id' ) } )
 					.then( function ( response ) {
 						notify( messageFrom( response ), response.success ? 'success' : 'error' );
@@ -2583,6 +2596,8 @@
 
 		qsa( '.rbw-formula-delete' ).forEach( function ( button ) {
 			button.addEventListener( 'click', function () {
+				closeMenus();
+
 				var products = parseInt( button.getAttribute( 'data-products' ) || '0', 10 );
 				var detach = '0';
 				var question = products > 0
@@ -3360,105 +3375,352 @@
 	/* Kebab menus                                                         */
 	/* ------------------------------------------------------------------ */
 
-	/**
-	 * Close every open kebab menu.
+	/* ------------------------------------------------------------------ */
+	/* Kebab menus (portalled)                                             */
+	/* ------------------------------------------------------------------ */
+
+	/*
+	 * A kebab menu cannot live inside the table it belongs to: `.rbw-table`
+	 * needs `overflow: hidden` for its rounded corners and `overflow-x: auto`
+	 * on mobile, and either one clips an absolutely-positioned popup. The last
+	 * rows of a list are the worst case because the menu opens downward.
 	 *
-	 * @param {Element} [except] Menu wrapper to keep open.
+	 * So on open the menu ELEMENT is moved to <body> (a "portal"), switched to
+	 * `position: fixed` and placed from the toggle's bounding rect. The original
+	 * parent and next sibling are remembered and the menu is put back on close,
+	 * so event delegation, AJAX re-renders and the existing CSS keep working.
 	 */
-	function closeMenus( except ) {
-		qsa( '.rbw-kebab .rbw-menu' ).forEach( function ( menu ) {
-			if ( except && except.contains( menu ) ) {
-				return;
-			}
+	var OPEN_MENU = null; // { menu, toggle, wrap, parent, next, onScroll, onResize }.
 
-			menu.hidden = true;
-
-			var toggle = qs( '.rbw-kebab-toggle', menu.parentNode );
-
-			if ( toggle ) {
-				toggle.setAttribute( 'aria-expanded', 'false' );
-			}
+	/**
+	 * Items inside a menu that can receive focus.
+	 *
+	 * @param {Element} menu Menu element.
+	 * @return {Element[]} Focusable items.
+	 */
+	function menuItems( menu ) {
+		return qsa( '.rbw-menu-item', menu ).filter( function ( item ) {
+			return ! item.disabled;
 		} );
 	}
 
 	/**
+	 * Put a portalled menu back where it came from.
+	 *
+	 * Safe to call twice, and safe when the original parent was destroyed by an
+	 * AJAX re-render (the menu is then dropped instead of being orphaned).
+	 *
+	 * @param {Object} state Portal state.
+	 * @return {void}
+	 */
+	function restoreMenu( state ) {
+		var menu = state.menu;
+
+		if ( ! menu ) {
+			return;
+		}
+
+		menu.hidden = true;
+		menu.classList.remove( 'rbw-menu--portal' );
+		menu.style.top = '';
+		menu.style.left = '';
+		menu.style.bottom = '';
+		menu.style.right = '';
+		menu.removeAttribute( 'data-placement' );
+
+		window.removeEventListener( 'scroll', state.onScroll, true );
+		window.removeEventListener( 'resize', state.onResize );
+
+		if ( state.parent && state.parent.isConnected ) {
+			if ( state.next && state.next.parentNode === state.parent ) {
+				state.parent.insertBefore( menu, state.next );
+			} else {
+				state.parent.appendChild( menu );
+			}
+		} else if ( menu.parentNode ) {
+			// The row was re-rendered away: do not leave an orphan in <body>.
+			menu.parentNode.removeChild( menu );
+		}
+	}
+
+	/**
+	 * Position a portalled menu against its toggle.
+	 *
+	 * Aligns the menu's inline-end edge with the toggle's inline-end edge (RTL and
+	 * LTR aware), clamps it inside the viewport with an 8px margin and flips it
+	 * above the toggle when there is not enough room below.
+	 *
+	 * @param {Object} state Portal state.
+	 * @return {void}
+	 */
+	function positionMenu( state ) {
+		var menu = state.menu;
+		var toggle = state.toggle;
+
+		if ( ! menu || ! toggle || ! toggle.isConnected || menu.hidden ) {
+			return;
+		}
+
+		var margin = 8;
+		var gap = 4;
+		var rect = toggle.getBoundingClientRect();
+		var rtl = 'rtl' === window.getComputedStyle( document.documentElement ).direction;
+
+		// Reset so the natural size can be measured.
+		menu.style.top = '0px';
+		menu.style.left = '0px';
+
+		var size = menu.getBoundingClientRect();
+		var viewportW = document.documentElement.clientWidth || window.innerWidth;
+		var viewportH = document.documentElement.clientHeight || window.innerHeight;
+
+		// Inline-end alignment: RTL anchors the right edge, LTR the left edge.
+		var left = rtl ? rect.right - size.width : rect.left;
+
+		// Vertical placement with flip.
+		var spaceBelow = viewportH - rect.bottom - margin;
+		var spaceAbove = rect.top - margin;
+		var top = rect.bottom + gap;
+		var flip = spaceBelow < size.height && spaceAbove > spaceBelow;
+
+		if ( flip ) {
+			top = rect.top - size.height - gap;
+		}
+
+		if ( top < margin ) {
+			top = margin;
+		}
+
+		if ( top + size.height > viewportH - margin ) {
+			top = Math.max( margin, viewportH - margin - size.height );
+		}
+
+		if ( left < margin ) {
+			left = margin;
+		}
+
+		if ( left + size.width > viewportW - margin ) {
+			left = Math.max( margin, viewportW - margin - size.width );
+		}
+
+		menu.style.top = Math.round( top ) + 'px';
+		menu.style.left = Math.round( left ) + 'px';
+		menu.setAttribute( 'data-placement', flip ? 'top' : 'bottom' );
+	}
+
+	/**
+	 * Close the open kebab menu, if any.
+	 *
+	 * @param {Object} [options]           Options.
+	 * @param {boolean} [options.focusToggle] Return focus to the trigger.
+	 * @return {void}
+	 */
+	function closeMenus( options ) {
+		var state = OPEN_MENU;
+
+		if ( ! state ) {
+			return;
+		}
+
+		OPEN_MENU = null;
+
+		var toggle = state.toggle;
+
+		restoreMenu( state );
+
+		if ( toggle ) {
+			toggle.setAttribute( 'aria-expanded', 'false' );
+		}
+
+		if ( options && options.focusToggle && toggle && toggle.isConnected ) {
+			toggle.focus();
+		}
+	}
+
+	/**
+	 * Open a kebab menu as a portal.
+	 *
+	 * @param {Element} toggle The trigger button.
+	 * @return {void}
+	 */
+	function openMenu( toggle ) {
+		var wrap = toggle.closest( '.rbw-kebab' );
+		var menu = wrap ? qs( '.rbw-menu', wrap ) : null;
+
+		if ( ! menu ) {
+			return;
+		}
+
+		// Single-open policy: never leave a previous menu behind.
+		closeMenus();
+
+		var state = {
+			menu: menu,
+			toggle: toggle,
+			wrap: wrap,
+			parent: menu.parentNode,
+			next: menu.nextSibling,
+			onScroll: null,
+			onResize: null
+		};
+
+		state.onScroll = function () {
+			// Capture phase: catches any scrolled ancestor, not just the window.
+			positionMenu( state );
+		};
+
+		state.onResize = function () {
+			positionMenu( state );
+		};
+
+		menu.classList.add( 'rbw-menu--portal' );
+		document.body.appendChild( menu );
+		menu.hidden = false;
+
+		positionMenu( state );
+
+		window.addEventListener( 'scroll', state.onScroll, true );
+		window.addEventListener( 'resize', state.onResize );
+
+		toggle.setAttribute( 'aria-expanded', 'true' );
+		OPEN_MENU = state;
+
+		var first = menuItems( menu )[ 0 ];
+
+		if ( first ) {
+			first.focus();
+		}
+	}
+
+	/**
 	 * Bind the kebab menus (click + keyboard).
+	 *
+	 * Delegated from `document` so rows re-rendered by AJAX keep working without a
+	 * re-bind, and so the portalled menu (now a child of <body>) still receives
+	 * its own clicks.
 	 */
 	function bindMenus() {
-		qsa( '.rbw-kebab-toggle' ).forEach( function ( toggle ) {
-			if ( toggle.getAttribute( 'data-rbw-bound' ) ) {
-				return;
-			}
+		document.addEventListener( 'click', function ( event ) {
+			var toggle = event.target.closest && event.target.closest( '.rbw-kebab-toggle' );
 
-			toggle.setAttribute( 'data-rbw-bound', '1' );
-
-			toggle.addEventListener( 'click', function ( event ) {
+			if ( toggle ) {
+				event.preventDefault();
 				event.stopPropagation();
 
-				var wrap = toggle.closest( '.rbw-kebab' );
-				var menu = qs( '.rbw-menu', wrap );
-				var open = menu && ! menu.hidden;
-
-				closeMenus( open ? wrap : null );
-
-				if ( ! menu ) {
-					return;
+				if ( OPEN_MENU && OPEN_MENU.toggle === toggle ) {
+					closeMenus();
+				} else {
+					openMenu( toggle );
 				}
 
-				menu.hidden = open;
-				toggle.setAttribute( 'aria-expanded', open ? 'false' : 'true' );
-
-				if ( ! open ) {
-					var first = qs( '.rbw-menu-item', menu );
-
-					if ( first ) {
-						first.focus();
-					}
-				}
-			} );
-
-			// Arrow keys inside the menu, Escape closes.
-			var wrap = toggle.closest( '.rbw-kebab' );
-			var menu = wrap ? qs( '.rbw-menu', wrap ) : null;
-
-			if ( ! menu ) {
 				return;
 			}
 
-			menu.addEventListener( 'keydown', function ( event ) {
-				var items = qsa( '.rbw-menu-item', menu );
-				var index = items.indexOf( document.activeElement );
+			// A click on a menu ITEM must reach its own delegated handler, so it is
+			// not treated as an outside click. Dismissing on item click is done by
+			// the action handlers themselves (they close the menu after acting).
+			if ( event.target.closest && event.target.closest( '.rbw-menu' ) ) {
+				return;
+			}
 
-				if ( 'Escape' === event.key ) {
-					event.preventDefault();
-					closeMenus();
-					toggle.focus();
-					return;
-				}
-
-				if ( 'ArrowDown' === event.key || 'ArrowUp' === event.key ) {
-					event.preventDefault();
-
-					var next = 'ArrowDown' === event.key
-						? ( index + 1 ) % items.length
-						: ( index - 1 + items.length ) % items.length;
-
-					if ( items[ next ] ) {
-						items[ next ].focus();
-					}
-				}
-			} );
-		} );
-
-		document.addEventListener( 'click', function () {
 			closeMenus();
 		} );
 
 		document.addEventListener( 'keydown', function ( event ) {
+			var toggle = event.target.closest && event.target.closest( '.rbw-kebab-toggle' );
+
+			if ( toggle && ! OPEN_MENU ) {
+				// Enter/Space is handled by the click handler; arrows open directly.
+				if ( 'ArrowDown' === event.key || 'ArrowUp' === event.key ) {
+					event.preventDefault();
+					openMenu( toggle );
+
+					var opened = OPEN_MENU ? menuItems( OPEN_MENU.menu ) : [];
+					var target = 'ArrowUp' === event.key ? opened[ opened.length - 1 ] : opened[ 0 ];
+
+					if ( target ) {
+						target.focus();
+					}
+				}
+
+				return;
+			}
+
+			if ( ! OPEN_MENU ) {
+				return;
+			}
+
 			if ( 'Escape' === event.key ) {
-				closeMenus();
+				event.preventDefault();
+				closeMenus( { focusToggle: true } );
+				return;
+			}
+
+			if ( 'Tab' === event.key ) {
+				// Tab navigation leaving the menu closes it. Focus is never stolen,
+				// so the browser keeps its normal tab order.
+				var inside = OPEN_MENU.menu.contains( document.activeElement );
+
+				if ( ! inside ) {
+					return;
+				}
+
+				if ( event.shiftKey ) {
+					closeMenus( { focusToggle: true } );
+					return;
+				}
+
+				window.setTimeout( function () {
+					if ( OPEN_MENU && ! OPEN_MENU.menu.contains( document.activeElement ) ) {
+						closeMenus();
+					}
+				}, 0 );
+
+				return;
+			}
+
+			if ( 'ArrowDown' !== event.key && 'ArrowUp' !== event.key && 'Home' !== event.key && 'End' !== event.key ) {
+				return;
+			}
+
+			if ( ! OPEN_MENU.menu.contains( document.activeElement ) ) {
+				return;
+			}
+
+			var list = menuItems( OPEN_MENU.menu );
+
+			if ( ! list.length ) {
+				return;
+			}
+
+			event.preventDefault();
+
+			var index = list.indexOf( document.activeElement );
+			var nextIndex = 0;
+
+			if ( 'ArrowDown' === event.key ) {
+				nextIndex = ( index + 1 ) % list.length;
+			} else if ( 'ArrowUp' === event.key ) {
+				nextIndex = ( index - 1 + list.length ) % list.length;
+			} else if ( 'End' === event.key ) {
+				nextIndex = list.length - 1;
+			}
+
+			if ( list[ nextIndex ] ) {
+				list[ nextIndex ].focus();
 			}
 		} );
+
+		// A re-render that detaches the toggle must also drop its portal.
+		if ( window.MutationObserver ) {
+			var observer = new MutationObserver( function () {
+				if ( OPEN_MENU && ! OPEN_MENU.toggle.isConnected ) {
+					closeMenus();
+				}
+			} );
+
+			observer.observe( document.body, { childList: true, subtree: true } );
+		}
 	}
 
 	/* ------------------------------------------------------------------ */

@@ -74,13 +74,62 @@ Check every screen at **360, 768, 1280, 1600** px with WordPress' admin menu bot
 4. «ارقام فارسی» still governs the digits: `۱۴۰۵-۰۸-۰۷` with it on,
    `1405-08-07` with it off — including the clock.
 
+## Fonts (Phase 9c)
+
+The admin UI loads **Vazirmatn** from `assets/fonts/`. This regressed once, so
+check it explicitly on every page:
+
+1. DevTools → **Network** → filter `woff2`: exactly three requests
+   (`Vazirmatn-Regular`, `-Medium`, `-Bold`) must return **200**, none **404**.
+2. `http://<site>/wp-content/plugins/ratebridge-woo/assets/fonts/Vazirmatn-Bold.woff2`
+   opens the file (it is a binary, not an HTML error page).
+3. The panel headings render in Vazirmatn, not the WordPress system font stack —
+   easiest to see on a Persian letter with a distinctive «گ» or «ژ».
+4. `assets/fonts/OFL.txt` exists and mentions Vazirmatn and the SIL Open Font
+   License 1.1.
+
+`php tests/css-assets.php` guards all of this: it resolves every `url(...)` in
+every stylesheet against its own file and fails on a missing target.
+
+## Kebab menu portal (Phase 9c)
+
+`.rbw-table` keeps `overflow: hidden` (rounded corners) and `overflow-x: auto`
+on mobile, both of which clip an in-place popup. The menu is therefore moved to
+`<body>` while open. Verify:
+
+1. **Last row of a short list (2 rows)** — currencies and formulas: open the kebab
+   on the *last* row. The menu must be fully visible, not cut off at the table
+   edge, and every item must be clickable.
+2. **First and middle rows**, long list (10+ currencies) — same check.
+3. **Flip** — scroll so a last row sits near the bottom of the viewport (or zoom
+   to 200 %): the menu opens **above** the toggle instead of being clipped.
+4. **No scrollbar** — opening a menu must not add a page scrollbar or shift the
+   layout.
+5. **Widths 360 / 768 / 1280**, RTL and LTR: the menu never leaves the viewport,
+   keeps an 8 px margin, and its inline-end edge lines up with the toggle's
+   inline-end edge (right edge in fa_IR, left edge in en_US).
+6. **Stacking** — the open menu paints **over** the WP admin bar and the table,
+   but **under** the confirm dialog and toasts. Open a menu, then trigger a
+   delete: the dialog must be on top.
+7. **Close on** — click outside; `Esc` (focus returns to the toggle); resizing the
+   window; scrolling any ancestor (the page, the table wrapper, the mobile card
+   list); `Tab`bing out of the menu; and opening another row's menu (only one is
+   ever open).
+8. **No orphans** — open a menu, then delete/duplicate a formula so the list
+   re-renders: no stray `.rbw-menu` may remain a child of `<body>` (inspect
+   `document.body` in the console).
+9. **The actions still work** from inside the portalled menu: ویرایش / تکثیر /
+   حذف (formulas) and ویرایش / حذف plus the delete confirmation (currencies).
+
 ## Keyboard only
 
 1. `Tab` from the admin menu → header actions → tab strip. Arrow keys move
    between tabs; `Home`/`End` jump to the ends.
 2. On the currencies list: `Tab` to the switch (space toggles it), then the
-   refresh button, then the kebab. Inside the kebab, `↓`/`↑` walk the items and
-   `Esc` closes it and returns focus to the trigger.
+   refresh button, then the kebab. `Enter`, `Space` or `↓` opens it and focuses
+   the first item; `↑` opens at the **last** item; `↑`/`↓` wrap around,
+   `Home`/`End` jump to the ends; `Esc` closes it and returns focus to the
+   trigger; `Tab` out of the menu closes it without stealing focus.
 3. On the formulas list the same pattern applies: switch → edit icon → kebab
    (ویرایش / تکثیر / حذف).
 4. Overview timeline: `Tab` reaches the «بیشتر» summary of a clamped message;
@@ -123,4 +172,7 @@ Check every screen at **360, 768, 1280, 1600** px with WordPress' admin menu bot
   tabs share a glyph.
 - No English browser chrome («Choose File / No file chosen») appears anywhere in
   the import cards.
-- No AJAX action name, payload field or capability changed in this phase.
+- No AJAX action name, payload field or capability changed in these phases.
+- Every kebab toggle is a `<button aria-haspopup="menu" aria-expanded>`, points at
+  its menu with `aria-controls`, and its items are real `<button role="menuitem">`
+  elements — no `<div>`/`<a>` pseudo-buttons.

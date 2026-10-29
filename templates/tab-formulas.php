@@ -157,14 +157,15 @@ if ( 'none' !== $rbw_rounding && $rbw_step > 0 ) {
 								<button
 									type="button"
 									class="button button-small rbw-icon-button rbw-kebab-toggle"
-									aria-haspopup="true"
+									aria-haspopup="menu"
 									aria-expanded="false"
+									aria-controls="rbw-formula-menu-<?php echo esc_attr( (string) $rbw_formula->id ); ?>"
 									title="<?php esc_attr_e( 'More actions', 'ratebridge-woo' ); ?>"
 								>
 									<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-more"></use></svg>
 									<span class="screen-reader-text"><?php esc_html_e( 'More actions', 'ratebridge-woo' ); ?></span>
 								</button>
-								<ul class="rbw-menu" role="menu" hidden>
+								<ul class="rbw-menu" role="menu" id="rbw-formula-menu-<?php echo esc_attr( (string) $rbw_formula->id ); ?>" hidden>
 									<li role="none">
 										<button type="button" role="menuitem" class="rbw-menu-item rbw-formula-edit" data-id="<?php echo esc_attr( (string) $rbw_formula->id ); ?>">
 											<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-edit"></use></svg>

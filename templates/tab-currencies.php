@@ -257,14 +257,15 @@ $rbw_status = static function ( Currency $currency, Repricer $repricer ): array 
 									<button
 										type="button"
 										class="button button-small rbw-icon-button rbw-kebab-toggle"
-										aria-haspopup="true"
+										aria-haspopup="menu"
 										aria-expanded="false"
+										aria-controls="rbw-currency-menu-<?php echo esc_attr( (string) $rbw_currency->id ); ?>"
 										title="<?php esc_attr_e( 'More actions', 'ratebridge-woo' ); ?>"
 									>
 										<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-more"></use></svg>
 										<span class="screen-reader-text"><?php esc_html_e( 'More actions', 'ratebridge-woo' ); ?></span>
 									</button>
-									<ul class="rbw-menu" role="menu" hidden>
+									<ul class="rbw-menu" role="menu" id="rbw-currency-menu-<?php echo esc_attr( (string) $rbw_currency->id ); ?>" hidden>
 										<li role="none">
 											<button type="button" role="menuitem" class="rbw-menu-item rbw-edit" data-id="<?php echo esc_attr( (string) $rbw_currency->id ); ?>">
 												<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-edit"></use></svg>

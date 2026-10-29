@@ -24,7 +24,7 @@
  */
 @font-face {
 	font-family: "Vazirmatn";
-	src: url("../../../fonts/Vazirmatn-Regular.woff2") format("woff2");
+	src: url("../../fonts/Vazirmatn-Regular.woff2") format("woff2");
 	font-weight: 400;
 	font-style: normal;
 	font-display: swap;
@@ -34,7 +34,7 @@
 
 @font-face {
 	font-family: "Vazirmatn";
-	src: url("../../../fonts/Vazirmatn-Medium.woff2") format("woff2");
+	src: url("../../fonts/Vazirmatn-Medium.woff2") format("woff2");
 	font-weight: 500;
 	font-style: normal;
 	font-display: swap;
@@ -43,7 +43,7 @@
 
 @font-face {
 	font-family: "Vazirmatn";
-	src: url("../../../fonts/Vazirmatn-Bold.woff2") format("woff2");
+	src: url("../../fonts/Vazirmatn-Bold.woff2") format("woff2");
 	font-weight: 700;
 	font-style: normal;
 	font-display: swap;
@@ -117,7 +117,12 @@
 	/* --- z-index ------------------------------------------------------ */
 	--rbw-z-row: 1;
 	--rbw-z-sticky: 10;
-	--rbw-z-menu: 100;
+	/*
+	 * Kebab menus are portalled to <body>, so they must clear the WordPress admin
+	 * bar (`.wp-admin-bar` sits at 99999 and its content area at 99998) while still
+	 * staying under the plugin's own modal and toast layers.
+	 */
+	--rbw-z-menu: 100000;
 	--rbw-z-modal: 100100;
 	--rbw-z-toast: 100200;
 
