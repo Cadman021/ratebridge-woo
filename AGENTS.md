@@ -5,3 +5,7 @@
 - All user-facing strings use text domain `ratebridge-woo`; RTL/Persian first.
 - No copying of third-party code or assets. No external libraries without asking.
 - After each task: list changed files, how to test manually, and run `php -l` on edited files.
+- **Any UI attached outside `.rbw-admin` must live inside `#rbw-portal`.** The design
+  tokens live only on `.rbw-admin`, so a menu/toast/tooltip appended straight to `<body>`
+  resolves every `var(--rbw-*)` to nothing (unstyled, no z-index). Use `portalHost()` in
+  `assets/admin/js/admin.js`; never call `document.body.appendChild()`.

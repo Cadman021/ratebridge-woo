@@ -7,6 +7,7 @@
 
 namespace RateBridge\Admin;
 
+use RateBridge\Core\AssetVersion;
 use RateBridge\Core\DateFormatter;
 use RateBridge\Core\Logger;
 use RateBridge\Core\Settings;
@@ -41,7 +42,65 @@ final class SettingsPage {
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_action( 'admin_footer', array( $this, 'render_portal_host' ) );
 		add_filter( 'plugin_action_links_' . RBW_PLUGIN_BASENAME, array( $this, 'add_action_links' ) );
+	}
+
+	/**
+	 * Whether the current screen shows any RateBridge UI.
+	 *
+	 * Used to decide whether the portal host is worth printing. Kept public and
+	 * static so the product screens can reuse the same answer.
+	 *
+	 * @return bool
+	 */
+	public static function screen_has_plugin_ui(): bool {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+
+		if ( ! $screen instanceof \WP_Screen ) {
+			return false;
+		}
+
+		if ( 'woocommerce_page_' . self::SLUG === $screen->id ) {
+			return true;
+		}
+
+		// Products list + product editor (the «ارز» column and the panel).
+		if ( 'product' === $screen->post_type ) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Print the single portal host that body-level UI is attached to.
+	 *
+	 * Every element the plugin moves outside `.rbw-admin` — the kebab menu, the
+	 * toast stack, any future tooltip/popover — is appended here by JS. The host
+	 * carries the `rbw-admin` class, which is where the design tokens live, so
+	 * those elements resolve `var(--rbw-*)` exactly like in-page UI.
+	 *
+	 * It is rendered server-side as well as created by JS so there is no window
+	 * in which a portal target is missing (the toast host used to be created
+	 * lazily on the first toast, which raced with the first menu open).
+	 *
+	 * The host itself has no layout box: `position: static`, no size, no
+	 * `overflow` (which would re-clip a `position: fixed` child).
+	 *
+	 * @return void
+	 */
+	public function render_portal_host(): void {
+		if ( ! self::screen_has_plugin_ui() ) {
+			return;
+		}
+
+		if ( ! current_user_can( self::CAPABILITY ) ) {
+			return;
+		}
+
+		// `dir` is inherited from <html>, so no explicit attribute is needed.
+		echo '<div id="rbw-portal" class="rbw-admin rbw-portal rbw-typography" aria-live="off"></div>' . "\n";
 	}
 
 	/**
@@ -99,14 +158,14 @@ final class SettingsPage {
 				'rbw-tokens',
 				RBW_PLUGIN_URL . 'assets/admin/css/tokens.css',
 				array(),
-				RBW_VERSION
+				AssetVersion::get( 'assets/admin/css/tokens.css' )
 			);
 
 			wp_enqueue_script(
 				'rbw-admin',
 				RBW_PLUGIN_URL . 'assets/admin/js/admin.js',
 				array(),
-				RBW_VERSION,
+				AssetVersion::get( 'assets/admin/js/admin.js' ),
 				true
 			);
 
@@ -135,14 +194,14 @@ final class SettingsPage {
 			'rbw-tokens',
 			RBW_PLUGIN_URL . 'assets/admin/css/tokens.css',
 			array(),
-			RBW_VERSION
+			AssetVersion::get( 'assets/admin/css/tokens.css' )
 		);
 
 		wp_enqueue_style(
 			'rbw-admin',
 			RBW_PLUGIN_URL . 'assets/admin/css/admin.css',
 			array( 'rbw-tokens' ),
-			RBW_VERSION
+			AssetVersion::get( 'assets/admin/css/admin.css' )
 		);
 
 		/*
@@ -158,7 +217,7 @@ final class SettingsPage {
 				'rbw-admin-rtl',
 				RBW_PLUGIN_URL . 'assets/admin/css/admin-rtl.css',
 				array( 'rbw-admin' ),
-				RBW_VERSION
+				AssetVersion::get( 'assets/admin/css/admin-rtl.css' )
 			);
 		}
 
@@ -166,7 +225,7 @@ final class SettingsPage {
 			'rbw-admin',
 			RBW_PLUGIN_URL . 'assets/admin/js/admin.js',
 			array(),
-			RBW_VERSION,
+			AssetVersion::get( 'assets/admin/js/admin.js' ),
 			true
 		);
 

@@ -121,6 +121,58 @@ on mobile, both of which clip an in-place popup. The menu is therefore moved to
 9. **The actions still work** from inside the portalled menu: ویرایش / تکثیر /
    حذف (formulas) and ویرایش / حذف plus the delete confirmation (currencies).
 
+## Console must be clean (Phase 9d)
+
+On **every** plugin tab, the **product editor** and the **products list**, the
+DevTools console must show no errors and no 404s:
+
+1. Open DevTools → Console, then visit each tab: Overview, Currencies, Formulas,
+   Price sources, General settings, Import / Export.
+2. Repeat on `wp-admin/post.php?post=<id>&action=edit` and
+   `wp-admin/edit.php?post_type=product`.
+3. Expected: zero red lines. In particular no `Failed to load resource: 404`
+   for the three Vazirmatn files (see the *Fonts* section for the URLs).
+4. Network tab, filter `CSS`: every plugin stylesheet must carry a version that
+   matches the request. With `WP_DEBUG` or `SCRIPT_DEBUG` on, expect
+   `?ver=dev-<unix mtime>`; in production expect `?ver=<plugin version>`.
+5. After editing any plugin `.css`/`.js` in debug mode, a plain reload must pick
+   the change up (no hard refresh needed). That is what `AssetVersion` is for.
+
+## Body-level UI rule (Phase 9d)
+
+Design tokens live **only** on `.rbw-admin`. Anything attached outside it must be
+appended to `#rbw-portal`, which carries `rbw-admin` + `rbw-typography`.
+
+1. Open a kebab menu → inspect it in DevTools: its parent must be
+   `<div id="rbw-portal" class="rbw-admin rbw-portal rbw-typography">`, never
+   `<body>` directly.
+2. `#rbw-portal` itself must have **no layout box** — `position: static`, zero
+   size, `overflow: visible`, `pointer-events: none`. A `position: relative`
+   there would re-anchor every `position: fixed` child and break menu placement.
+3. The portal host exists on the page **before** any JS runs (view source):
+   `<div id="rbw-portal" class="rbw-admin rbw-portal rbw-typography">`.
+4. The toast stack (`#rbw-toasts`) must also be a child of `#rbw-portal`.
+5. Toggling a menu and re-reading `document.body.children` must never show a
+   stray `.rbw-menu`.
+
+### WooCommerce screens (tokens outside `.rbw-admin`)
+
+These surfaces render inside WooCommerce markup, so each one needs the scope:
+
+| Surface | Element | Scope class | Note |
+| --- | --- | --- | --- |
+| Product editor panel | `.rbw-product-panel` | `rbw-admin rbw-typography` | Full plugin look inside the WC form |
+| Products list «ارز» column | `.rbw-col-currency` | `rbw-admin` only | Token-only: native font/size must not change |
+| Bulk edit result | `.notice` | none | Plain WordPress notice, no tokens used |
+| Frontend shortcodes/widgets | `.rbw-rates-wrap` etc. | own token subset | `frontend.css` defines the tokens it uses |
+
+Check the products list column specifically: the formula slug line (`.rbw-muted`)
+must render in the muted grey `#646970`, not in the inherited body colour. Before
+this pass it resolved `--rbw-text-faint` to nothing and fell back to inherited
+black.
+
+`php tests/ui-scope.php` asserts all of the above statically.
+
 ## Keyboard only
 
 1. `Tab` from the admin menu → header actions → tab strip. Arrow keys move
@@ -157,6 +209,13 @@ on mobile, both of which clip an in-place popup. The menu is therefore moved to
   flash and the skeleton animation stop, and the ticker becomes a wrapped list.
 
 ## Toast + confirm behaviour
+
+- Success, error and warning toasts must each render **styled**: card background,
+  left/inline-start accent border, padding, shadow, and stacked bottom-start.
+  An unstyled toast (plain text, no box) means it fell outside the token scope —
+  check it is inside `#rbw-portal`.
+- Toasts must paint **above** the page and the portalled menu, and **below** the
+  confirm dialog. Open a toast and a confirm dialog together to verify.
 
 - Every AJAX action reports through a toast: success auto-dismisses after ~5 s,
   errors stay until closed (or a fifth toast pushes the oldest out).

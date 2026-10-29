@@ -11,6 +11,7 @@
 
 namespace RateBridge\Frontend;
 
+use RateBridge\Core\AssetVersion;
 use RateBridge\Core\Settings;
 use RateBridge\Currency\Currency;
 use RateBridge\Currency\CurrencyRepository;
@@ -396,7 +397,7 @@ final class Frontend {
 				self::STYLE,
 				RBW_PLUGIN_URL . 'assets/frontend/css/frontend.css',
 				array(),
-				RBW_VERSION
+				AssetVersion::get( 'assets/frontend/css/frontend.css' )
 			);
 		}
 
@@ -407,7 +408,7 @@ final class Frontend {
 				$rtl,
 				RBW_PLUGIN_URL . 'assets/frontend/css/frontend-rtl.css',
 				array( self::STYLE ),
-				RBW_VERSION
+				AssetVersion::get( 'assets/frontend/css/frontend-rtl.css' )
 			);
 		}
 	}

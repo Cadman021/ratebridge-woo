@@ -881,6 +881,44 @@
 }
 
 /* Toast stack (created by JS) */
+/* ===================================================================== */
+/* Portal host                                                           */
+/* ===================================================================== */
+
+/*
+ * `#rbw-portal` is the single container for UI that must live outside the page
+ * wrapper (kebab menus, the toast stack, tooltips). It carries `.rbw-admin` so
+ * design tokens resolve there.
+ *
+ * It must NOT create a layout box or a stacking/clipping context:
+ *  - no `position` other than `static`, otherwise it would become the containing
+ *    block for `position: fixed` children and break their viewport coordinates;
+ *  - no `overflow`, for the same reason (it would clip the portalled menu);
+ *  - no `transform`/`filter`/`will-change`, which also create a containing block.
+ * Children position themselves against the viewport.
+ */
+.rbw-portal {
+	position: static;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	/*
+	 * No size of its own: `display: contents` would remove the box entirely, but
+	 * it is not needed and hurts older browsers, so the host is simply an empty
+	 * block whose only children are out-of-flow (fixed) elements.
+	 */
+	inline-size: 0;
+	block-size: 0;
+	overflow: visible;
+	/* Never let the empty host steal a click or a tap. */
+	pointer-events: none;
+}
+
+/* Children opt back into interaction. */
+.rbw-portal > * {
+	pointer-events: auto;
+}
+
 .rbw-toasts {
 	position: fixed;
 	inset-block-end: var(--rbw-s-4);
@@ -1231,8 +1269,12 @@
 	display: inline-block;
 }
 
-/* Discreet, destructive-by-nature action: reads as a link, not a button. */
-.button-link.is-danger-link {
+/*
+ * Discreet, destructive-by-nature action: reads as a link, not a button.
+ * Scoped to the plugin's own class (`.rbw-reset-budget`) rather than the generic
+ * `.button-link`, so WordPress' own link-buttons elsewhere in admin never match.
+ */
+.rbw-reset-budget.is-danger-link {
 	color: var(--rbw-danger-text);
 	background: none;
 	border: 0;
@@ -1242,8 +1284,8 @@
 	min-block-size: auto;
 }
 
-.button-link.is-danger-link:hover,
-.button-link.is-danger-link:focus-visible {
+.rbw-reset-budget.is-danger-link:hover,
+.rbw-reset-budget.is-danger-link:focus-visible {
 	color: var(--rbw-danger-text);
 	background: var(--rbw-danger-bg);
 	text-decoration: none;

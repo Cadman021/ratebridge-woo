@@ -54,6 +54,16 @@
 /* Tokens                                                                    */
 /* ------------------------------------------------------------------------- */
 
+/*
+ * Tokens live on `.rbw-admin` and ONLY there.
+ *
+ * Any UI that is attached outside the page wrapper must therefore live inside
+ * `#rbw-portal`, which itself carries the `rbw-admin` class (see
+ * SettingsPage::render_portal_host() and portalHost() in admin.js). Do NOT add
+ * other selectors here: a second selector makes it possible to attach
+ * body-level UI somewhere that does not inherit the tokens — which is exactly
+ * the bug that left the portalled kebab menu and the toast stack unstyled.
+ */
 .rbw-admin {
 	/* --- brand -------------------------------------------------------- */
 	--rbw-primary: var(--wp-admin-theme-color, #2271b1);
@@ -155,6 +165,27 @@
 	--rbw-tap-min: 40px;  /* touch target on narrow screens */
 	--rbw-max-width: 1280px;
 
+	font-family: var(--rbw-font);
+	color: var(--rbw-text);
+	line-height: var(--rbw-lh);
+	font-size: var(--rbw-fs-md);
+}
+
+/*
+ * Typography is a SEPARATE opt-in class, not part of `.rbw-admin`.
+ *
+ * `.rbw-admin` defines the custom properties only, so it can also be used as a
+ * bare token scope on markup that is not a plugin page. The products-list column
+ * is the case in point: it needs `--rbw-text-faint` for `.rbw-muted`, but
+ * applying Vazirmatn at 13px/1.7 to a WooCommerce table cell would make the
+ * column look foreign next to its neighbours.
+ *
+ * The plugin's page wrapper, the portal host and the product editor panel carry
+ * BOTH classes; the products-list column carries `rbw-admin` alone.
+ *
+ * One source of truth: adding a token touches only the block above.
+ */
+.rbw-typography {
 	font-family: var(--rbw-font);
 	color: var(--rbw-text);
 	line-height: var(--rbw-lh);

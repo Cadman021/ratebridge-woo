@@ -10,6 +10,7 @@
 
 namespace RateBridge\Product;
 
+use RateBridge\Core\AssetVersion;
 use RateBridge\Core\DateFormatter;
 use RateBridge\Admin\AjaxController;
 use RateBridge\Admin\SettingsPage;
@@ -182,7 +183,9 @@ final class ProductFields {
 		$currencies = $this->currencies();
 		$unit       = SettingsPage::unit_label();
 
-		echo '<div class="options_group rbw-product-panel rbw-admin">';
+		// `rbw-typography` as well: the panel is a plugin surface inside the Woo form
+		// and should read as one, unlike a single table cell.
+		echo '<div class="options_group rbw-product-panel rbw-admin rbw-typography">';
 
 		woocommerce_wp_checkbox(
 			array(
@@ -1242,7 +1245,14 @@ final class ProductFields {
 	 * @return void
 	 */
 	private function print_column( int $post_id ): void {
-		echo '<div class="rbw-col-currency">';
+		/*
+		 * `rbw-admin` on the cell: the products list is WooCommerce markup, not the
+		 * plugin page, so the design tokens (where `--rbw-text-faint` and friends
+		 * live) are not inherited from anywhere. Without this wrapper `.rbw-muted`
+		 * inside the column resolved to an undefined variable and fell back to the
+		 * browser default colour.
+		 */
+		echo '<div class="rbw-col-currency rbw-admin">';
 
 		if ( ! ProductData::is_enabled( $post_id ) ) {
 			// A variable product may still have managed variations.
@@ -1535,14 +1545,14 @@ final class ProductFields {
 			'rbw-tokens',
 			RBW_PLUGIN_URL . 'assets/admin/css/tokens.css',
 			array(),
-			RBW_VERSION
+			AssetVersion::get( 'assets/admin/css/tokens.css' )
 		);
 
 		wp_enqueue_style(
 			self::HANDLE,
 			RBW_PLUGIN_URL . 'assets/admin/css/product.css',
 			array( 'rbw-tokens' ),
-			RBW_VERSION
+			AssetVersion::get( 'assets/admin/css/product.css' )
 		);
 
 		if ( is_rtl() ) {
@@ -1550,7 +1560,7 @@ final class ProductFields {
 				self::HANDLE . '-rtl',
 				RBW_PLUGIN_URL . 'assets/admin/css/product-rtl.css',
 				array( self::HANDLE ),
-				RBW_VERSION
+				AssetVersion::get( 'assets/admin/css/product-rtl.css' )
 			);
 		}
 	}
@@ -1590,7 +1600,7 @@ final class ProductFields {
 			self::HANDLE,
 			RBW_PLUGIN_URL . 'assets/admin/js/product.js',
 			array(),
-			RBW_VERSION,
+			AssetVersion::get( 'assets/admin/js/product.js' ),
 			true
 		);
 

@@ -62,7 +62,7 @@ $rbw_tab_url = static function ( string $tab ): string {
 ?>
 <?php require RBW_PLUGIN_DIR . 'templates/icon-sprite.php'; ?>
 
-<div class="wrap rbw-wrap rbw-admin">
+<div class="wrap rbw-wrap rbw-admin rbw-typography">
 	<header class="rbw-header">
 		<div class="rbw-header-main">
 			<h1 class="rbw-title">

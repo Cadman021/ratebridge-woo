@@ -78,8 +78,12 @@ kebab_check(
 );
 
 kebab_check(
-	'the menu is appended to <body>',
-	(bool) preg_match( '/document\.body\.appendChild\(\s*menu\s*\)/', $js )
+	// Phase 9d: the menu goes into the portal host (which carries the tokens),
+	// never straight into <body>. Appending to <body> left every
+	// `var(--rbw-*)` undefined, so the menu rendered with no background/border.
+	'the menu is portalled into #rbw-portal (not <body>)',
+	(bool) preg_match( '/portalHost\(\)\.appendChild\(\s*menu\s*\)/', $js )
+		&& ! preg_match( '/document\.body\.appendChild\(\s*menu\s*\)/', $js )
 );
 
 kebab_check(

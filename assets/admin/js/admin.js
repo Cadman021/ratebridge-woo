@@ -122,7 +122,38 @@
 	}
 
 	/**
-	 * Toast stack host (created once).
+	 * The single portal host for body-level UI.
+	 *
+	 * All design tokens are scoped to `.rbw-admin`. Anything the plugin moves out
+	 * of the page wrapper — kebab menus, the toast stack, future tooltips — would
+	 * otherwise sit in <body> with every `var(--rbw-*)` undefined (unstyled menu,
+	 * unstyled toasts, no z-index).
+	 *
+	 * The host carries the `rbw-admin` class so those elements resolve the tokens
+	 * exactly like in-page UI. It is also printed server-side on every screen that
+	 * shows plugin UI, so this only has to create it as a fallback (e.g. a screen
+	 * where the footer hook did not run).
+	 *
+	 * @return {HTMLElement} The portal host.
+	 */
+	function portalHost() {
+		var host = qs( '#rbw-portal' );
+
+		if ( host ) {
+			return host;
+		}
+
+		host = document.createElement( 'div' );
+		host.id = 'rbw-portal';
+		host.className = 'rbw-admin rbw-portal rbw-typography';
+		host.setAttribute( 'aria-live', 'off' );
+		document.body.appendChild( host );
+
+		return host;
+	}
+
+	/**
+	 * Toast stack host (created once inside the portal).
 	 *
 	 * @return {HTMLElement} Container element.
 	 */
@@ -139,7 +170,9 @@
 		host.setAttribute( 'role', 'status' );
 		host.setAttribute( 'aria-live', 'polite' );
 		host.setAttribute( 'aria-atomic', 'false' );
-		document.body.appendChild( host );
+
+		// Inside the portal host, NOT <body>: the tokens live on .rbw-admin.
+		portalHost().appendChild( host );
 
 		return host;
 	}
@@ -3574,7 +3607,9 @@
 		};
 
 		menu.classList.add( 'rbw-menu--portal' );
-		document.body.appendChild( menu );
+
+		// Into the portal host (which carries the tokens), never straight into <body>.
+		portalHost().appendChild( menu );
 		menu.hidden = false;
 
 		positionMenu( state );
