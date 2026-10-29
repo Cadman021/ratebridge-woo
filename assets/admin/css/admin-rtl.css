@@ -29,6 +29,7 @@
 .rbw-admin .rbw-kpi-value,
 .rbw-meter-label,
 .rbw-timeline-meta time,
+.rbw-timeline-time,
 .rbw-test-result,
 .rbw-formula-test-result,
 .rbw-formula-error-line {
@@ -38,7 +39,7 @@
 
 .rbw-admin .rbw-kpi-value,
 .rbw-meter-label,
-.rbw-timeline-meta time {
+.rbw-timeline-time {
 	text-align: right;
 }
 
@@ -64,14 +65,12 @@
 }
 
 /* Timeline rail sits on the right in RTL. */
-.rbw-timeline {
-	padding-inline: var(--rbw-s-3) 0;
-}
-
-.rbw-timeline-dot {
-	inset-inline-start: auto;
-	inset-inline-end: calc(var(--rbw-s-3) * -1 - 5px);
-}
+/*
+ * The rail and the dot are positioned with logical properties in admin.css,
+ * so no RTL override is needed: `inset-inline-start` and `margin-inline-start`
+ * already flip. The old physical overrides were removed because they broke the
+ * grid layout (the dot escaped the content column).
+ */
 
 .rbw-modal-content {
 	text-align: right;

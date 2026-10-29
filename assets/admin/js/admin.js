@@ -38,6 +38,52 @@
 	}
 
 	/**
+	 * Wrap an LTR fragment (date, number, code) in a bdi isolate.
+	 *
+	 * Mirrors RateBridge\Frontend\Bidi::isolate() on the PHP side: a bare
+	 * `2026-10-29 17:23` or `(1,234,567)` inside a Persian sentence is re-ordered by
+	 * the Unicode bidi algorithm, and the surrounding brackets jump to the wrong
+	 * side. `<bdi dir="ltr">` pins the fragment's direction and isolates it from
+	 * the paragraph, so the punctuation around it stays where it was typed.
+	 *
+	 * @param {string} value  Raw text (escaped here).
+	 * @param {string} [tag]  Wrapper tag name, default 'bdi'.
+	 * @return {string} Safe HTML fragment.
+	 */
+	function bdi( value, tag ) {
+		var name = tag || 'bdi';
+
+		if ( value === null || typeof value === 'undefined' || value === '' ) {
+			return '';
+		}
+
+		return '<' + name + ' dir="ltr">' + esc( value ) + '</' + name + '>';
+	}
+
+	/**
+	 * Format a number for display with grouping, optionally in Persian digits.
+	 *
+	 * @param {number} value    Value.
+	 * @param {number} decimals Fraction digits (default 0).
+	 * @return {string} Grouped number string.
+	 */
+	function formatNumber( value, decimals ) {
+		var digits = typeof decimals === 'number' ? decimals : 0;
+		var text = Number( value ).toLocaleString( 'en-US', {
+			minimumFractionDigits: digits,
+			maximumFractionDigits: digits
+		} );
+
+		if ( config.usePersianDigits ) {
+			text = text.replace( /[0-9]/g, function ( digit ) {
+				return String.fromCharCode( 0x06f0 + parseInt( digit, 10 ) );
+			} );
+		}
+
+		return text;
+	}
+
+	/**
 	 * Show a request error, and recover automatically when the session/nonce
 	 * has expired (WordPress answers with a bare "0" in that case).
 	 *
@@ -908,7 +954,11 @@
 			result = Math.floor( sample / step ) * step;
 		}
 
-		output.textContent = result.toLocaleString();
+		// The upstream sample is shown in Persian sentences, so it is isolated
+		// and grouped: `(1,234,567)` must not scatter its brackets in RTL.
+		if ( output ) {
+			output.innerHTML = bdi( formatNumber( result ) );
+		}
 	}
 
 	/**

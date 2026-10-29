@@ -456,34 +456,72 @@
 /* Timeline                                                              */
 /* ===================================================================== */
 
+/*
+ * History rows are a 3-column grid: [rail] [dot] [content].
+ * The rail (the vertical line) is a pseudo-element on the list, the dot sits in
+ * its own auto column, and the content column is `minmax(0, 1fr)` so long
+ * unbroken messages shrink instead of pushing the card wider. Everything is a
+ * logical property, so the rail moves to the correct side in RTL.
+ */
 .rbw-timeline {
+	--rbw-rail-x: 11px;
+
+	position: relative;
+	display: grid;
+	gap: var(--rbw-s-3);
 	margin: 0;
-	padding: 0 0 0 var(--rbw-s-3);
+	padding: 0;
+	padding-inline-start: 0;
 	list-style: none;
-	border-inline-start: 2px solid var(--rbw-bg-inset);
+}
+
+/* The rail lives inside the list box, never on the card edge. */
+.rbw-timeline::before {
+	content: "";
+	position: absolute;
+	inset-block: 6px;
+	inset-inline-start: var(--rbw-rail-x);
+	inline-size: 2px;
+	background: var(--rbw-bg-inset);
+	border-radius: 1px;
 }
 
 .rbw-admin .rbw-timeline {
-	padding-inline-start: var(--rbw-s-3);
+	padding-inline-start: 0;
 }
 
 .rbw-timeline-item {
-	position: relative;
-	padding-block-end: var(--rbw-s-3);
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	column-gap: var(--rbw-s-3);
+	align-items: start;
+	min-inline-size: 0;
 }
 
 .rbw-timeline-dot {
-	position: absolute;
-	inset-inline-start: calc(var(--rbw-s-3) * -1 - 5px);
-	inset-block-start: 6px;
-	inline-size: 8px;
-	block-size: 8px;
+	grid-column: 1;
+	/* Centre the 10px dot on the 2px rail: (2 - 10) / 2 + rail offset 1px. */
+	inline-size: 10px;
+	block-size: 10px;
+	margin-inline-start: 7px;
+	margin-block-start: 5px;
 	border-radius: 50%;
 	background: var(--rbw-success-border);
+	box-shadow: 0 0 0 3px var(--rbw-surface);
+	z-index: 1;
 }
 
 .rbw-timeline-item.is-error .rbw-timeline-dot {
 	background: var(--rbw-danger-border);
+}
+
+.rbw-timeline-body {
+	grid-column: 2;
+	min-inline-size: 0;
+	/* Long tokens (URLs, keys, Persian composite words) wrap instead of
+	   overflowing the card. */
+	overflow-wrap: anywhere;
+	word-break: normal;
 }
 
 .rbw-timeline-meta {
@@ -493,14 +531,89 @@
 	align-items: center;
 	font-size: var(--rbw-fs-xs);
 	color: var(--rbw-text-muted);
-	font-variant-numeric: tabular-nums;
 }
 
-.rbw-timeline-body p {
+/*
+ * The timestamp is a Latin/numeric fragment inside a Persian sentence.
+ * It carries its own isolate (a <bdi> from PHP) and never wraps mid-value.
+ */
+.rbw-timeline-time {
+	display: inline-block;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.rbw-timeline-message,
+.rbw-timeline-full {
 	margin: 2px 0 0;
 	font-size: var(--rbw-fs-sm);
 	color: var(--rbw-text-muted);
-	word-break: break-word;
+	overflow-wrap: anywhere;
+}
+
+/* Collapsed state: exactly two lines, with a fade so the cut is obvious. */
+.rbw-timeline-details {
+	margin: 0;
+}
+
+.rbw-timeline-summary {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	overflow: hidden;
+	cursor: pointer;
+	list-style: none;
+	margin-block-start: 2px;
+	font-size: var(--rbw-fs-sm);
+	color: var(--rbw-text-muted);
+	overflow-wrap: anywhere;
+}
+
+.rbw-timeline-summary::-webkit-details-marker {
+	display: none;
+}
+
+.rbw-timeline-summary::marker {
+	content: "";
+}
+
+.rbw-timeline-clamp {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	overflow: hidden;
+}
+
+.rbw-timeline-details[open] .rbw-timeline-clamp {
+	display: none;
+}
+
+.rbw-timeline-details[open] .rbw-timeline-summary {
+	display: inline-flex;
+}
+
+.rbw-collapse-text,
+.rbw-timeline-details[open] .rbw-expand-text {
+	display: none;
+}
+
+.rbw-timeline-details[open] .rbw-collapse-text {
+	display: inline;
+}
+
+.rbw-expand-text,
+.rbw-collapse-text {
+	margin-inline-start: var(--rbw-s-2);
+	font-size: var(--rbw-fs-xs);
+	color: var(--rbw-primary);
+	text-decoration: underline;
+	white-space: nowrap;
+}
+
+.rbw-timeline-details[open] .rbw-timeline-full {
+	display: block;
 }
 
 /* ===================================================================== */
@@ -1447,6 +1560,20 @@
 
 	.rbw-kpi-value {
 		font-size: var(--rbw-fs-xl);
+	}
+
+	/* At narrow widths the meta row stacks so the date and the badges each
+	   get a full line instead of fighting for inline space. */
+	.rbw-timeline-meta {
+		row-gap: 4px;
+	}
+
+	.rbw-timeline {
+		--rbw-rail-x: 9px;
+	}
+
+	.rbw-timeline-dot {
+		margin-inline-start: 5px;
 	}
 
 	/* Tables collapse to stacked rows with inline labels. */

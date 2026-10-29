@@ -67,11 +67,9 @@ $rbw_tab_link = static function ( string $tab ): string {
 			<span class="rbw-kpi-meta">
 				<?php
 				$rbw_last_ts = (int) ( $rbw_kpis['last_update']['timestamp'] ?? 0 );
-				echo esc_html(
-					$rbw_last_ts > 0
-						? wp_date( 'Y-m-d H:i', $rbw_last_ts )
-						: __( 'no update yet', 'ratebridge-woo' )
-				);
+				echo $rbw_last_ts > 0
+					? \RateBridge\Frontend\Bidi::isolate( wp_date( 'Y-m-d H:i', $rbw_last_ts ) )
+					: esc_html__( 'no update yet', 'ratebridge-woo' );
 				?>
 			</span>
 		</div>
@@ -91,11 +89,9 @@ $rbw_tab_link = static function ( string $tab ): string {
 			<strong class="rbw-kpi-value rbw-kpi-text">
 				<?php
 				$rbw_next = (int) ( $rbw_kpis['next_run'] ?? 0 );
-				echo esc_html(
-					$rbw_next > 0
-						? wp_date( 'H:i', $rbw_next )
-						: __( 'not scheduled', 'ratebridge-woo' )
-				);
+				echo $rbw_next > 0
+					? \RateBridge\Frontend\Bidi::isolate( wp_date( 'H:i', $rbw_next ) )
+					: esc_html__( 'not scheduled', 'ratebridge-woo' );
 				?>
 			</strong>
 			<span class="rbw-kpi-meta">
@@ -209,9 +205,9 @@ $rbw_tab_link = static function ( string $tab ): string {
 							<p class="rbw-provider-meta">
 								<?php
 								printf(
-									/* translators: %s: date and time */
+									/* translators: %s: date and time, isolated so its digits keep order in RTL */
 									esc_html__( 'Next request allowed: %s', 'ratebridge-woo' ),
-									esc_html( (string) $rbw_provider['next_allowed'] )
+									\RateBridge\Frontend\Bidi::isolate( (string) $rbw_provider['next_allowed'] )
 								);
 								?>
 							</p>
@@ -243,20 +239,44 @@ $rbw_tab_link = static function ( string $tab ): string {
 		<?php else : ?>
 			<ol class="rbw-timeline">
 				<?php foreach ( $rbw_activity as $rbw_entry ) : ?>
-					<?php $rbw_ok = 'success' === ( $rbw_entry['status'] ?? '' ); ?>
+					<?php
+					$rbw_ok      = 'success' === ( $rbw_entry['status'] ?? '' );
+					$rbw_time    = (int) ( $rbw_entry['time'] ?? 0 );
+					$rbw_message = trim( (string) ( $rbw_entry['message'] ?? '' ) );
+					$rbw_long    = mb_strlen( $rbw_message ) > 90;
+					?>
 					<li class="rbw-timeline-item is-<?php echo esc_attr( $rbw_ok ? 'ok' : 'error' ); ?>">
 						<span class="rbw-timeline-dot" aria-hidden="true"></span>
+
 						<div class="rbw-timeline-body">
 							<div class="rbw-timeline-meta">
-								<time datetime="<?php echo esc_attr( gmdate( 'c', (int) ( $rbw_entry['time'] ?? 0 ) ) ); ?>">
-									<?php echo esc_html( wp_date( 'Y-m-d H:i', (int) ( $rbw_entry['time'] ?? 0 ) ) ); ?>
+								<time
+									class="rbw-timeline-time"
+									datetime="<?php echo esc_attr( gmdate( 'c', $rbw_time ) ); ?>"
+								>
+									<?php
+									// Isolated so `2026-10-29 17:23` keeps its order inside RTL text.
+									echo \RateBridge\Frontend\Bidi::isolate( wp_date( 'Y-m-d H:i', $rbw_time ) );
+									?>
 								</time>
 								<span class="rbw-badge is-<?php echo esc_attr( $rbw_ok ? 'success' : 'error' ); ?>">
 									<?php echo esc_html( $rbw_ok ? __( 'Success', 'ratebridge-woo' ) : __( 'Error', 'ratebridge-woo' ) ); ?>
 								</span>
 								<span class="rbw-muted"><?php echo esc_html( 'manual' === ( $rbw_entry['trigger'] ?? '' ) ? __( 'Manual', 'ratebridge-woo' ) : __( 'Cron', 'ratebridge-woo' ) ); ?></span>
 							</div>
-							<p><?php echo esc_html( (string) ( $rbw_entry['message'] ?? '' ) ); ?></p>
+
+							<?php if ( $rbw_long ) : ?>
+								<details class="rbw-timeline-details">
+									<summary class="rbw-timeline-summary">
+										<span class="rbw-timeline-clamp"><?php echo esc_html( $rbw_message ); ?></span>
+										<span class="rbw-expand-text"><?php esc_html_e( 'More', 'ratebridge-woo' ); ?></span>
+										<span class="rbw-collapse-text"><?php esc_html_e( 'Less', 'ratebridge-woo' ); ?></span>
+									</summary>
+									<p class="rbw-timeline-full"><?php echo esc_html( $rbw_message ); ?></p>
+								</details>
+							<?php else : ?>
+								<p class="rbw-timeline-message"><?php echo esc_html( $rbw_message ); ?></p>
+							<?php endif; ?>
 						</div>
 					</li>
 				<?php endforeach; ?>

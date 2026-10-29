@@ -93,7 +93,9 @@ $rbw_status = static function ( Currency $currency, Repricer $repricer ): array 
 			/* translators: 1: unit label (Rial/Toman), 2: next cron run time */
 			esc_html__( 'Rates are stored in %1$s per 1 unit. Next automatic run: %2$s', 'ratebridge-woo' ),
 			esc_html( $rbw_unit ),
-			esc_html( $rbw_next_run ? wp_date( 'Y-m-d H:i', $rbw_next_run ) : __( 'not scheduled', 'ratebridge-woo' ) )
+			$rbw_next_run
+				? \RateBridge\Frontend\Bidi::isolate( wp_date( 'Y-m-d H:i', $rbw_next_run ) )
+				: esc_html__( 'not scheduled', 'ratebridge-woo' )
 		);
 		?>
 	</span>
@@ -497,7 +499,7 @@ $rbw_status = static function ( Currency $currency, Repricer $repricer ): array 
 			<?php else : ?>
 				<?php foreach ( $rbw_log as $rbw_entry ) : ?>
 					<tr>
-						<td data-label="<?php esc_attr_e( 'Time', 'ratebridge-woo' ); ?>"><?php echo esc_html( wp_date( 'Y-m-d H:i:s', (int) ( $rbw_entry['time'] ?? time() ) ) ); ?></td>
+						<td data-label="<?php esc_attr_e( 'Time', 'ratebridge-woo' ); ?>"><?php echo \RateBridge\Frontend\Bidi::isolate( wp_date( 'Y-m-d H:i:s', (int) ( $rbw_entry['time'] ?? time() ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes. ?></td>
 						<td data-label="<?php esc_attr_e( 'Status', 'ratebridge-woo' ); ?>">
 							<span class="rbw-badge is-<?php echo esc_attr( 'success' === ( $rbw_entry['status'] ?? '' ) ? 'success' : 'error' ); ?>">
 								<?php echo esc_html( 'success' === ( $rbw_entry['status'] ?? '' ) ? __( 'Success', 'ratebridge-woo' ) : __( 'Error', 'ratebridge-woo' ) ); ?>

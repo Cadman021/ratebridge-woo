@@ -97,8 +97,9 @@ $rbw_default_tpl  = ProductNotice::DEFAULT_TEMPLATE;
 					<p class="description rbw-rounding-preview">
 						<?php
 						printf(
-							/* translators: %s: formatted example number */
-							esc_html__( 'Preview (1,234,567): %s', 'ratebridge-woo' ),
+							/* translators: %s: formatted example number, isolated so its digits keep order in RTL */
+						esc_html__( 'Preview %s: %s', 'ratebridge-woo' ),
+							\RateBridge\Frontend\Bidi::isolate( '(1,234,567)' ),
 							'<code id="rbw-rounding-preview-value">—</code>'
 						);
 						?>

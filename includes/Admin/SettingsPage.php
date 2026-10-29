@@ -193,6 +193,8 @@ final class SettingsPage {
 					'height' => __( 'Height', 'ratebridge-woo' ),
 				),
 				'currencyCodes'  => $this->currency_codes_for_js(),
+				'usePersianDigits' => (bool) Settings::get( 'use_persian_digits', false ),
+				'isRtl'          => (bool) is_rtl(),
 				'strings'  => array(
 					'confirmDelete' => __( 'Delete this currency? This cannot be undone.', 'ratebridge-woo' ),
 					'confirmClear'  => __( 'Clear the update log?', 'ratebridge-woo' ),
