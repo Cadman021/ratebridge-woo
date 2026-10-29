@@ -268,16 +268,20 @@ final class Frontend {
 			return __( 'unknown', 'ratebridge-woo' );
 		}
 
-		// wp_date() honours the site timezone; RateFormatter::format_date() is the
-		// testable fallback when WordPress is unavailable (CLI tests).
-		if ( function_exists( 'wp_date' ) ) {
-			$php_format = self::tokens_to_php( $format );
-			$formatted  = wp_date( $php_format, $timestamp );
-		} else {
-			$formatted = RateFormatter::format_date( $timestamp, $format );
+		/*
+		 * One funnel for every date the plugin prints, admin or frontend:
+		 * site timezone, optional Jalali calendar, Persian digits last. See
+		 * Core\DateFormatter for the reasoning.
+		 */
+		if ( class_exists( '\RateBridge\Core\DateFormatter' ) ) {
+			return \RateBridge\Core\DateFormatter::format( $timestamp, $format );
 		}
 
-		return RateFormatter::maybe_persian( (string) $formatted, self::use_persian_digits() );
+		// Fallback for CLI tests that load RateFormatter only.
+		return RateFormatter::maybe_persian(
+			RateFormatter::format_date( $timestamp, $format ),
+			self::use_persian_digits()
+		);
 	}
 
 	/**

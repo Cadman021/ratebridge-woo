@@ -94,7 +94,7 @@ $rbw_status = static function ( Currency $currency, Repricer $repricer ): array 
 			esc_html__( 'Rates are stored in %1$s per 1 unit. Next automatic run: %2$s', 'ratebridge-woo' ),
 			esc_html( $rbw_unit ),
 			$rbw_next_run
-				? \RateBridge\Frontend\Bidi::isolate( wp_date( 'Y-m-d H:i', $rbw_next_run ) )
+				? \RateBridge\Frontend\Bidi::isolate( \RateBridge\Core\DateFormatter::format( $rbw_next_run, 'Y-m-d H:i' ) )
 				: esc_html__( 'not scheduled', 'ratebridge-woo' )
 		);
 		?>
@@ -211,7 +211,7 @@ $rbw_status = static function ( Currency $currency, Repricer $repricer ): array 
 						<td class="rbw-rate" data-rate="<?php echo esc_attr( (string) $rbw_currency->rate ); ?>" data-label="<?php echo esc_attr( sprintf( /* translators: %s: unit */ __( 'Rate (%s)', 'ratebridge-woo' ), $rbw_unit ) ); ?>">
 							<span class="rbw-rate-value"><?php echo esc_html( SettingsPage::format_rate( $rbw_currency ) ); ?></span>
 							<?php if ( $rbw_timestamp > 0 ) : ?>
-								<div class="rbw-muted rbw-last-updated" title="<?php echo esc_attr( wp_date( 'Y-m-d H:i:s', $rbw_timestamp ) ); ?>">
+								<div class="rbw-muted rbw-last-updated" title="<?php echo esc_attr( \RateBridge\Core\DateFormatter::format( $rbw_timestamp, 'Y-m-d H:i:s' ) ); ?>">
 									<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-clock"></use></svg>
 									<time datetime="<?php echo esc_attr( gmdate( 'c', $rbw_timestamp ) ); ?>"><?php echo esc_html( \RateBridge\Frontend\Frontend::time_ago( $rbw_timestamp ) ); ?></time>
 								</div>
@@ -499,7 +499,7 @@ $rbw_status = static function ( Currency $currency, Repricer $repricer ): array 
 			<?php else : ?>
 				<?php foreach ( $rbw_log as $rbw_entry ) : ?>
 					<tr>
-						<td data-label="<?php esc_attr_e( 'Time', 'ratebridge-woo' ); ?>"><?php echo \RateBridge\Frontend\Bidi::isolate( wp_date( 'Y-m-d H:i:s', (int) ( $rbw_entry['time'] ?? time() ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes. ?></td>
+						<td data-label="<?php esc_attr_e( 'Time', 'ratebridge-woo' ); ?>"><?php echo \RateBridge\Frontend\Bidi::isolate( \RateBridge\Core\DateFormatter::format( (int) ( $rbw_entry['time'] ?? time() ), 'Y-m-d H:i:s' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes. ?></td>
 						<td data-label="<?php esc_attr_e( 'Status', 'ratebridge-woo' ); ?>">
 							<span class="rbw-badge is-<?php echo esc_attr( 'success' === ( $rbw_entry['status'] ?? '' ) ? 'success' : 'error' ); ?>">
 								<?php echo esc_html( 'success' === ( $rbw_entry['status'] ?? '' ) ? __( 'Success', 'ratebridge-woo' ) : __( 'Error', 'ratebridge-woo' ) ); ?>

@@ -12,6 +12,7 @@
 
 namespace RateBridge\ImportExport;
 
+use RateBridge\Core\DateFormatter;
 use RateBridge\Core\Logger;
 use RateBridge\Core\Settings;
 use RateBridge\Currency\Currency;
@@ -686,7 +687,7 @@ final class Importer {
 			$out[] = array(
 				'id'       => (string) ( $backup['id'] ?? '' ),
 				'created'  => (int) ( $backup['created'] ?? 0 ),
-				'date'     => ! empty( $backup['created'] ) ? wp_date( 'Y-m-d H:i', (int) $backup['created'] ) : '—',
+				'date'     => ! empty( $backup['created'] ) ? DateFormatter::format( (int) $backup['created'], 'Y-m-d H:i' ) : '—',
 				'reason'   => (string) ( $backup['reason'] ?? '' ),
 				'version'  => (string) ( $backup['version'] ?? '' ),
 				'counts'   => (array) ( $backup['counts'] ?? array() ),

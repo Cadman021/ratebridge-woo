@@ -7,6 +7,7 @@
 
 namespace RateBridge\Admin;
 
+use RateBridge\Core\DateFormatter;
 use RateBridge\Core\Logger;
 use RateBridge\Core\Settings;
 use RateBridge\Cron\Scheduler;
@@ -428,16 +429,6 @@ final class SettingsPage {
 	 * @return string
 	 */
 	public static function format_datetime( ?string $utc_datetime ): string {
-		if ( empty( $utc_datetime ) ) {
-			return '—';
-		}
-
-		$timestamp = strtotime( $utc_datetime . ' UTC' );
-
-		if ( false === $timestamp ) {
-			return '—';
-		}
-
-		return wp_date( 'Y-m-d H:i', $timestamp );
+		return DateFormatter::format_utc( $utc_datetime, 'Y-m-d H:i' );
 	}
 }

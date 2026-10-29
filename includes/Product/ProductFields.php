@@ -10,6 +10,7 @@
 
 namespace RateBridge\Product;
 
+use RateBridge\Core\DateFormatter;
 use RateBridge\Admin\AjaxController;
 use RateBridge\Admin\SettingsPage;
 use RateBridge\Core\Settings;
@@ -1286,7 +1287,7 @@ final class ProductFields {
 					'<span class="rbw-col-date"><span class="rbw-col-date-label">%s</span> <time dir="ltr" datetime="%s">%s</time></span>',
 					esc_html__( 'Last calculation:', 'ratebridge-woo' ),
 					esc_attr( gmdate( 'c', $last ) ),
-					esc_html( wp_date( 'Y-m-d H:i', $last ) )
+					esc_html( DateFormatter::format( (int) $last, 'Y-m-d H:i' ) )
 				);
 			}
 
@@ -1314,7 +1315,7 @@ final class ProductFields {
 				'<span class="rbw-col-date"><span class="rbw-col-date-label">%s</span> <time dir="ltr" datetime="%s">%s</time></span>',
 				esc_html__( 'Last calculation:', 'ratebridge-woo' ),
 				esc_attr( gmdate( 'c', $last ) ),
-				esc_html( wp_date( 'Y-m-d H:i', $last ) )
+				esc_html( DateFormatter::format( (int) $last, 'Y-m-d H:i' ) )
 			);
 		}
 

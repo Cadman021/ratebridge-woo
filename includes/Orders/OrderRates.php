@@ -11,6 +11,7 @@
 
 namespace RateBridge\Orders;
 
+use RateBridge\Core\DateFormatter;
 use RateBridge\Core\Settings;
 use RateBridge\Currency\Currency;
 use RateBridge\Currency\CurrencyRepository;
@@ -683,7 +684,7 @@ final class OrderRates {
 			$line .= ' — ' . sprintf(
 				/* translators: %s: formatted date/time */
 				__( 'rate updated: %s', 'ratebridge-woo' ),
-				wp_date( 'Y-m-d H:i', (int) $snapshot['rate_time'] )
+				DateFormatter::format( (int) $snapshot['rate_time'], 'Y-m-d H:i' )
 			);
 		}
 
@@ -740,7 +741,7 @@ final class OrderRates {
 			$line .= ' — ' . sprintf(
 				/* translators: %s: formatted date/time */
 				__( 'rate updated: %s', 'ratebridge-woo' ),
-				wp_date( 'Y-m-d H:i', (int) $snapshot['rate_time'] )
+				DateFormatter::format( (int) $snapshot['rate_time'], 'Y-m-d H:i' )
 			);
 		}
 

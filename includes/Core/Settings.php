@@ -53,6 +53,8 @@ final class Settings {
 			'date_format'               => 'Y-m-d H:i',
 			// Persian digits in the plugin's own output.
 			'use_persian_digits'        => false,
+			// Show dates in the Jalali (Solar Hijri) calendar instead of Gregorian.
+			'use_jalali_dates'          => null,
 		);
 	}
 
@@ -149,6 +151,10 @@ final class Settings {
 			$clean['use_persian_digits'] = self::to_bool( $values['use_persian_digits'] );
 		}
 
+		if ( array_key_exists( 'use_jalali_dates', $values ) ) {
+			$clean['use_jalali_dates'] = self::to_bool( $values['use_jalali_dates'] );
+		}
+
 		update_option( self::OPTION, $clean );
 
 		return $clean;
@@ -196,6 +202,39 @@ final class Settings {
 	 */
 	public static function max_rate_age_hours(): int {
 		return self::sanitize_max_rate_age( self::get( 'max_rate_age_hours', 48 ) );
+	}
+
+	/**
+	 * Whether dates should be shown in the Jalali calendar.
+	 *
+	 * Unset (the default) means "follow the site language": Jalali for Persian
+	 * sites, Gregorian otherwise. An explicit 0/1 from the admin always wins.
+	 *
+	 * @return bool
+	 */
+	public static function use_jalali_dates(): bool {
+		$stored = self::get( 'use_jalali_dates', null );
+
+		if ( null !== $stored ) {
+			return (bool) $stored;
+		}
+
+		return self::site_is_persian();
+	}
+
+	/**
+	 * Whether the active site locale is Persian (fa_IR, fa_AF, …).
+	 *
+	 * @return bool
+	 */
+	public static function site_is_persian(): bool {
+		$locale = function_exists( 'get_locale' ) ? (string) get_locale() : '';
+
+		if ( '' === $locale ) {
+			return false;
+		}
+
+		return 0 === strpos( strtolower( $locale ), 'fa' );
 	}
 
 	/**

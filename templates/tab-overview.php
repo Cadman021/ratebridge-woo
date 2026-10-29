@@ -68,7 +68,7 @@ $rbw_tab_link = static function ( string $tab ): string {
 				<?php
 				$rbw_last_ts = (int) ( $rbw_kpis['last_update']['timestamp'] ?? 0 );
 				echo $rbw_last_ts > 0
-					? \RateBridge\Frontend\Bidi::isolate( wp_date( 'Y-m-d H:i', $rbw_last_ts ) )
+					? \RateBridge\Frontend\Bidi::isolate( \RateBridge\Core\DateFormatter::format( $rbw_last_ts, 'Y-m-d H:i' ) )
 					: esc_html__( 'no update yet', 'ratebridge-woo' );
 				?>
 			</span>
@@ -90,7 +90,7 @@ $rbw_tab_link = static function ( string $tab ): string {
 				<?php
 				$rbw_next = (int) ( $rbw_kpis['next_run'] ?? 0 );
 				echo $rbw_next > 0
-					? \RateBridge\Frontend\Bidi::isolate( wp_date( 'H:i', $rbw_next ) )
+					? \RateBridge\Frontend\Bidi::isolate( \RateBridge\Core\DateFormatter::format( $rbw_next, 'H:i' ) )
 					: esc_html__( 'not scheduled', 'ratebridge-woo' );
 				?>
 			</strong>
@@ -256,7 +256,7 @@ $rbw_tab_link = static function ( string $tab ): string {
 								>
 									<?php
 									// Isolated so `2026-10-29 17:23` keeps its order inside RTL text.
-									echo \RateBridge\Frontend\Bidi::isolate( wp_date( 'Y-m-d H:i', $rbw_time ) );
+									echo \RateBridge\Frontend\Bidi::isolate( \RateBridge\Core\DateFormatter::format( $rbw_time, 'Y-m-d H:i' ) );
 									?>
 								</time>
 								<span class="rbw-badge is-<?php echo esc_attr( $rbw_ok ? 'success' : 'error' ); ?>">

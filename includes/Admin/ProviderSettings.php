@@ -7,6 +7,7 @@
 
 namespace RateBridge\Admin;
 
+use RateBridge\Core\DateFormatter;
 use RateBridge\Providers\AbstractProvider;
 use RateBridge\Providers\ProviderInterface;
 use RateBridge\Providers\ProviderRegistry;
@@ -304,16 +305,16 @@ final class ProviderSettings {
 			'status'           => $status,
 			'source_updated'   => (int) $state['source_updated'],
 			'source_updated_fmt' => (int) $state['source_updated'] > 0
-				? wp_date( 'Y-m-d H:i', (int) $state['source_updated'] )
+				? DateFormatter::format( (int) $state['source_updated'], 'Y-m-d H:i' )
 				: '',
 			'period'           => RequestBudget::current_period(),
 			'last_request'     => (int) $state['last_request'],
 			'last_request_fmt' => (int) $state['last_request'] > 0
-				? wp_date( 'Y-m-d H:i', (int) $state['last_request'] )
+				? DateFormatter::format( (int) $state['last_request'], 'Y-m-d H:i' )
 				: '',
 			'last_status'      => (int) $state['last_status'],
 			'next_allowed'     => $next_allowed,
-			'next_allowed_fmt' => $next_allowed > 0 ? wp_date( 'Y-m-d H:i', $next_allowed ) : '',
+			'next_allowed_fmt' => $next_allowed > 0 ? DateFormatter::format( $next_allowed, 'Y-m-d H:i' ) : '',
 			'min_interval'     => $min_interval,
 			'effective'        => $effective,
 			'failure_backoff'  => RequestBudget::FAILURE_BACKOFF_MINUTES,

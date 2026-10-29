@@ -27,6 +27,7 @@ $rbw_block_pos   = (string) ( $rbw_settings['product_block_position'] ?? 'after_
 $rbw_block_tpl   = (string) ( $rbw_settings['product_block_template'] ?? '' );
 $rbw_date_format = (string) ( $rbw_settings['date_format'] ?? 'Y-m-d H:i' );
 $rbw_persian     = ! empty( $rbw_settings['use_persian_digits'] );
+$rbw_jalali      = \RateBridge\Core\Settings::use_jalali_dates();
 
 $rbw_block_positions = array(
 	'after_price'       => __( 'After the price', 'ratebridge-woo' ),
@@ -181,6 +182,14 @@ $rbw_default_tpl  = ProductNotice::DEFAULT_TEMPLATE;
 					/>
 					<p class="description">
 						<?php esc_html_e( 'Used for absolute dates in the plugin output and in %updated_date%. Letters: Y (year), m (month), d (day), j (day without leading zero), H (hour), i (minute), s (second). Example: Y-m-d H:i', 'ratebridge-woo' ); ?>
+					</p>
+
+					<label class="rbw-inline">
+						<input type="checkbox" name="use_jalali_dates" value="1" <?php checked( $rbw_jalali ); ?> />
+						<?php esc_html_e( 'Show dates in the Jalali calendar', 'ratebridge-woo' ); ?>
+					</label>
+					<p class="description">
+						<?php esc_html_e( 'When on, every date the plugin prints (overview, currencies, logs, backups, shortcodes and the product block) uses the Solar Hijri calendar with the same letters; time stays 24-hour in the site timezone. On by default for Persian sites.', 'ratebridge-woo' ); ?>
 					</p>
 				</td>
 			</tr>

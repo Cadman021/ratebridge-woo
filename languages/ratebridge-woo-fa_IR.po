@@ -2679,3 +2679,22 @@ msgstr "بات تایلند"
 
 msgid "Turkmen Manat"
 msgstr "منات ترکمنستان"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 9b — Jalali dates, bidi isolation, timeline disclosure
+# ─────────────────────────────────────────────────────────────────────────────
+
+msgid "More"
+msgstr "بیشتر"
+
+msgid "Less"
+msgstr "کمتر"
+
+msgid "Preview %s: %s"
+msgstr "پیش‌نمایش %s: %s"
+
+msgid "Show dates in the Jalali calendar"
+msgstr "نمایش تاریخ شمسی"
+
+msgid "When on, every date the plugin prints (overview, currencies, logs, backups, shortcodes and the product block) uses the Solar Hijri calendar with the same letters; time stays 24-hour in the site timezone. On by default for Persian sites."
+msgstr "با روشن بودن این گزینه، همه تاریخ‌هایی که افزونه نمایش می‌دهد (نمای کلی، ارزها، گزارش‌ها، پشتیبان‌ها، شورت‌کدها و بلوک محصول) با تقویم هجری شمسی و همان حروف نمایش داده می‌شوند؛ ساعت به صورت ۲۴ ساعته و در منطقه زمانی سایت می‌ماند. برای سایت‌های فارسی به‌طور پیش‌فرض روشن است."

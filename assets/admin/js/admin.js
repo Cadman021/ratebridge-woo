@@ -1053,7 +1053,8 @@
 				product_block_position: fieldValue( form, 'product_block_position' ),
 				product_block_template: fieldValue( form, 'product_block_template' ),
 				date_format: fieldValue( form, 'date_format' ),
-				use_persian_digits: checkboxValue( form, 'use_persian_digits' )
+				use_persian_digits: checkboxValue( form, 'use_persian_digits' ),
+				use_jalali_dates: checkboxValue( form, 'use_jalali_dates' )
 			};
 
 			// The unit change rewrites every stored rate: ask explicitly.

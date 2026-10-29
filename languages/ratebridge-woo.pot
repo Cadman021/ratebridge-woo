@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: RateBridge Woo\n"
 "Report-Msgid-Bugs-To: https://example.com/ratebridge-woo\n"
-"POT-Creation-Date: 2026-10-29T19:58:43+00:00\n"
+"POT-Creation-Date: 2026-10-29T20:25:01+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -1410,6 +1410,10 @@ msgid "Length"
 msgstr ""
 
 #: ratebridge-woo
+msgid "Less"
+msgstr ""
+
+#: ratebridge-woo
 msgid "Letters: Y m d j H i s — for example Y-m-d H:i"
 msgstr ""
 
@@ -1527,6 +1531,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Monthly request usage"
+msgstr ""
+
+#: ratebridge-woo
+msgid "More"
 msgstr ""
 
 #: ratebridge-woo
@@ -1878,7 +1886,7 @@ msgid "Prefix"
 msgstr ""
 
 #: ratebridge-woo
-msgid "Preview (1,234,567): %s"
+msgid "Preview %s: %s"
 msgstr ""
 
 #: ratebridge-woo
@@ -2343,6 +2351,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "Show a currency info block on product pages"
+msgstr ""
+
+#: ratebridge-woo
+msgid "Show dates in the Jalali calendar"
 msgstr ""
 
 #: ratebridge-woo
@@ -3291,6 +3303,10 @@ msgstr ""
 
 #: ratebridge-woo
 msgid "When enabled, the price is calculated from the currency rate in this plugin."
+msgstr ""
+
+#: ratebridge-woo
+msgid "When on, every date the plugin prints (overview, currencies, logs, backups, shortcodes and the product block) uses the Solar Hijri calendar with the same letters; time stays 24-hour in the site timezone. On by default for Persian sites."
 msgstr ""
 
 #: ratebridge-woo
