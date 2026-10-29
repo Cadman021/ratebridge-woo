@@ -272,6 +272,8 @@ final class SettingsPage {
 					'dismiss'           => __( 'Dismiss', 'ratebridge-woo' ),
 					'cancelLabel'       => __( 'Cancel', 'ratebridge-woo' ),
 					'importNow'         => __( 'Import now', 'ratebridge-woo' ),
+					'showingCount'      => __( '%1$d of %2$d', 'ratebridge-woo' ),
+					'confirmDiscard'    => __( 'You have unsaved changes. Close without saving?', 'ratebridge-woo' ),
 				),
 			)
 		);

@@ -3034,6 +3034,279 @@
 		} );
 	}
 
+	/* ------------------------------------------------------------------ */
+	/* Kebab menus                                                         */
+	/* ------------------------------------------------------------------ */
+
+	/**
+	 * Close every open kebab menu.
+	 *
+	 * @param {Element} [except] Menu wrapper to keep open.
+	 */
+	function closeMenus( except ) {
+		qsa( '.rbw-kebab .rbw-menu' ).forEach( function ( menu ) {
+			if ( except && except.contains( menu ) ) {
+				return;
+			}
+
+			menu.hidden = true;
+
+			var toggle = qs( '.rbw-kebab-toggle', menu.parentNode );
+
+			if ( toggle ) {
+				toggle.setAttribute( 'aria-expanded', 'false' );
+			}
+		} );
+	}
+
+	/**
+	 * Bind the kebab menus (click + keyboard).
+	 */
+	function bindMenus() {
+		qsa( '.rbw-kebab-toggle' ).forEach( function ( toggle ) {
+			if ( toggle.getAttribute( 'data-rbw-bound' ) ) {
+				return;
+			}
+
+			toggle.setAttribute( 'data-rbw-bound', '1' );
+
+			toggle.addEventListener( 'click', function ( event ) {
+				event.stopPropagation();
+
+				var wrap = toggle.closest( '.rbw-kebab' );
+				var menu = qs( '.rbw-menu', wrap );
+				var open = menu && ! menu.hidden;
+
+				closeMenus( open ? wrap : null );
+
+				if ( ! menu ) {
+					return;
+				}
+
+				menu.hidden = open;
+				toggle.setAttribute( 'aria-expanded', open ? 'false' : 'true' );
+
+				if ( ! open ) {
+					var first = qs( '.rbw-menu-item', menu );
+
+					if ( first ) {
+						first.focus();
+					}
+				}
+			} );
+
+			// Arrow keys inside the menu, Escape closes.
+			var wrap = toggle.closest( '.rbw-kebab' );
+			var menu = wrap ? qs( '.rbw-menu', wrap ) : null;
+
+			if ( ! menu ) {
+				return;
+			}
+
+			menu.addEventListener( 'keydown', function ( event ) {
+				var items = qsa( '.rbw-menu-item', menu );
+				var index = items.indexOf( document.activeElement );
+
+				if ( 'Escape' === event.key ) {
+					event.preventDefault();
+					closeMenus();
+					toggle.focus();
+					return;
+				}
+
+				if ( 'ArrowDown' === event.key || 'ArrowUp' === event.key ) {
+					event.preventDefault();
+
+					var next = 'ArrowDown' === event.key
+						? ( index + 1 ) % items.length
+						: ( index - 1 + items.length ) % items.length;
+
+					if ( items[ next ] ) {
+						items[ next ].focus();
+					}
+				}
+			} );
+		} );
+
+		document.addEventListener( 'click', function () {
+			closeMenus();
+		} );
+
+		document.addEventListener( 'keydown', function ( event ) {
+			if ( 'Escape' === event.key ) {
+				closeMenus();
+			}
+		} );
+	}
+
+	/* ------------------------------------------------------------------ */
+	/* Currencies: client-side search + filters                            */
+	/* ------------------------------------------------------------------ */
+
+	var CURRENCY_FILTER_KEY = 'rbwCurrencyFilter';
+
+	/**
+	 * Apply the search box and the two selects to the currency rows.
+	 */
+	function applyCurrencyFilters() {
+		var table = qs( '#rbw-currencies-table' );
+
+		if ( ! table ) {
+			return;
+		}
+
+		var search = qs( '#rbw-currency-search' );
+		var status = qs( '#rbw-filter-status' );
+		var provider = qs( '#rbw-filter-provider' );
+		var count = qs( '#rbw-filter-count' );
+
+		var term = search ? String( search.value || '' ).toLowerCase().trim() : '';
+		var wantStatus = status ? status.value : '';
+		var wantProvider = provider ? provider.value : '';
+
+		var rows = qsa( 'tbody tr[data-id]', table );
+		var shown = 0;
+
+		rows.forEach( function ( row ) {
+			var haystack = row.getAttribute( 'data-search' ) || '';
+			var rowStatus = row.getAttribute( 'data-status' ) || '';
+			var rowProvider = row.getAttribute( 'data-provider' ) || '';
+
+			var match = ( ! term || haystack.indexOf( term ) !== -1 ) &&
+				( ! wantStatus || rowStatus === wantStatus ) &&
+				( ! wantProvider || rowProvider === wantProvider );
+
+			row.hidden = ! match;
+
+			if ( match ) {
+				++shown;
+			}
+		} );
+
+		if ( count ) {
+			count.textContent = rows.length
+				? ( strings.showingCount || '%1$d of %2$d' ).replace( '%1$d', shown ).replace( '%2$d', rows.length )
+				: '';
+		}
+
+		try {
+			window.sessionStorage.setItem(
+				CURRENCY_FILTER_KEY,
+				JSON.stringify( { term: term, status: wantStatus, provider: wantProvider } )
+			);
+		} catch ( e ) {
+			// Storage can be disabled: the filters still work for this page view.
+		}
+	}
+
+	/**
+	 * Restore the persisted filters and bind the controls.
+	 */
+	function bindCurrencyFilters() {
+		var search = qs( '#rbw-currency-search' );
+
+		if ( ! search ) {
+			return;
+		}
+
+		try {
+			var saved = JSON.parse( window.sessionStorage.getItem( CURRENCY_FILTER_KEY ) || '{}' );
+
+			if ( saved.term ) {
+				search.value = saved.term;
+			}
+
+			if ( saved.status && qs( '#rbw-filter-status' ) ) {
+				qs( '#rbw-filter-status' ).value = saved.status;
+			}
+
+			if ( saved.provider && qs( '#rbw-filter-provider' ) ) {
+				qs( '#rbw-filter-provider' ).value = saved.provider;
+			}
+		} catch ( e ) {
+			// Ignore malformed storage.
+		}
+
+		[ '#rbw-currency-search', '#rbw-filter-status', '#rbw-filter-provider' ].forEach( function ( selector ) {
+			var field = qs( selector );
+
+			if ( ! field ) {
+				return;
+			}
+
+			field.addEventListener( 'input', applyCurrencyFilters );
+			field.addEventListener( 'change', applyCurrencyFilters );
+		} );
+
+		applyCurrencyFilters();
+	}
+
+	/* ------------------------------------------------------------------ */
+	/* Modal focus management + unsaved-change guard                       */
+	/* ------------------------------------------------------------------ */
+
+	var modalSnapshots = {};
+
+	/**
+	 * Serialise the current values of a form (for the unsaved-changes check).
+	 *
+	 * @param {HTMLElement} form Form element.
+	 * @return {string} Snapshot.
+	 */
+	function snapshotForm( form ) {
+		var parts = [];
+
+		qsa( 'input, select, textarea', form ).forEach( function ( field ) {
+			if ( ! field.name || 'hidden' === field.type ) {
+				return;
+			}
+
+			parts.push( field.name + '=' + ( field.type === 'checkbox' ? ( field.checked ? '1' : '0' ) : field.value ) );
+		} );
+
+		return parts.join( '|' );
+	}
+
+	/**
+	 * Track open modals: remember the trigger, trap nothing (native dialog
+	 * semantics are enough here) but close on ESC and warn about lost edits.
+	 */
+	function bindModalShell() {
+		qsa( '.rbw-modal[id]' ).forEach( function ( modal ) {
+			var form = qs( 'form', modal );
+
+			if ( ! form ) {
+				return;
+			}
+
+			// Snapshot when opened (the open functions set hidden = false).
+			var observer = new window.MutationObserver( function () {
+				if ( ! modal.hidden ) {
+					modalSnapshots[ modal.id ] = snapshotForm( form );
+				}
+			} );
+
+			observer.observe( modal, { attributes: true, attributeFilter: [ 'hidden' ] } );
+
+			qsa( '[data-rbw-close]', modal ).forEach( function ( closer ) {
+				closer.addEventListener( 'click', function ( event ) {
+					var before = modalSnapshots[ modal.id ];
+
+					if ( before && before !== snapshotForm( form ) ) {
+						event.preventDefault();
+						event.stopImmediatePropagation();
+
+						confirmDialog( strings.confirmDiscard || strings.genericError ).then( function ( ok ) {
+							if ( ok ) {
+								modal.hidden = true;
+							}
+						} );
+					}
+				}, true );
+			} );
+		} );
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		bindToolbar();
 		bindTable();
@@ -3047,5 +3320,8 @@
 		bindFormulas();
 		bindImportExport();
 		bindTabs();
+		bindMenus();
+		bindCurrencyFilters();
+		bindModalShell();
 	} );
 }() );
