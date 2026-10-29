@@ -1312,13 +1312,6 @@
 	font-style: italic;
 }
 
-.rbw-card-actions {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--rbw-s-2);
-	margin-block: var(--rbw-s-4) var(--rbw-s-2);
-}
-
 .rbw-budget {
 	border-block-start: 1px solid var(--rbw-bg-inset);
 	padding-block-start: var(--rbw-s-3);
@@ -2052,6 +2045,47 @@
 }
 
 /* Very narrow (>= 360px is the WP minimum). */
+/* ===================================================================== */
+/* Narrow widths: stepper, drop zone, secret field, sources cards        */
+/* ===================================================================== */
+
+@media screen and (max-width: 600px) {
+	/* Steps wrap onto two lines rather than scrolling sideways. */
+	.rbw-steps {
+		gap: var(--rbw-s-1);
+	}
+
+	.rbw-step + .rbw-step::before {
+		inline-size: var(--rbw-s-2);
+	}
+
+	.rbw-step-label {
+		font-size: var(--rbw-fs-xs);
+	}
+
+	.rbw-dropzone {
+		padding: var(--rbw-s-4) var(--rbw-s-2);
+	}
+
+	/* A secret field plus its toggle must still fit 360px. */
+	.rbw-secret {
+		flex-wrap: nowrap;
+	}
+
+	.rbw-secret input {
+		min-inline-size: 0;
+	}
+
+	/* Cards lose the fixed 360px track so they never overflow the panel. */
+	.rbw-cards {
+		grid-template-columns: 1fr;
+	}
+
+	.rbw-card-actions {
+		flex-wrap: wrap;
+	}
+}
+
 @media screen and (max-width: 480px) {
 	.rbw-kpis {
 		grid-template-columns: 1fr 1fr;
