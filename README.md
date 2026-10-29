@@ -9,7 +9,8 @@ the plugin recalculate the store-currency price (Iranian Toman or Rial) from liv
 - **Namespace / prefix:** `RateBridge\` / `rbw_`
 - **Requirements:** PHP 8.1+, WordPress 6.4+, WooCommerce 8+ (HPOS compatible)
 
-> **Status – Phase 7.** Currency management, real price sources (Navasan + AlanChand),
+> **Status – Phase 9.** Currency management, real price sources (Navasan, AlanChand,
+> NetArz, Nerkhsanj),
 > per-provider settings, request-quota protection, **product pricing by currency**
 > (simple + variable products, classic editor), **automatic repricing when a rate
 > changes**, store-unit migration, **order rate records on every line item**,
@@ -45,12 +46,18 @@ ratebridge-woo/
 │   ├── csv.php                 CSV round trips, injection guard, bulk edit (No WP)
 │   ├── elementor-contracts.php Static contract test for the Elementor widgets
 │   ├── ajax-actions.php        JS request() slugs vs registered wp_ajax hooks
+│   ├── provider-budget.php     Daily quota, auth_failed stickiness, message order
+│   ├── provider-contracts.php  Registry, settings schema and symbol parity (boots WP)
 │   └── scrub-secrets.php       Credentials never leak into messages
 ├── docs/
 │   └── api-samples/            Real API response fixtures (committed, secret-free)
 │       ├── navasan-latest.json
 │       ├── alanchand-currency.json
-│       └── alanchand-gold.json
+│       ├── alanchand-gold.json
+│       ├── netarz-rates.json
+│       ├── netarz-rate-usd.json
+│       ├── nerkhsanj-live.json
+│       └── nerkhsanj-docs.txt
 ├── includes/
 │   ├── Core/
 │   │   ├── Plugin.php          Singleton bootstrap; wires cron, AJAX, admin page, pricing
@@ -65,15 +72,19 @@ ratebridge-woo/
 │   │   ├── ProviderInterface.php   The contract every rate source must implement
 │   │   ├── AbstractProvider.php    HTTP helper: timeouts, cache, quota gate, secret scrubber
 │   │   ├── ProviderRegistry.php    `rbw_register_providers` filter, lookup by key
-│   │   ├── RequestBudget.php       Per-provider quota guard (monthly + interval + backoff)
+│   │   ├── RequestBudget.php       Per-provider quota guard (daily + monthly + interval + auth)
 │   │   ├── ManualProvider.php      Rates typed by the administrator (never auto-updated)
 │   │   ├── MockProvider.php        Deterministic fake rates for development/testing
 │   │   ├── NavasanProvider.php     Real: api.navasan.tech
 │   │   ├── AlanChandProvider.php   Real: api.alanchand.com
+│   │   ├── NetarzProvider.php      Real: netarz.ir (Bearer key, free/pro plans)
+│   │   ├── NerkhsanjProvider.php   Real: nerkh.jahankhahan.shop (open, no key)
 │   │   └── Parsing/
 │   │       ├── NumberParser.php    Messy strings -> positive finite floats (WP-free)
 │   │       ├── NavasanParser.php   Pure parser for the Navasan payload (WP-free)
-│   │       └── AlanChandParser.php Pure parser for the AlanChand payloads (WP-free)
+│   │       ├── AlanChandParser.php Pure parser for the AlanChand payloads (WP-free)
+│   │       ├── NetarzParser.php    Pure parser for the NetArz envelope (WP-free)
+│   │       └── NerkhsanjParser.php Pure parser for the Nerkhsanj live feed (WP-free)
 │   ├── Pricing/
 │   │   ├── RateUpdater.php     Chooses due currencies, batches per provider, stores rates
 │   │   ├── PriceCalculator.php Pure calculation engine (no WordPress; CLI-testable)
@@ -269,7 +280,9 @@ array(
   never been updated.
 - **Batching:** `RateUpdater` groups all due currencies by provider key and calls
   `fetch_rates()` **once per provider per cycle**. Navasan returns the whole catalogue in one
-  request; AlanChand makes at most one request per catalogue type (currency/gold/crypto).
+  request; AlanChand makes at most one request per catalogue type (currency/gold/crypto);
+  NetArz and Nerkhsanj each return their whole catalogue in a single request, cached in a
+  transient so repeated admin actions do not burn quota.
 - **Interval floor:** if a row's `update_interval_minutes` is shorter than the provider's
   effective minimum, `RateUpdater::is_due_for_provider()` skips it until the provider's own
   minimum has elapsed, so the cron tick never hammers the API.
@@ -290,13 +303,20 @@ non-autoloaded option `rbw_request_budget`:
 
 ```php
 array(
-    'navasan' => array(
-        'last_request' => 1792945862, // unix ts of the last real request
-        'last_status'  => 200,        // last HTTP status (0 = transport error)
-        'count'        => 42,         // requests in this period
-        'period'       => '2026-10',  // month key the count belongs to
-        'last_failure' => 0,          // unix ts of the last failure
-        'last_error'   => '',         // scrubbed message
+    'netarz' => array(
+        'last_request'    => 1792945862, // unix ts of the last real request
+        'last_status'     => 200,        // last HTTP status (0 = transport error)
+        'count'           => 42,         // requests in this period
+        'period'          => '2026-10',  // month key the count belongs to
+        'day_count'       => 3,          // requests today
+        'day'             => '2026-10-29',
+        'last_failure'    => 0,          // unix ts of the last failure
+        'last_error'      => '',         // scrubbed message
+        'auth_failed'     => false,      // sticky credential rejection
+        'auth_status'     => 0,          // 401 / 403
+        'auth_message'    => '',         // root-cause text shown to the admin
+        'auth_fingerprint' => '',        // sha256 of the secret settings
+        'source_updated'  => 0,          // unix ts of the source's own timestamp
     ),
 )
 ```
@@ -311,12 +331,28 @@ Rules:
    the counter. **Cache hits never consume quota** — the transient is checked first.
 3. The monthly counter **resets automatically** when the calendar month changes
    (`current_period()` is compared on every read); no cron job is needed.
-4. **Failure back-off:** after a failed request the provider is not contacted again for
+4. **Daily limit (new in Phase 9).** A provider may declare a *daily* cap in addition to the
+   monthly one (`get_daily_limit()`); NetArz defaults to the plan figure. `authorize()` checks
+   the daily cap before the monthly one, because "resets at midnight" is the more useful
+   message. The counter lives in `day_count` and rolls over on the site-timezone date, so again
+   no cron job is needed. `0` means unlimited.
+5. **Failure back-off:** after a failed request the provider is not contacted again for
    `RequestBudget::FAILURE_BACKOFF_MINUTES` (15) minutes, so a wrong key cannot burn the quota
    on every 5-minute tick.
-5. **A manual "update now"/"test connection" is also budgeted.** The cache is only bypassed
+6. **`auth_failed` is sticky, not a back-off.** An HTTP **401/403** (or a parser-level auth error
+   code) stores `auth_failed = true` together with the *root cause* message and a fingerprint
+   (sha256) of the provider's secret settings. While the fingerprint is unchanged the provider
+   is **not retried at all** — the error message is shown verbatim on the Sources card, on the
+   currency row and in the Overview attention list. The block clears itself as soon as the key
+   changes (`RequestBudget::fingerprint()` differs) or after a successful manual
+   "Test connection", so recovering needs no secret knowledge of the plugin.
+7. **Root cause first.** `authorize()` prepends the last stored provider error to any back-off
+   note, and `RateUpdater` prefixes the provider label only when it is not already there — so a
+   currency row reads «NetArz: توکن/کلید نامعتبر… (HTTP 401)» rather than an unrelated
+   interval message.
+8. **A manual "update now"/"test connection" is also budgeted.** The cache is only bypassed
    when the budget still allows a real call.
-6. **Effective minimum interval** = `max(configured interval, ceil(minutes_in_month / monthly_limit))`.
+9. **Effective minimum interval** = `max(configured interval, ceil(minutes_in_month / monthly_limit))`.
    For Navasan's 120/month that is ≈366 minutes; for AlanChand's 60-minute setting it is 60.
    The Price sources tab shows both numbers, and the currency dialog warns when a row asks for
    a shorter interval than the source permits.
@@ -334,9 +370,35 @@ Secrets never appear in user-facing text: `AbstractProvider::scrub_secrets()` re
 | `manual` | Manual (typed by admin) | – | – | entered by admin |
 | `mock` | Mock / test data | – | – | deterministic fake |
 | `navasan` | Navasan | `GET https://api.navasan.tech/latest/?api_key=KEY` | query `api_key` | Toman |
-| `alanchand` | AlanChand | `GET https://api.alanchand.com?type={currency\|gold\|crypto}&symbols=a,b` | `Authorization: Bearer TOKEN` | Toman |
+| `alanchand` | AlanChand | `GET https://api.alanchand.com/?type={currencies\|golds\|crypto}&token=TOKEN` | token in the **query string** | Toman |
+| `netarz` | NetArz (نت‌ارز) | `GET https://netarz.ir/api/fx/v1/rates` | **`Authorization: Bearer fx-ntz-…`** header | Toman (IRT) |
+| `nerkhsanj` | Nerkhsanj (نرخ‌سنج) | `GET https://nerkh.jahankhahan.shop/data/live.json` | none (open feed) | Toman |
 
 **No scraping is performed** — only the official JSON APIs.
+
+### NetArz (`netarz`)
+
+- Auth is a **Bearer header only**. The app key is bound to the server’s public IP and to the
+  domain, so a rejected key almost always means the IP/domain is not allow-listed in the
+  NetArz panel — the plugin says exactly that instead of a generic "401".
+- `quote_currency` is `IRT` (Toman) and prices are **per `unit`**, not per one piece: IQD, AMD
+  and PKR come back with `unit: 100`, so the parser divides by `unit` before storing.
+- The **free plan is delayed by ~15 minutes** (`meta.is_delayed = true`,
+  `meta.delayed_minutes = 15`); Pro is live. Defaults: free → 3,000 requests/day and a
+  15-minute interval, pro → 200,000/day and 5 minutes. A `daily_limit` of 0 means "use the
+  plan default".
+- The catalogue is **currencies only** — there is no gold or coin code, so do not point a
+  gold product at NetArz.
+
+### Nerkhsanj (`nerkhsanj`)
+
+- Free, **unofficial**, no key and no attribution requirement in the docs, but it updates every
+  minute and is not an official API — keep the interval at 5 minutes or more (the default).
+- 28 rate keys, all Toman, no unit multipliers. Gold (`gold`, `gold24`, `mesghal`) and coins
+  (`coin`, `bahar`, `half`, `quarter`, `gram`) are included, so it can drive gold products.
+- Timestamps are **Jalali date + Tehran time**; the parser converts them arithmetically (no
+  `Intl` dependency). Outside market hours `time` is empty and the last close is served — a
+  source older than 3 days is flagged as stale in the admin.
 
 ### What the real samples showed
 

@@ -26,6 +26,19 @@ $rbw_cards = isset( $rbw_view['cards'] ) && is_array( $rbw_view['cards'] ) ? $rb
 			$rbw_budget   = isset( $rbw_card['budget'] ) && is_array( $rbw_card['budget'] ) ? $rbw_card['budget'] : array();
 			$rbw_used     = (int) ( $rbw_budget['used'] ?? 0 );
 			$rbw_limit    = (int) ( $rbw_budget['limit'] ?? 0 );
+			$rbw_daily    = (int) ( $rbw_budget['daily_limit'] ?? 0 );
+			$rbw_today    = (int) ( $rbw_budget['used_today'] ?? 0 );
+			$rbw_auth_ok  = empty( $rbw_budget['auth_failed'] );
+			$rbw_status   = (string) ( $rbw_budget['status'] ?? 'ok' );
+
+			// Persian label + badge class for the status pill.
+			$rbw_pill = array(
+				'ok'        => array( __( 'Connected', 'ratebridge-woo' ), 'success' ),
+				'exhausted' => array( __( 'Quota exhausted', 'ratebridge-woo' ), 'danger' ),
+				'error'     => array( __( 'Error', 'ratebridge-woo' ), 'error' ),
+				'needs_key' => array( __( 'Needs a key / auth error', 'ratebridge-woo' ), 'warning' ),
+			);
+			[ $rbw_pill_text, $rbw_pill_class ] = $rbw_pill[ $rbw_status ] ?? $rbw_pill['ok'];
 			$rbw_percent  = $rbw_limit > 0 ? min( 100, (int) round( ( $rbw_used / $rbw_limit ) * 100 ) ) : 0;
 			$rbw_warn     = $rbw_limit > 0 && $rbw_percent >= 80;
 			?>
@@ -33,10 +46,11 @@ $rbw_cards = isset( $rbw_view['cards'] ) && is_array( $rbw_view['cards'] ) ? $rb
 				<header class="rbw-card-header">
 					<h3>
 						<?php echo esc_html( (string) ( $rbw_card['label'] ?? $rbw_key ) ); ?>
-						<?php if ( ! empty( $rbw_card['configured'] ) ) : ?>
-							<span class="rbw-badge rbw-badge-success"><?php esc_html_e( 'Configured', 'ratebridge-woo' ); ?></span>
-						<?php else : ?>
-							<span class="rbw-badge rbw-badge-error"><?php esc_html_e( 'Not configured', 'ratebridge-woo' ); ?></span>
+						<span class="rbw-badge is-<?php echo esc_attr( $rbw_pill_class ); ?>">
+							<?php echo esc_html( $rbw_pill_text ); ?>
+						</span>
+						<?php if ( empty( $rbw_card['configured'] ) ) : ?>
+							<span class="rbw-badge is-muted"><?php esc_html_e( 'Not configured', 'ratebridge-woo' ); ?></span>
 						<?php endif; ?>
 					</h3>
 					<p class="rbw-muted">
@@ -49,6 +63,13 @@ $rbw_cards = isset( $rbw_view['cards'] ) && is_array( $rbw_view['cards'] ) ? $rb
 						?>
 					</p>
 				</header>
+
+				<?php if ( ! $rbw_auth_ok ) : ?>
+					<p class="rbw-error-text rbw-auth-error">
+						<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-key"></use></svg>
+						<?php echo esc_html( (string) ( $rbw_budget['auth_message'] ?? __( 'The credentials were rejected.', 'ratebridge-woo' ) ) ); ?>
+					</p>
+				<?php endif; ?>
 
 				<form class="rbw-provider-form" data-provider="<?php echo esc_attr( (string) $rbw_key ); ?>" onsubmit="return false;">
 					<?php foreach ( (array) ( $rbw_card['fields'] ?? array() ) as $rbw_field ) : ?>
@@ -177,6 +198,29 @@ $rbw_cards = isset( $rbw_view['cards'] ) && is_array( $rbw_view['cards'] ) ? $rb
 								?>
 							</strong>
 						</li>
+						<?php if ( $rbw_daily > 0 ) : ?>
+							<li>
+								<span><?php esc_html_e( 'Requests today', 'ratebridge-woo' ); ?>:</span>
+								<strong>
+									<?php
+									echo esc_html(
+										sprintf(
+											/* translators: 1: used today, 2: daily limit */
+											__( '%1$d of %2$d', 'ratebridge-woo' ),
+											$rbw_today,
+											$rbw_daily
+										)
+									);
+									?>
+								</strong>
+							</li>
+						<?php endif; ?>
+						<?php if ( ! empty( $rbw_budget['source_updated_fmt'] ) ) : ?>
+							<li>
+								<span><?php esc_html_e( 'Last source data', 'ratebridge-woo' ); ?>:</span>
+								<strong><?php echo esc_html( (string) $rbw_budget['source_updated_fmt'] ); ?></strong>
+							</li>
+						<?php endif; ?>
 						<li>
 							<span><?php esc_html_e( 'Last request', 'ratebridge-woo' ); ?>:</span>
 							<strong>

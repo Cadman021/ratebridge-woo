@@ -2517,3 +2517,165 @@ msgstr "هنوز به‌روزرسانی نشده"
 
 msgid "of %d configured"
 msgstr "از %d ارز تعریف‌شده"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 9 — NetArz + Nerkhsanj providers, auth_failed state, daily budget
+# ─────────────────────────────────────────────────────────────────────────────
+
+msgid "NetArz"
+msgstr "نت‌ارز"
+
+msgid "Nerkhsanj"
+msgstr "نرخ‌سنج"
+
+msgid "%1$s: the token/key is invalid or expired (HTTP %2$d)."
+msgstr "%1$s: توکن/کلید نامعتبر یا منقضی شده است (HTTP %2$d)."
+
+msgid "%s rejected the credentials"
+msgstr "%s اعتبارنامه‌ها را رد کرد"
+
+msgid "%s rejected the credentials. Fix the API key or token, then run “Test connection”."
+msgstr "%s اعتبارنامه‌ها را رد کرد. کلید API یا توکن را اصلاح کنید و سپس «تست اتصال» را اجرا کنید."
+
+msgid "The server’s public IP (or your domain) is probably not allowed in the NetArz panel."
+msgstr "به احتمال زیاد IP عمومی این سرور (یا دامنه شما) در پنل نت‌ارز مجاز نشده است."
+
+msgid "The daily request limit for %1$s has been reached (%2$d of %3$d). It resets at midnight (%4$s). No request was sent to the provider."
+msgstr "سهمیه روزانه %1$s تکمیل شده است (%2$d از %3$d). نیمه‌شب (%4$s) بازنشانی می‌شود. هیچ درخواستی به منبع ارسال نشد."
+
+msgid "Requests today"
+msgstr "درخواست‌های امروز"
+
+msgid "Last source data"
+msgstr "آخرین داده منبع"
+
+msgid "Needs a key / auth error"
+msgstr "نیازمند کلید / خطای احراز هویت"
+
+msgid "Open price sources"
+msgstr "باز کردن منابع قیمت"
+
+msgid "The credentials were rejected."
+msgstr "اعتبارنامه‌ها رد شدند."
+
+msgid "Daily request limit"
+msgstr "حداکثر درخواست روزانه"
+
+msgid "Request timeout (seconds)"
+msgstr "مهلت درخواست (ثانیه)"
+
+msgid "Plan"
+msgstr "طرح"
+
+msgid "Which price"
+msgstr "کدام قیمت"
+
+msgid "Mid (average)"
+msgstr "میانگین"
+
+msgid "Buy"
+msgstr "خرید"
+
+msgid "Sell"
+msgstr "فروش"
+
+msgid "Buy/sell are indicative quotes around the market mid."
+msgstr "خرید و فروش، نرخ‌های تقریبی حول میانگین بازار هستند."
+
+msgid "An app API key from the NetArz panel (API نرخ ارز)."
+msgstr "کلید API برنامه از پنل نت‌ارز (بخش API نرخ ارز)."
+
+msgid "The key is sent only in the Authorization header. The public IP of this server must be allowed in the NetArz panel, otherwise every request returns 401/403."
+msgstr "کلید فقط در هدر Authorization ارسال می‌شود. IP عمومی این سرور باید در پنل نت‌ارز مجاز شده باشد، وگرنه همه درخواست‌ها 401/403 برمی‌گردانند."
+
+msgid "Free (data delayed 15 minutes)"
+msgstr "رایگان (داده با ۱۵ دقیقه تأخیر)"
+
+msgid "Pro (live data)"
+msgstr "پرو (داده زنده)"
+
+msgid "The free plan delays every rate by about 15 minutes; Pro has no delay."
+msgstr "طرح رایگان هر نرخ را حدود ۱۵ دقیقه با تأخیر می‌دهد؛ طرح پرو تأخیر ندارد."
+
+msgid "0 = use the plan default (free 3,000 / pro 200,000 per day). The per-minute limit is informational only."
+msgstr "۰ = استفاده از پیش‌فرض طرح (رایگان ۳٬۰۰۰ / پرو ۲۰۰٬۰۰۰ در روز). محدودیت در دقیقه فقط جنبه اطلاعی دارد."
+
+msgid "Free plan default 15 minutes (the data itself is 15 minutes delayed); pro default 5. Never below 5."
+msgstr "پیش‌فرض طرح رایگان ۱۵ دقیقه است (خود داده ۱۵ دقیقه تأخیر دارد)؛ پرو ۵ دقیقه. هرگز کمتر از ۵."
+
+msgid "0 = no daily limit (the interval already keeps usage low)."
+msgstr "۰ = بدون محدودیت روزانه (بازه زمانی به‌تنهایی مصرف را کم نگه می‌دارد)."
+
+msgid "5 to 30 seconds. The feed is small, 10 is plenty."
+msgstr "بین ۵ تا ۳۰ ثانیه. حجم این فید کوچک است و ۱۰ کافی است."
+
+msgid "The source updates every minute, but it is free and unofficial: please keep at least 5 minutes (default 5)."
+msgstr "منبع هر دقیقه به‌روز می‌شود، اما رایگان و غیررسمی است: لطفاً حداقل ۵ دقیقه را نگه دارید (پیش‌فرض ۵)."
+
+msgid "NetArz needs an API key. Add it on the Price sources tab."
+msgstr "نت‌ارز به کلید API نیاز دارد. آن را در تب منابع قیمت وارد کنید."
+
+msgid "NetArz returned no usable rates."
+msgstr "نت‌ارز هیچ نرخ قابل استفاده‌ای برنگرداند."
+
+msgid "NetArz returned an error (%1$s): %2$s"
+msgstr "نت‌ارز خطا برگرداند (%1$s): %2$s"
+
+msgid "Nerkhsanj returned no usable rates."
+msgstr "نرخ‌سنج هیچ نرخ قابل استفاده‌ای برنگرداند."
+
+msgid "The API token issued by AlanChand. It is sent in the request query string (token=…), never in a header."
+msgstr "توکن API صادرشده توسط آلان‌چند. در رشته پرس‌وجوی درخواست ارسال می‌شود (token=…) و هرگز در هدر نمی‌رود."
+
+msgid "Copy the token from your AlanChand account panel. The free token is valid for 3 days and can only be issued once; paid tokens are available from the provider’s own site. Because the token travels in the URL, it is scrubbed from every message and log entry."
+msgstr "توکن را از پنل حساب آلان‌چند بردارید. توکن رایگان ۳ روز اعتبار دارد و فقط یک‌بار صادر می‌شود؛ توکن‌های پرداختی از سایت خود منبع در دسترس‌اند. چون توکن در نشانی (URL) سفر می‌کند، از همه پیام‌ها و گزارش‌ها پاک می‌شود."
+
+# --- currency/commodity names (NetArz + Nerkhsanj catalogues) --------------
+
+msgid "Afghan Afghani"
+msgstr "افغانی افغانستان"
+
+msgid "Armenian Dram (100)"
+msgstr "درام ارمنستان (۱۰۰)"
+
+msgid "Azerbaijani Manat"
+msgstr "منات آذربایجان"
+
+msgid "Danish Krone"
+msgstr "کرون دانمارک"
+
+msgid "Georgian Lari"
+msgstr "لاری گرجستان"
+
+msgid "Hong Kong Dollar"
+msgstr "دلار هنگ‌کنگ"
+
+msgid "Indian Rupee"
+msgstr "روپیه هند"
+
+msgid "Iraqi Dinar"
+msgstr "دینار عراق"
+
+msgid "Jordanian Dinar"
+msgstr "دینار اردن"
+
+msgid "Malaysian Ringgit"
+msgstr "رینگیت مالزی"
+
+msgid "Norwegian Krone"
+msgstr "کرون نروژ"
+
+msgid "Pakistani Rupee (100)"
+msgstr "روپیه پاکستان (۱۰۰)"
+
+msgid "Singapore Dollar"
+msgstr "دلار سنگاپور"
+
+msgid "Tether (USDT)"
+msgstr "تتر"
+
+msgid "Thai Baht"
+msgstr "بات تایلند"
+
+msgid "Turkmen Manat"
+msgstr "منات ترکمنستان"

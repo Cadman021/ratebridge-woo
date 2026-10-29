@@ -190,8 +190,14 @@ final class RateUpdater {
 			$rates = $provider->fetch_rates( array_values( array_unique( $symbols ) ) );
 
 			if ( is_wp_error( $rates ) ) {
+				/*
+				 * The provider message already carries the ROOT cause first (an auth
+				 * failure or the last real provider error), followed by any backoff
+				 * note. Prefixing it with the provider label makes a currency row
+				 * self-explanatory: «NetArz: توکن/کلید نامعتبر… (HTTP 401)».
+				 */
 				foreach ( $items as $currency ) {
-					$this->repository->set_error( $currency->id, $rates->get_error_message() );
+					$this->repository->set_error( $currency->id, $this->compose_provider_error( $provider, $rates ) );
 					$errors[] = sprintf( '%s: %s', $currency->code, $rates->get_error_message() );
 					++$summary['failed'];
 				}
@@ -327,6 +333,28 @@ final class RateUpdater {
 		}
 
 		$this->update_one( $currency->id, 'manual' );
+	}
+
+	/**
+	 * Provider label + root-cause-first message for a currency row.
+	 *
+	 * @param ProviderInterface $provider Provider.
+	 * @param WP_Error          $error    Error.
+	 * @return string
+	 */
+	private function compose_provider_error( ProviderInterface $provider, WP_Error $error ): string {
+		$message = trim( $error->get_error_message() );
+
+		if ( '' === $message ) {
+			return $provider->get_label();
+		}
+
+		// The provider already prefixes its own label for auth errors.
+		if ( str_starts_with( $message, $provider->get_label() ) ) {
+			return $message;
+		}
+
+		return $provider->get_label() . ': ' . $message;
 	}
 
 	/**

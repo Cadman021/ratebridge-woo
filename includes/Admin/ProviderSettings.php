@@ -189,6 +189,14 @@ final class ProviderSettings {
 
 		$provider->save_settings( $new );
 
+		/*
+		 * A changed key/token must un-block the provider immediately: the sticky
+		 * auth_failed state is tied to the credential fingerprint.
+		 */
+		if ( RequestBudget::fingerprint( $old ) !== RequestBudget::fingerprint( $new ) ) {
+			RequestBudget::clear_auth_failed( $provider_key );
+		}
+
 		return array(
 			'errors' => array(),
 			'saved'  => $new,
@@ -265,11 +273,39 @@ final class ProviderSettings {
 		$min_interval   = method_exists( $provider, 'get_min_interval_minutes' ) ? $provider->get_min_interval_minutes() : 0;
 		$effective      = method_exists( $provider, 'get_effective_min_interval_minutes' ) ? $provider->get_effective_min_interval_minutes() : $min_interval;
 		$used           = RequestBudget::used_this_period( $key );
+		$daily_limit    = method_exists( $provider, 'get_daily_limit' ) ? $provider->get_daily_limit() : 0;
+		$used_today     = RequestBudget::used_today( $key );
 		$next_allowed   = RequestBudget::next_allowed_at( $key, $min_interval, $monthly_limit );
+
+		// Auth state: explicitly failing credentials win over any quota message.
+		$auth_failed = RequestBudget::is_auth_failed( $key, $provider->get_settings() );
+
+		$status = 'ok';
+
+		if ( $auth_failed ) {
+			$status = 'needs_key';
+		} elseif ( $daily_limit > 0 && $used_today >= $daily_limit ) {
+			$status = 'exhausted';
+		} elseif ( $monthly_limit > 0 && $used >= $monthly_limit ) {
+			$status = 'exhausted';
+		} elseif ( '' !== (string) $state['last_error'] ) {
+			$status = 'error';
+		}
 
 		return array(
 			'used'             => $used,
 			'limit'            => $monthly_limit,
+			'daily_limit'      => $daily_limit,
+			'used_today'       => $used_today,
+			'day'              => RequestBudget::current_day(),
+			'auth_failed'      => $auth_failed,
+			'auth_status'      => (int) $state['auth_status'],
+			'auth_message'     => (string) $state['auth_message'],
+			'status'           => $status,
+			'source_updated'   => (int) $state['source_updated'],
+			'source_updated_fmt' => (int) $state['source_updated'] > 0
+				? wp_date( 'Y-m-d H:i', (int) $state['source_updated'] )
+				: '',
 			'period'           => RequestBudget::current_period(),
 			'last_request'     => (int) $state['last_request'],
 			'last_request_fmt' => (int) $state['last_request'] > 0
@@ -283,6 +319,16 @@ final class ProviderSettings {
 			'failure_backoff'  => RequestBudget::FAILURE_BACKOFF_MINUTES,
 			'last_error'       => (string) $state['last_error'],
 		);
+	}
+
+	/**
+	 * Mark the credentials as good after a successful manual test.
+	 *
+	 * @param ProviderInterface $provider Provider.
+	 * @return void
+	 */
+	public function note_test_success( ProviderInterface $provider ): void {
+		RequestBudget::clear_auth_failed( $provider->get_key() );
 	}
 
 	/**
@@ -388,6 +434,9 @@ final class ProviderSettings {
 				)
 			);
 		}
+
+		// A successful manual test proves the credentials work.
+		RequestBudget::clear_auth_failed( $provider_key );
 
 		// Only the first 3 pairs are shown; values are never secrets.
 		$sample = array();

@@ -2,8 +2,9 @@
 /**
  * AlanChand provider (official REST API).
  *
- * Endpoint: GET https://api.alanchand.com?type={currency|gold|crypto}&symbols=a,b
- * Auth:     Authorization: Bearer TOKEN
+ * Endpoint: GET https://api.alanchand.com/?type={currencies|golds|crypto}&token=TOKEN
+ * Auth:     the token travels in the **query string** (`token=…`), never in a
+ *           header — see the verified request format in README.md.
  *
  * Prices are in Toman. The API is grouped in three catalogues, so we make at
  * most one request per type per refresh cycle and cache each type separately.
@@ -422,8 +423,8 @@ final class AlanChandProvider extends AbstractProvider {
 				'label'       => __( 'API token', 'ratebridge-woo' ),
 				'type'        => 'password',
 				'required'    => true,
-				'description' => __( 'The bearer token issued by AlanChand.', 'ratebridge-woo' ),
-				'hint'        => __( 'Copy the token from your AlanChand account panel. It is sent only in the Authorization header.', 'ratebridge-woo' ),
+				'description' => __( 'The API token issued by AlanChand. It is sent in the request query string (token=…), never in a header.', 'ratebridge-woo' ),
+				'hint'        => __( 'Copy the token from your AlanChand account panel. The free token is valid for 3 days and can only be issued once; paid tokens are available from the provider’s own site. Because the token travels in the URL, it is scrubbed from every message and log entry.', 'ratebridge-woo' ),
 			),
 			array(
 				'key'         => 'min_interval',

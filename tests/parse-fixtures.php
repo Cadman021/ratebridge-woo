@@ -19,6 +19,8 @@ declare( strict_types=1 );
 namespace RateBridge\Tests;
 
 use RateBridge\Providers\Parsing\AlanChandParser;
+use RateBridge\Providers\Parsing\NetarzParser;
+use RateBridge\Providers\Parsing\NerkhsanjParser;
 use RateBridge\Providers\Parsing\NavasanParser;
 use RateBridge\Providers\Parsing\NumberParser;
 
@@ -30,6 +32,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once __DIR__ . '/../includes/Providers/Parsing/NumberParser.php';
 require_once __DIR__ . '/../includes/Providers/Parsing/NavasanParser.php';
 require_once __DIR__ . '/../includes/Providers/Parsing/AlanChandParser.php';
+require_once __DIR__ . '/../includes/Providers/Parsing/NetarzParser.php';
+require_once __DIR__ . '/../includes/Providers/Parsing/NerkhsanjParser.php';
 
 /**
  * Tiny PASS/FAIL collector.
@@ -384,6 +388,190 @@ if ( '' !== $alan_gold ) {
 }
 
 /* ------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+echo "\n[8] NetArz parser (netarz-rates.json, netarz-rate-usd.json)\n";
+/* ------------------------------------------------------------------------- */
+
+$netarz_list   = fixture( 'netarz-rates.json' );
+$netarz_single = fixture( 'netarz-rate-usd.json' );
+
+if ( '' !== $netarz_list ) {
+	$map = NetarzParser::parse( $netarz_list );
+
+	Assert::check( 'parsed all 32 codes', 32 === count( $map ), 'count=' . count( $map ) );
+
+	// Values verified directly against the fixture.
+	Assert::rate( 'USD mid', $map['USD'] ?? null, 271500.0 );
+	Assert::rate( 'EUR mid', $map['EUR'] ?? null, 302600.0 );
+	Assert::rate( 'AED mid', $map['AED'] ?? null, 73900.0 );
+	Assert::rate( 'GBP mid', $map['GBP'] ?? null, 361300.0 );
+	Assert::rate( 'JPY mid', $map['JPY'] ?? null, 1719.0 );
+
+	// unit = 100 rows MUST be divided by 100 (IQD/AMD/PKR).
+	Assert::rate( 'IQD per 1 unit (unit=100)', $map['IQD'] ?? null, 179.1 );
+	Assert::rate( 'AMD per 1 unit (unit=100)', $map['AMD'] ?? null, 755.0 );
+	Assert::rate( 'PKR per 1 unit (unit=100)', $map['PKR'] ?? null, 980.0 );
+
+	Assert::check(
+		'the unit=100 rows are the only scaled ones',
+		abs( ( $map['IQD'] ?? 0 ) - 17910 / 100 ) < 0.0001 && abs( ( $map['USD'] ?? 0 ) - 271500 ) < 0.0001
+	);
+
+	$bad = array_filter( $map, static fn ( $v ) => ! is_float( $v ) || ! is_finite( $v ) || $v <= 0 );
+	Assert::check( 'no zero/negative/non-finite values', empty( $bad ), implode( ',', array_keys( $bad ) ) );
+
+	// quote side selection
+	$buy = NetarzParser::parse( $netarz_list, NetarzParser::QUOTE_BUY );
+	Assert::rate( 'USD buy', $buy['USD'] ?? null, 270100.0 );
+	$sell = NetarzParser::parse( $netarz_list, NetarzParser::QUOTE_SELL );
+	Assert::rate( 'USD sell', $sell['USD'] ?? null, 272900.0 );
+
+	// meta / freshness / source timestamp
+	$fresh = NetarzParser::freshness( $netarz_list );
+	Assert::check( 'meta.is_delayed = true (free plan)', true === $fresh['delayed'] );
+	Assert::check( 'meta.delayed_minutes = 15', 15 === $fresh['minutes'] );
+	Assert::check( 'meta.plan = free', 'free' === $fresh['plan'] );
+	Assert::check(
+		'meta.as_of parses to 2026-10-29 18:57 UTC',
+		'2026-10-29 18:57' === gmdate( 'Y-m-d H:i', NetarzParser::source_timestamp( $netarz_list ) ),
+		gmdate( 'Y-m-d H:i', NetarzParser::source_timestamp( $netarz_list ) )
+	);
+
+	// broken payloads
+	Assert::check( 'garbage body returns empty', array() === NetarzParser::parse( '<html>nope</html>' ) );
+	Assert::check( 'empty object returns empty', array() === NetarzParser::parse( '{}' ) );
+}
+
+if ( '' !== $netarz_single ) {
+	// The single-currency shape wraps ONE object in `data`, not a list.
+	$single = NetarzParser::parse( $netarz_single );
+	Assert::check( 'single object shape parsed', 1 === count( $single ) && isset( $single['USD'] ) );
+	Assert::rate( 'single USD mid', $single['USD'] ?? null, 271500.0 );
+}
+
+// Error envelope (documented: errors always live in `error` with a code).
+$error_body = '{"error":{"code":"forbidden_domain","message":"domain not allowed"}}';
+$err        = NetarzParser::error( $error_body );
+Assert::check( 'error envelope parsed', is_array( $err ) && 'forbidden_domain' === $err['code'] );
+Assert::check( 'no error on a good payload', null === NetarzParser::error( $netarz_list ) );
+
+/* ------------------------------------------------------------------------- */
+echo "\n[9] Nerkhsanj parser (nerkhsanj-live.json)\n";
+/* ------------------------------------------------------------------------- */
+
+$nerkh_body = fixture( 'nerkhsanj-live.json' );
+
+if ( '' !== $nerkh_body ) {
+	$map = NerkhsanjParser::parse( $nerkh_body );
+
+	Assert::check( 'parsed all 28 rates', 28 === count( $map ), 'count=' . count( $map ) );
+
+	Assert::rate( 'dollar', $map['USD'] ?? null, 271060.0 );
+	Assert::rate( 'euro', $map['EUR'] ?? null, 301900.0 );
+	Assert::rate( 'yuan', $map['CNY'] ?? null, 40770.0 );
+	Assert::rate( 'pound', $map['GBP'] ?? null, 361690.0 );
+	Assert::rate( 'aed', $map['AED'] ?? null, 74289.0 );
+	Assert::rate( 'lira', $map['TRY'] ?? null, 5460.0 );
+	Assert::rate( 'tether', $map['USDT'] ?? null, 271556.0 );
+	Assert::rate( 'bitcoin', $map['BTC'] ?? null, 21949402800.0 );
+
+	// Gold and coin: must NOT be off by 1000x.
+	Assert::rate( 'gold (18K gram)', $map['GOLD18'] ?? null, 26223500.0 );
+	Assert::rate( 'coin (Emami)', $map['COIN'] ?? null, 266785000.0 );
+	Assert::rate( 'gold24', $map['GOLD24'] ?? null, 34964300.0 );
+	Assert::rate( 'mesghal', $map['MESGHAL'] ?? null, 113604000.0 );
+	Assert::rate( 'silver', $map['SILVER'] ?? null, 489280.0 );
+
+	Assert::check( 'gold is in the tens of millions (not 26k)', ( $map['GOLD18'] ?? 0 ) > 20000000 );
+	Assert::check( 'coin is in the hundreds of millions', ( $map['COIN'] ?? 0 ) > 200000000 );
+
+	$bad = array_filter( $map, static fn ( $v ) => ! is_float( $v ) || ! is_finite( $v ) || $v <= 0 );
+	Assert::check( 'no zero/negative/non-finite values', empty( $bad ), implode( ',', array_keys( $bad ) ) );
+
+	// Meta + freshness.
+	$meta = NerkhsanjParser::meta( $nerkh_body );
+	Assert::check( 'meta date is Jalali 1405/08/07', '1405/08/07' === $meta['date'] );
+	Assert::check( 'meta time is 16:59', '16:59' === $meta['time'] );
+	Assert::check( 'meta counts 28 rates', 28 === $meta['count'] );
+
+	// Jalali -> Gregorian conversion.
+	Assert::check(
+		'jalali 1405/08/07 = 2026-10-28',
+		'2026-10-28' === gmdate( 'Y-m-d', NerkhsanjParser::jalali_to_timestamp( 1405, 8, 7 ) ),
+		gmdate( 'Y-m-d', NerkhsanjParser::jalali_to_timestamp( 1405, 8, 7 ) )
+	);
+	Assert::check( 'impossible Jalali date -> 0', 0 === NerkhsanjParser::jalali_to_timestamp( 1405, 13, 1 ) );
+
+	$src = NerkhsanjParser::source_timestamp( $nerkh_body );
+	Assert::check( 'source timestamp is a positive unix time', $src > 1700000000, (string) $src );
+
+	// Empty `time` (outside market hours) still yields a usable date.
+	$no_time = '{"date":"1405/08/07","time":"","rates":{"dollar":271060}}';
+	Assert::check( 'empty time still gives a timestamp', NerkhsanjParser::source_timestamp( $no_time ) > 0 );
+
+	// Defensive parsing: strings, commas, Persian digits, nulls.
+	$messy = '{"date":"1405/08/07","time":"10:00","rates":{"dollar":"۲۷۱٬۰۶۰","euro":"301,900","gold":null,"coin":"","aed":-5}}';
+	$messy_map = NerkhsanjParser::parse( $messy );
+	Assert::rate( 'messy dollar (Persian digits + separators)', $messy_map['USD'] ?? null, 271060.0 );
+	Assert::rate( 'messy euro (comma)', $messy_map['EUR'] ?? null, 301900.0 );
+	Assert::check( 'null gold skipped', ! isset( $messy_map['GOLD18'] ) );
+	Assert::check( 'empty coin skipped', ! isset( $messy_map['COIN'] ) );
+	Assert::check( 'negative aed skipped', ! isset( $messy_map['AED'] ) );
+
+	Assert::check( 'garbage body returns empty', array() === NerkhsanjParser::parse( 'nope' ) );
+}
+
+/* ------------------------------------------------------------------------- */
+echo "\n[10] Cross-source consistency (Navasan / AlanChand / NetArz / Nerkhsanj)\n";
+/* ------------------------------------------------------------------------- */
+/*
+ * The fixtures were captured on different days (Navasan/AlanChand 2026-10-25,
+ * NetArz/Nerkhsanj 2026-10-29), so a small drift is expected. Tolerances:
+ *   currencies 4%  (day-to-day FX move)
+ *   gold/coin  6%  (higher volatility + different quote conventions)
+ * Anything beyond that is a unit bug (x10/x1000), not drift.
+ */
+if ( '' !== $navasan_body && '' !== $alan_currency && '' !== $nerkh_body && '' !== $netarz_list ) {
+	$nav = NavasanParser::parse_to_toman( $navasan_body );
+	$ac  = AlanChandParser::parse_to_toman( $alan_currency, AlanChandParser::TYPE_CURRENCY );
+	$acg = AlanChandParser::parse_to_toman( $alan_gold, AlanChandParser::TYPE_GOLD );
+	$nz  = NetarzParser::parse( $netarz_list );
+	$nk  = NerkhsanjParser::parse( $nerkh_body );
+
+	$groups = array(
+		array( 'USD', 4.0, array( $nav['usd'] ?? null, $ac['usd'] ?? null, $nz['USD'] ?? null, $nk['USD'] ?? null ) ),
+		array( 'EUR', 4.0, array( $nav['eur'] ?? null, $ac['eur'] ?? null, $nz['EUR'] ?? null, $nk['EUR'] ?? null ) ),
+		array( 'AED', 4.0, array( $nav['aed'] ?? null, $ac['aed'] ?? null, $nz['AED'] ?? null, $nk['AED'] ?? null ) ),
+		array( 'GBP', 4.0, array( $nav['gbp'] ?? null, $ac['gbp'] ?? null, $nz['GBP'] ?? null, $nk['GBP'] ?? null ) ),
+		array( '18K gold', 6.0, array( $nav['18ayar'] ?? null, $acg['18ayar'] ?? null, $nk['GOLD18'] ?? null ) ),
+		array( 'full coin', 6.0, array( $nav['sekkeh'] ?? null, $acg['sekkeh'] ?? null, $nk['COIN'] ?? null ) ),
+	);
+
+	foreach ( $groups as [ $label, $tolerance, $values ] ) {
+		$values = array_values( array_filter( $values, static fn ( $v ) => is_float( $v ) && $v > 0 ) );
+
+		if ( count( $values ) < 2 ) {
+			Assert::check( $label . ' present in at least two sources', false, 'count=' . count( $values ) );
+			continue;
+		}
+
+		$min = min( $values );
+		$max = max( $values );
+		$pct = ( $max - $min ) / $min * 100;
+
+		Assert::check(
+			sprintf( '%s within %s%% across sources (min %s, max %s, %.2f%%)', $label, $tolerance, number_format( $min ), number_format( $max ), $pct ),
+			$pct <= $tolerance
+		);
+
+		// Fail loudly on a x10 / x1000 unit mismatch.
+		Assert::check(
+			sprintf( '%s has no x10/x1000 mismatch (ratio %.2f)', $label, $max / $min ),
+			( $max / $min ) < 3.0
+		);
+	}
+}
+
 echo "\n", str_repeat( '=', 60 ), "\n";
 printf( "RESULT: %d passed, %d failed\n", Assert::$passed, Assert::$failed );
 

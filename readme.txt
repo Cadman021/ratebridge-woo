@@ -4,7 +4,7 @@ Tags: currency, exchange rate, woocommerce, pricing, gold price, persian
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.8.1
+Stable tag: 0.9.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,8 +22,8 @@ instead of a fixed amount:
 
 **Features**
 
-* **Currencies** with real price sources (Navasan, AlanChand), per-source settings and a
-  request-quota guard so a free plan is never burned.
+* **Currencies** with real price sources (Navasan, AlanChand, NetArz, Nerkhsanj), per-source
+  settings and a request-quota guard (monthly **and** daily) so a free plan is never burned.
 * **Currency-level pricing rules**: profit (percent/fixed), commission, extra amount.
 * **Product pricing** (simple + variable products, classic editor): base price, sale base price,
   minimum price, fluctuation margin, per-product profit overrides, live price preview.
@@ -104,6 +104,21 @@ only removed on uninstall when **«حذف تمام داده‌ها هنگام ح
 4. Elementor widgets in the «نرخ ساز» category.
 
 == Changelog ==
+
+= 0.9.0 =
+* New source **NetArz** (`netarz`, نت‌ارز): Bearer-key FX API, Toman quotes, free (15-minute
+  delay) and pro plans with their own daily caps, `unit`-aware parsing for IQD/AMD/PKR.
+* New source **Nerkhsanj** (`nerkhsanj`, نرخ‌سنج): free open feed, no key, 28 Toman rates
+  including gold and coins, Jalali/Tehran timestamps with a 3-day staleness warning.
+* **Sticky `auth_failed` state**: an HTTP 401/403 stops all retries until the key changes or a
+  manual test succeeds, and the root cause (e.g. "the server IP is not allow-listed") is shown
+  on the Sources card, the currency row and the Overview instead of a generic quota message.
+* **Daily request limit** for providers that need one, checked before the monthly limit and
+  reset on the site-timezone date.
+* AlanChand wording corrected: the token travels in the **query string** (`token=…`), the free
+  token is valid for 3 days and can be issued once.
+* `fx-ntz-…` keys (and generic `Bearer` tokens) are now scrubbed from every message and log
+  entry — this also fixes a pattern that previously matched nothing.
 
 = 0.8.1 =
 * UI redesign: design tokens, Vazirmatn, inline icon sprite, a new Overview tab (KPIs, provider

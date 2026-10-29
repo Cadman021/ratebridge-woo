@@ -74,6 +74,72 @@ abstract class AbstractProvider implements ProviderInterface {
 	}
 
 	/**
+	 * Daily real-request limit (site-timezone calendar day), 0 for unlimited.
+	 *
+	 * Providers that declare a `daily_limit` setting override this.
+	 *
+	 * @return int
+	 */
+	public function get_daily_limit(): int {
+		$declared = $this->get_setting( 'daily_limit', null );
+
+		return is_numeric( $declared ) ? max( 0, (int) $declared ) : 0;
+	}
+
+	/**
+	 * Persian message for a 401/403 response.
+	 *
+	 * Providers may add a hint about their own failure modes (Netarz: IP/domain
+	 * allow-list) by overriding `get_auth_hint()`.
+	 *
+	 * @param int $status HTTP status.
+	 * @return string
+	 */
+	protected function auth_error_message( int $status ): string {
+		$base = sprintf(
+			/* translators: 1: provider label, 2: HTTP status code */
+			__( '%1$s: the token/key is invalid or expired (HTTP %2$d).', 'ratebridge-woo' ),
+			$this->get_label(),
+			$status
+		);
+
+		$hint = trim( $this->get_auth_hint() );
+
+		return '' !== $hint ? $base . ' ' . $hint : $base;
+	}
+
+	/**
+	 * Extra Persian hint appended to the auth error (provider-specific).
+	 *
+	 * @return string
+	 */
+	protected function get_auth_hint(): string {
+		return '';
+	}
+
+	/**
+	 * Whether an error code from `parse_response()` means "bad credentials".
+	 *
+	 * @param string $code Error code.
+	 * @return bool
+	 */
+	protected function is_auth_error_code( string $code ): bool {
+		return (bool) preg_match( '/(^|_)(auth|unauthori[sz]ed|forbidden|invalid_?(key|token))($|_)/i', $code );
+	}
+
+	/**
+	 * Provider's own "as of" timestamp from the last parsed payload (0 = none).
+	 *
+	 * Providers that expose a source timestamp override this so the admin can see
+	 * data freshness instead of guessing from our own fetch time.
+	 *
+	 * @return int
+	 */
+	protected function get_last_source_timestamp(): int {
+		return 0;
+	}
+
+	/**
 	 * Symbols this provider can serve, as symbol => Persian label.
 	 *
 	 * Providers that talk to a fixed catalogue override this so the admin can
@@ -179,17 +245,21 @@ abstract class AbstractProvider implements ProviderInterface {
 			$this->get_key(),
 			$this->get_label(),
 			$this->get_min_interval_minutes(),
-			$this->get_monthly_limit()
+			$this->get_monthly_limit(),
+			$this->get_daily_limit(),
+			$this->get_settings()
 		);
 
 		if ( is_wp_error( $authorized ) ) {
 			return $authorized;
 		}
 
+		$timeout = isset( $args['timeout'] ) ? (int) $args['timeout'] : (int) static::TIMEOUT;
+
 		$response = wp_remote_get(
 			$request_url,
 			array(
-				'timeout'     => self::TIMEOUT,
+				'timeout'     => max( 5, min( 60, $timeout ) ),
 				'redirection' => 3,
 				'headers'     => array_merge(
 					array(
@@ -221,6 +291,25 @@ abstract class AbstractProvider implements ProviderInterface {
 		$body   = (string) wp_remote_retrieve_body( $response );
 
 		if ( $status < 200 || $status >= 300 ) {
+			/*
+			 * 401/403 means the credentials are wrong/expired (or the server is not
+			 * allowed): that is a different state from a quota or network failure.
+			 * It is remembered with a fingerprint of the secrets, so nothing is
+			 * retried until the key/token actually changes.
+			 */
+			if ( in_array( $status, array( 401, 403 ), true ) ) {
+				$message = $this->auth_error_message( $status );
+
+				RequestBudget::set_auth_failed(
+					$this->get_key(),
+					$status,
+					$message,
+					RequestBudget::fingerprint( $this->get_settings() )
+				);
+
+				return new WP_Error( 'rbw_provider_auth_failed', $message );
+			}
+
 			$message = sprintf(
 				/* translators: %d: HTTP status code */
 				__( 'Unexpected HTTP status: %d', 'ratebridge-woo' ),
@@ -236,6 +325,17 @@ abstract class AbstractProvider implements ProviderInterface {
 
 		if ( is_wp_error( $parsed ) ) {
 			$parsed = new WP_Error( $parsed->get_error_code(), $this->scrub_secrets( $parsed->get_error_message() ) );
+
+			if ( $this->is_auth_error_code( (string) $parsed->get_error_code() ) ) {
+				RequestBudget::set_auth_failed(
+					$this->get_key(),
+					$status,
+					$parsed->get_error_message(),
+					RequestBudget::fingerprint( $this->get_settings() )
+				);
+
+				return $parsed;
+			}
 
 			RequestBudget::record( $this->get_key(), $status, true, $parsed->get_error_message() );
 
@@ -254,6 +354,15 @@ abstract class AbstractProvider implements ProviderInterface {
 
 		// The request succeeded and consumed quota.
 		RequestBudget::record( $this->get_key(), $status, false );
+
+		// A good response proves the credentials work again.
+		RequestBudget::clear_auth_failed( $this->get_key() );
+
+		$source_timestamp = $this->get_last_source_timestamp();
+
+		if ( $source_timestamp > 0 ) {
+			RequestBudget::set_source_updated( $this->get_key(), $source_timestamp );
+		}
 
 		if ( $cache_ttl > 0 ) {
 			set_transient( $cache_key, $parsed, $cache_ttl );
@@ -293,7 +402,18 @@ abstract class AbstractProvider implements ProviderInterface {
 			$text
 		) ?? $text;
 
-		// Belt and braces: never echo a bare long token-looking string.
+		/*
+		 * Belt and braces: redact anything that *looks* like a credential even
+		 * when it is not one of our stored values (e.g. an error body echoing the
+		 * key back). Patterns are provider-agnostic prefixes we know about:
+		 *   fx-ntz-v1-…   NetArz app keys
+		 *   Sk-…/sk_…/pk_… generic API-key prefixes
+		 * and any long base64-ish token next to `Bearer`.
+		 */
+		$text = preg_replace( '/\bfx-ntz-[A-Za-z0-9._\-]{4,}/', '***', $text ) ?? $text;
+		$text = preg_replace( '/\b(?:sk|pk)_[A-Za-z0-9]{12,}/', '***', $text ) ?? $text;
+		$text = preg_replace( '/(Bearer\s+)[A-Za-z0-9._\-]{8,}/i', '$1***', $text ) ?? $text;
+
 		return $text;
 	}
 

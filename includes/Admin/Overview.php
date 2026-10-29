@@ -200,12 +200,19 @@ final class Overview {
 			$status = 'connected';
 			$label  = __( 'Connected', 'ratebridge-woo' );
 
-			if ( ! $card['uses_network'] ) {
+			if ( ! empty( $budget['auth_failed'] ) ) {
+				// Broken credentials beat every quota message.
+				$status = 'needs_key';
+				$label  = __( 'Needs a key / auth error', 'ratebridge-woo' );
+			} elseif ( ! $card['uses_network'] ) {
 				$status = 'local';
 				$label  = __( 'Local', 'ratebridge-woo' );
 			} elseif ( ! $card['configured'] ) {
 				$status = 'needs_key';
 				$label  = __( 'Needs a key', 'ratebridge-woo' );
+			} elseif ( ! empty( $budget['daily_limit'] ) && (int) $budget['used_today'] >= (int) $budget['daily_limit'] ) {
+				$status = 'exhausted';
+				$label  = __( 'Quota exhausted', 'ratebridge-woo' );
 			} elseif ( $budget['limit'] > 0 && $budget['used'] >= $budget['limit'] ) {
 				$status = 'exhausted';
 				$label  = __( 'Quota exhausted', 'ratebridge-woo' );
@@ -225,7 +232,10 @@ final class Overview {
 				'limit'       => (int) $budget['limit'],
 				'percent'     => $budget['limit'] > 0 ? min( 100, (int) round( $budget['used'] / $budget['limit'] * 100 ) ) : 0,
 				'next_allowed' => (string) $budget['next_allowed_fmt'],
-				'last_error'  => (string) $budget['last_error'],
+				'last_error'  => '' !== (string) $budget['auth_message'] && ! empty( $budget['auth_failed'] )
+					? (string) $budget['auth_message']
+					: (string) $budget['last_error'],
+				'auth_failed' => ! empty( $budget['auth_failed'] ),
 			);
 		}
 
@@ -294,6 +304,31 @@ final class Overview {
 					'action' => __( 'Update now', 'ratebridge-woo' ),
 				);
 			}
+		}
+
+		// Providers whose credentials were rejected (401/403) need the admin.
+		$registry = ProviderRegistry::instance();
+		$service  = new ProviderSettings( $registry );
+
+		foreach ( $registry->with_settings() as $provider ) {
+			$card   = $service->card_model( $provider );
+			$budget = $card['budget'];
+
+			if ( empty( $budget['auth_failed'] ) ) {
+				continue;
+			}
+
+			$rows[] = array(
+				'level'  => 'error',
+				'title'  => sprintf(
+					/* translators: %s: provider label */
+					__( '%s rejected the credentials', 'ratebridge-woo' ),
+					(string) $card['label']
+				),
+				'text'   => (string) $budget['auth_message'],
+				'tab'    => 'sources',
+				'action' => __( 'Open price sources', 'ratebridge-woo' ),
+			);
 		}
 
 		// Formulas that no longer compile would silently stop repricing.

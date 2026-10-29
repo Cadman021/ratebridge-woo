@@ -63,6 +63,8 @@ final class ProviderRegistry {
 			new MockProvider(),
 			new NavasanProvider(),
 			new AlanChandProvider(),
+			new NetarzProvider(),
+			new NerkhsanjProvider(),
 		);
 
 		/**
