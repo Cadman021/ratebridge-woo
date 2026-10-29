@@ -47,6 +47,11 @@ $rbw_icons = array(
 	'save'      => '<path d="M4 4h12l4 4v12H4V4zm2 2v12h12V9.2L16.8 7H6zm2 1h7v4H8V7zm1 7h6v4H9v-4z"/>',
 	'copy'      => '<path d="M9 3h9a2 2 0 0 1 2 2v9h-2V5H9V3zM4 8h10v13H4V8zm2 2v9h6v-9H6z"/>',
 	'filter'    => '<path d="M3 5h18l-7 8v6l-4-2v-4L3 5z"/>',
+	// A real gear, so «تنظیمات عمومی» no longer looks like a dropdown caret.
+	'gear'      => '<path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm0 2a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM10.6 2h2.8l.4 2.4c.4.1.8.3 1.2.5l2-1.4 2 2-1.4 2c.2.4.4.8.5 1.2l2.4.4v2.8l-2.4.4c-.1.4-.3.8-.5 1.2l1.4 2-2 2-2-1.4c-.4.2-.8.4-1.2.5L13.4 22h-2.8l-.4-2.4c-.4-.1-.8-.3-1.2-.5l-2 1.4-2-2 1.4-2c-.2-.4-.4-.8-.5-1.2L3.5 14.9v-2.8l2.4-.4c.1-.4.3-.8.5-1.2l-1.4-2 2-2 2 1.4c.4-.2.8-.4 1.2-.5L10.6 2z"/>',
+	// Tabs get their own distinct, meaningful icons (no two tabs share one).
+	'layers'    => '<path d="M12 2 2 7l10 5 10-5-10-5zm0 2.3L18.6 7 12 9.8 5.4 7 12 4.3zM2 12l10 5 10-5-1.8-.9L12 15.1 3.8 11.1 2 12zm0 5 10 5 10-5-1.8-.9L12 20.1l-8.2-4-1.8.9z"/>',
+	'swap'      => '<path d="M7 4l4 4H8v8H6V8H2l5-4zm10 16-4-4h3V8h2v8h4l-5 4z"/>',
 );
 
 ?>

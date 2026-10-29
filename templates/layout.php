@@ -18,6 +18,11 @@ $rbw_health     = isset( $rbw_view['health'] ) && is_array( $rbw_view['health'] 
 	'details' => '',
 );
 
+/*
+ * Tab icons: every tab needs its own recognisable icon. Sharing one glyph
+ * between two tabs (the old `filter` on both General and the header button)
+ * made the strip read as decoration rather than navigation.
+ */
 $rbw_tabs = array(
 	'overview'      => array(
 		'label' => __( 'Overview', 'ratebridge-woo' ),
@@ -37,11 +42,11 @@ $rbw_tabs = array(
 	),
 	'general'       => array(
 		'label' => __( 'General settings', 'ratebridge-woo' ),
-		'icon'  => 'filter',
+		'icon'  => 'gear',
 	),
 	'import-export' => array(
 		'label' => __( 'Import / Export', 'ratebridge-woo' ),
-		'icon'  => 'download',
+		'icon'  => 'swap',
 	),
 );
 
@@ -73,14 +78,25 @@ $rbw_tab_url = static function ( string $tab ): string {
 		</div>
 
 		<div class="rbw-header-actions">
-			<button type="button" class="button" id="rbw-update-all-header">
+			<?php
+			/*
+			 * «به‌روزرسانی همه» lives here and ONLY here. It used to be duplicated in
+			 * the currencies toolbar, which meant two buttons with one job and two
+			 * separate JS bindings. The toolbar one was removed; #rbw-update-all is
+			 * kept as the id so the existing handler and its AJAX contract are
+			 * untouched.
+			 */
+			?>
+			<button type="button" class="button" id="rbw-update-all">
 				<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-refresh"></use></svg>
 				<?php esc_html_e( 'Update all now', 'ratebridge-woo' ); ?>
 			</button>
-			<a class="button" href="<?php echo esc_url( $rbw_tab_url( 'general' ) ); ?>">
-				<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-filter"></use></svg>
-				<?php esc_html_e( 'Settings', 'ratebridge-woo' ); ?>
-			</a>
+			<?php if ( 'general' !== $rbw_active_tab ) : ?>
+				<a class="button" href="<?php echo esc_url( $rbw_tab_url( 'general' ) ); ?>">
+					<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-gear"></use></svg>
+					<?php esc_html_e( 'General settings', 'ratebridge-woo' ); ?>
+				</a>
+			<?php endif; ?>
 		</div>
 	</header>
 

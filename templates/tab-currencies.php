@@ -83,10 +83,6 @@ $rbw_status = static function ( Currency $currency, Repricer $repricer ): array 
 		<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-download"></use></svg>
 		<?php esc_html_e( 'Add from presets', 'ratebridge-woo' ); ?>
 	</button>
-	<button type="button" class="button" id="rbw-update-all">
-		<svg class="rbw-icon" aria-hidden="true"><use href="#rbw-i-refresh"></use></svg>
-		<?php esc_html_e( 'Update all now', 'ratebridge-woo' ); ?>
-	</button>
 	<span class="rbw-muted rbw-info-line">
 		<?php
 		printf(

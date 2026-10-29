@@ -156,6 +156,17 @@
 	box-shadow: var(--rbw-shadow-1);
 }
 
+/* Every tab carries its own icon; it is part of the label, not decoration. */
+.rbw-tab .rbw-icon {
+	flex: 0 0 auto;
+	opacity: 0.85;
+}
+
+.rbw-tab.is-active .rbw-icon {
+	opacity: 1;
+	color: var(--rbw-primary);
+}
+
 .rbw-panel[hidden] {
 	display: none;
 }
@@ -1546,9 +1557,12 @@
 		scrollbar-width: thin;
 	}
 
+	/* Below the fold the icon alone would be ambiguous, so the label always
+	   stays; only the padding shrinks. The strip scrolls horizontally. */
 	.rbw-tab {
 		min-block-size: var(--rbw-tap-min);
 		padding-block: 10px;
+		padding-inline: var(--rbw-s-2);
 	}
 
 	.rbw-header-actions .button,
