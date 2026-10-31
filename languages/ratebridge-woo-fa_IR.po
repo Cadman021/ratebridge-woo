@@ -339,7 +339,7 @@ msgid "Copy the token from your AlanChand account panel. It is sent only in the 
 msgstr "توکن را از پنل کاربری آلان‌چند خود بردارید. این مقدار فقط در سرآیند Authorization ارسال می‌شود."
 
 msgid "Copy the value shown in your Navasan user panel under the API section."
-msgstr "مقدار نمایش‌داده‌شده در پنل کاربری نواسان، بخش API، را کپی کنید."
+msgstr "مقدار نمایش‌داده‌شده در پنل کاربری نوسان، بخش API، را کپی کنید."
 
 msgid "Default item price"
 msgstr "قیمت پیش‌فرض آیتم"
@@ -378,7 +378,7 @@ msgid "Monthly request usage"
 msgstr "میزان مصرف درخواست ماهانه"
 
 msgid "Navasan"
-msgstr "نواسان"
+msgstr "نوسان"
 
 msgid "Next allowed request"
 msgstr "درخواست مجاز بعدی"
@@ -435,7 +435,7 @@ msgid "The AlanChand API token is not configured. Add it in “Price sources”.
 msgstr "توکن API آلان‌چند تنظیم نشده است. آن را در «منابع قیمت» وارد کنید."
 
 msgid "The Navasan API key is not configured. Add it in “Price sources”."
-msgstr "کلید API نواسان تنظیم نشده است. آن را در «منابع قیمت» وارد کنید."
+msgstr "کلید API نوسان تنظیم نشده است. آن را در «منابع قیمت» وارد کنید."
 
 msgid "The bearer token issued by AlanChand."
 msgstr "توکن Bearer که آلان‌چند صادر کرده است."
@@ -444,7 +444,7 @@ msgid "The free plan allows about 120 requests per month. The plugin never excee
 msgstr "طرح رایگان حدود ۱۲۰ درخواست در ماه اجازه می‌دهد. افزونه هرگز از این عدد فراتر نمی‌رود."
 
 msgid "The key issued by your Navasan account panel."
-msgstr "کلیدی که پنل کاربری نواسان برای شما صادر کرده است."
+msgstr "کلیدی که پنل کاربری نوسان برای شما صادر کرده است."
 
 msgid "The monthly request limit for %1$s has been reached (%2$d of %3$d). No request was sent to the provider."
 msgstr "محدودیت درخواست ماهانه %1$s به پایان رسیده است (%2$d از %3$d). هیچ درخواستی به منبع ارسال نشد."
@@ -657,16 +657,16 @@ msgid "Manual currencies are not updated automatically. Edit the currency to cha
 msgstr "ارزهای دستی به‌صورت خودکار به‌روزرسانی نمی‌شوند. برای تغییر نرخ، ارز را ویرایش کنید."
 
 msgid "Navasan reported an error: %s"
-msgstr "نواسان خطا گزارش کرد: %s"
+msgstr "نوسان خطا گزارش کرد: %s"
 
 msgid "Navasan returned a response that is not valid JSON."
-msgstr "پاسخ نواسان JSON معتبر نبود."
+msgstr "پاسخ نوسان JSON معتبر نبود."
 
 msgid "Navasan returned no usable prices."
-msgstr "نواسان هیچ قیمت قابل‌استفاده‌ای برنگرداند."
+msgstr "نوسان هیچ قیمت قابل‌استفاده‌ای برنگرداند."
 
 msgid "Navasan returned none of the requested symbols (%s)."
-msgstr "نواسان هیچ‌یک از نمادهای درخواستی (%s) را برنگرداند."
+msgstr "نوسان هیچ‌یک از نمادهای درخواستی (%s) را برنگرداند."
 
 msgid "No symbols requested."
 msgstr "هیچ نمادی درخواست نشد."

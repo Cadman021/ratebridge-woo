@@ -14,6 +14,47 @@
 /* Segmented pricing-method control (same `rbw_mode` field)              */
 /* --------------------------------------------------------------------- */
 
+/*
+ * This is a `<div class="form-field">` inside `.woocommerce_options_panel`, and
+ * WooCommerce's own form-field CSS collides with it in three ways:
+ *
+ *   p.form-field, fieldset.form-field { padding: 5px 20px 5px 162px !important; }
+ *       -> our div is NOT matched (only p/fieldset are), so it never gets the
+ *          162px label gutter the rest of the panel is aligned to;
+ *   label, legend { float: left; width: 150px; margin: 0 0 0 -150px; }
+ *       -> every `.rbw-segment` is a <label>, so the two pills were floated
+ *          150px to the LEFT, outside the meta box and over the sidebar.
+ *          admin-rtl.css mirrors this to `float: right; margin: 0 -150px 0 0`,
+ *          so in RTL the pill was pushed 150px to the RIGHT instead. The reset
+ *          below is direction-agnostic (float/width/margin only), so it covers
+ *          both files without a separate RTL rule;
+ *   .description { display: inline; margin: 0 0 0 7px; clear: none; }
+ *       -> the helper text tried to sit inline inside a flex row.
+ *
+ * The panel therefore escaped its container and overlapped the sidebar. Fix:
+ * opt out of the float/gutter and lay the control out as its own flex row.
+ */
+
+/* Reset the WooCommerce label float on our segments, whatever wraps them. */
+.woocommerce_options_panel .rbw-segmented label,
+.woocommerce_options_panel .rbw-segmented .rbw-field-label {
+	float: none;
+	width: auto;
+	margin: 0;
+	padding: 0;
+	line-height: inherit;
+}
+
+/* The helper text is a flex item, not an inline sibling of the radios. */
+.woocommerce_options_panel .rbw-segmented > .description {
+	display: block;
+	margin: 0;
+	clear: none;
+	flex-basis: 100%;
+	padding-inline: 6px;
+	margin-block-start: 4px;
+}
+
 .rbw-segmented {
 	display: flex;
 	flex-wrap: wrap;
@@ -22,8 +63,29 @@
 	padding: 3px;
 	background: #f0f0f1;
 	border-radius: 8px;
+
+	/*
+	 * `fit-content` keeps the pill compact, but a long translation must still be
+	 * able to wrap instead of overflowing the meta box.
+	 */
 	inline-size: fit-content;
 	max-inline-size: 100%;
+	box-sizing: border-box;
+}
+
+/*
+ * The container IS the pill, so it keeps its own padding and background. It only
+ * needs to stop being a `fit-content` flex box that the panel's floats can push
+ * around: a full-width block that holds a compact pill row inside.
+ */
+.woocommerce_options_panel .rbw-segmented.form-field {
+	margin: 9px 0;
+	padding: 3px;
+	inline-size: auto;
+	max-inline-size: 100%;
+	box-sizing: border-box;
+	/* It is a flex container for the pills, laid out as a block in the panel. */
+	display: flex;
 }
 
 .rbw-segmented .rbw-field-label {
@@ -67,12 +129,6 @@
 
 .rbw-segment input:focus-visible + span {
 	box-shadow: 0 0 0 2px #fff, 0 0 0 4px #2271b1;
-}
-
-.rbw-segmented .description {
-	flex-basis: 100%;
-	margin-block-start: 4px;
-	padding-inline: 6px;
 }
 
 .rbw-product-fields {

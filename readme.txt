@@ -4,7 +4,7 @@ Tags: currency, exchange rate, woocommerce, pricing, gold price, persian
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.9.0
+Stable tag: 1.0.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -110,6 +110,17 @@ only removed on uninstall when **«حذف تمام داده‌ها هنگام ح
 4. Elementor widgets in the «نرخ ساز» category.
 
 == Changelog ==
+
+= 1.0.0 =
+* Fix: the provider label «نوسان» was rendered as «نواسان» because the compiled
+  `.mo` was stale; the Persian catalogue is now rebuilt and guarded by a test.
+* Fix: the «قیمت با نرخ ارز / فرمول‌بندی» control in the product editor escaped
+  the meta box and overlapped the sidebar — WooCommerce floats panel labels with
+  a -150px margin, which is now cancelled (RTL and LTR).
+* Fix: every plugin stylesheet/script is versioned from the file mtime in debug
+  mode, so a CSS fix is never masked by a cached copy.
+* Fix: body-level UI (kebab menus, toasts) lives in `#rbw-portal`, so the design
+  tokens apply to it.
 
 = 0.9.0 =
 * New source **NetArz** (`netarz`, نت‌ارز): Bearer-key FX API, Toman quotes, free (15-minute

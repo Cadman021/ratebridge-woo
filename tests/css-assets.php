@@ -326,7 +326,105 @@ CssAssetAssert::check(
 );
 
 /* ------------------------------------------------------------------------- */
-echo "\n[5] Summary\n";
+echo "\n[5] Product editor: the segmented control defeats WooCommerce's form CSS\n";
+/* ------------------------------------------------------------------------- */
+
+/*
+ * Regression: `.rbw-segmented` is a `<div class="form-field">` full of <label>s
+ * inside `.woocommerce_options_panel`. WooCommerce floats that panel's labels and
+ * pulls them -150px out of the box, so the pill escaped the meta box and covered
+ * the sidebar — in RTL it was mirrored to the other side. The fix only works if
+ * the reset remains: `float: none` + `width: auto` + `margin: 0` on the segment
+ * labels, and `display: block` for the helper text.
+ */
+$product_css = $assets_dir . '/admin/css/product.css';
+
+CssAssetAssert::check( 'product.css exists', is_file( $product_css ) );
+
+if ( is_file( $product_css ) ) {
+	$pcss = (string) file_get_contents( $product_css );
+
+	// Assertions read declarations only: our own explanatory comments quote the
+	// WooCommerce values verbatim, which would otherwise trip them.
+	$pcss_bare = (string) preg_replace( '#/\*.*?\*/#s', '', $pcss );
+
+	// Find the rule whose selector targets segment labels inside the panel.
+	$label_rule = '';
+
+	if ( preg_match_all( '/([^{}]+)\{([^{}]*)\}/', $pcss_bare, $rules, PREG_SET_ORDER ) ) {
+		foreach ( $rules as $rule ) {
+			$selector = (string) $rule[1];
+
+			if ( str_contains( $selector, '.rbw-segmented' ) && preg_match( '/\blabel\b|\.rbw-field-label/', $selector ) ) {
+				$label_rule .= $rule[2];
+			}
+		}
+	}
+
+	CssAssetAssert::check(
+		'segment labels cancel WooCommerce\'s float',
+		(bool) preg_match( '/float:\s*none/', $label_rule )
+	);
+
+	CssAssetAssert::check(
+		'segment labels cancel the fixed 150px width',
+		(bool) preg_match( '/width:\s*auto/', $label_rule )
+	);
+
+	CssAssetAssert::check(
+		'segment labels cancel the -150px negative margin',
+		(bool) preg_match( '/margin:\s*0\b/', $label_rule )
+	);
+
+	CssAssetAssert::check(
+		'the helper text is a block, not inline',
+		(bool) preg_match( '/\.rbw-segmented\s*>\s*\.description\s*\{[^}]*display:\s*block/s', $pcss_bare )
+	);
+
+	/*
+	 * Our element is a `div.form-field`, which WooCommerce does NOT match (it only
+	 * styles `p.form-field, fieldset.form-field`). So we must not rely on Woo's
+	 * 162px label gutter, and must not try to emulate it: the control lays itself
+	 * out. Assert we did not copy that magic number into our own sheet.
+	 */
+	CssAssetAssert::check(
+		"we do not depend on WooCommerce's 162px label gutter",
+		! str_contains( $pcss_bare, '162px' )
+	);
+
+	/*
+	 * The container must not be floated or pulled. Checked per rule (selector and
+	 * body captured separately), so the combined selector list of a neighbouring
+	 * rule can never be mistaken for this one.
+	 */
+	$container_float = false;
+	$container_pull  = false;
+
+	if ( preg_match_all( '/([^{}]+)\{([^{}]*)\}/', $pcss_bare, $crules, PREG_SET_ORDER ) ) {
+		foreach ( $crules as $crule ) {
+			$csel = trim( $crule[1] );
+
+			// Only the rule whose selector IS the container (not a descendant).
+			if ( ! preg_match( '/(^|,)\s*\.rbw-segmented\s*(,|\.|$)/', $csel ) ) {
+				continue;
+			}
+
+			if ( preg_match( '/float:\s*(?!none)/', $crule[2] ) ) {
+				$container_float = true;
+			}
+
+			if ( preg_match( '/margin[^;]*:-/', $crule[2] ) ) {
+				$container_pull = true;
+			}
+		}
+	}
+
+	CssAssetAssert::check( 'the segmented container is not floated', ! $container_float );
+	CssAssetAssert::check( 'the segmented container has no negative margin', ! $container_pull );
+}
+
+/* ------------------------------------------------------------------------- */
+echo "\n[6] Summary\n";
 /* ------------------------------------------------------------------------- */
 
 printf( "  %d stylesheet(s), %d url() reference(s): %d local, %d external.\n", count( $sheets ), $total, $local, $skipped );

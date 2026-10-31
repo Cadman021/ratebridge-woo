@@ -165,7 +165,33 @@ PC::check( 'free plan: 15 minute interval', 15 === $netarz->get_min_interval_min
 // Pro plan raises the limits.
 $netarz->save_settings( array_merge( $netarz->get_settings(), array( 'plan' => 'pro' ) ) );
 PC::check( 'pro plan: 200000 requests/day', 200000 === $netarz->get_daily_limit(), (string) $netarz->get_daily_limit() );
-PC::check( 'pro plan: 5 minute interval', 5 === $netarz->get_min_interval_minutes(), (string) $netarz->get_min_interval_minutes() );
+
+/*
+ * The interval is `max(5, plan_floor, declared)`. The stored `min_interval` was
+ * persisted when the free plan was active (15), so switching the plan to pro does
+ * NOT silently lower it — the provider only raises intervals, never reduces a
+ * value the admin has on screen. The pro floor of 5 is verified separately below.
+ */
+PC::check(
+	'pro plan never lowers an explicit interval (15 stays 15)',
+	15 === $netarz->get_min_interval_minutes(),
+	(string) $netarz->get_min_interval_minutes()
+);
+
+// With no explicit interval stored, the plan floor applies.
+$netarz->save_settings( array_merge( $netarz->get_settings(), array( 'plan' => 'pro', 'min_interval' => 0 ) ) );
+PC::check(
+	'pro plan floor is 5 minutes when nothing is declared',
+	5 === $netarz->get_min_interval_minutes(),
+	(string) $netarz->get_min_interval_minutes()
+);
+
+$netarz->save_settings( array_merge( $netarz->get_settings(), array( 'plan' => 'free', 'min_interval' => 0 ) ) );
+PC::check(
+	'free plan floor is 15 minutes when nothing is declared',
+	15 === $netarz->get_min_interval_minutes(),
+	(string) $netarz->get_min_interval_minutes()
+);
 
 // An explicit daily_limit wins over the plan default.
 $netarz->save_settings( array_merge( $netarz->get_settings(), array( 'plan' => 'free', 'daily_limit' => 500 ) ) );

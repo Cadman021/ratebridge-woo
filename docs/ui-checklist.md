@@ -173,6 +173,40 @@ black.
 
 `php tests/ui-scope.php` asserts all of the above statically.
 
+## Product editor: WooCommerce CSS collisions (Phase 9c-fix)
+
+The plugin's «قیمت‌گذاری با نرخ ارز» panel lives inside WooCommerce's product data
+metabox, so Woo's own form-field CSS applies to it. It broke once — check it:
+
+1. Open a product → **قیمت‌گذاری با نرخ ارز** → the segmented control
+   «قیمت پایه | فرمول‌بندی» must sit **inside** the meta box, aligned with the
+   other fields, and must not overlap the right-hand sidebar.
+2. In `fa_IR` (RTL) and `en_US` (LTR): the pill keeps its rounded background,
+   the two options are side by side, and the description line sits **below** the
+   pill (full width), not inline beside it.
+3. The pill must not be pulled sideways: WooCommerce floats panel labels with a
+   `-150px` negative margin (`float:right` in RTL), which is what pushed the
+   control out of the box. `product.css` cancels that with
+   `float:none; width:auto; margin:0` on `.rbw-segmented label`.
+4. Narrow the window: the pill wraps its description instead of overflowing.
+5. Variable products: the same panel in the variation editor behaves the same.
+
+`php tests/css-assets.php` asserts these overrides exist (and that we do not
+copy WooCommerce's `162px` label gutter).
+
+## Translations must be recompiled
+
+The Persian UI reads `languages/ratebridge-woo-fa_IR.mo`, which is **generated**
+from the `.po`. Editing only the `.po` leaves the site showing the old text —
+this shipped a wrong provider name («نواسان» instead of «نوسان») for days.
+
+1. After any `.po` edit: `php bin/build-mo.php`.
+2. `php tests/i18n-sync.php` must pass; it fails when the `.mo` content differs
+   from the `.po`, when the `.mo` is older than the `.po`, or when a known
+   misspelling reappears.
+3. Spot-check the label: **منابع قیمت** must read «نوسان», and the provider
+   picker in the currency dialog too.
+
 ## Keyboard only
 
 1. `Tab` from the admin menu → header actions → tab strip. Arrow keys move
